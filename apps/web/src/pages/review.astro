@@ -1,0 +1,112 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout title="Review">
+  <div class="container">
+    <div class="content" id="review-detail">
+      <p class="loading">Loading...</p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { dataClient } from '../lib/data-client';
+  import type { Review } from '../lib/types';
+
+  function escapeHtml(s: string): string {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderReview(r: Review): string {
+    const scorePct = Math.round((r.review.score / 10) * 100);
+    const confPct = Math.round((r.review.confidence / 5) * 100);
+    const strengths = r.review.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+    const weaknesses = r.review.weaknesses.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+
+    return `
+      <div class="forum-header">
+        <h1 class="forum-title">${escapeHtml(r.title)}</h1>
+        <div class="forum-meta">
+          <span class="tag tag-date">${r.date}</span>
+          ${r.hf_rank ? `<span class="tag tag-rank">HF Daily #${r.hf_rank}</span>` : ''}
+        </div>
+        <div class="forum-actions">
+          <a class="btn" href="${escapeHtml(r.paper_url)}" target="_blank" rel="noopener">PDF</a>
+          <a class="btn" href="/day/?date=${r.date}">Browse ${r.date}</a>
+          <a class="btn" href="/">Back to list</a>
+        </div>
+      </div>
+
+      <div class="forum-note">
+        <div class="note-heading">Abstract</div>
+        <div class="note-content">
+          <p>${escapeHtml(r.summary)}</p>
+        </div>
+      </div>
+
+      <div class="review-block">
+        <div class="review-block-header">
+          <span class="reviewer-label">AutoReviewer</span>
+          <span class="review-tags">
+            <span class="tag tag-score">Score: ${r.review.score.toFixed(1)}/10</span>
+            <span class="tag tag-confidence">Confidence: ${r.review.confidence}/5</span>
+          </span>
+        </div>
+        <div class="review-block-body">
+          <div class="review-field">
+            <div class="review-field-label">Rating</div>
+            <div class="review-field-value">
+              <span class="score-display">
+                <strong>${r.review.score.toFixed(1)}</strong>/10
+                <span class="score-bar"><span class="score-bar-fill" style="width:${scorePct}%"></span></span>
+              </span>
+              &nbsp;&nbsp;
+              <span class="score-display">
+                Confidence: <strong>${r.review.confidence}</strong>/5
+                <span class="score-bar"><span class="score-bar-fill" style="width:${confPct}%;background:#2196f3"></span></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="review-field">
+            <div class="review-field-label">Strengths</div>
+            <div class="review-field-value"><ul>${strengths}</ul></div>
+          </div>
+
+          <div class="review-field">
+            <div class="review-field-label">Weaknesses</div>
+            <div class="review-field-value"><ul>${weaknesses}</ul></div>
+          </div>
+
+          <div class="review-field">
+            <div class="review-field-label">Overall Assessment</div>
+            <div class="review-field-value">${escapeHtml(r.review.final_comment)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function main() {
+    const el = document.getElementById('review-detail')!;
+    const id = new URLSearchParams(window.location.search).get('id');
+
+    if (!id) {
+      el.innerHTML = '<p class="error">Missing review ID.</p>';
+      return;
+    }
+
+    try {
+      const review = await dataClient.getReview(id);
+      document.title = `${review.title} | AutoReviewer`;
+      el.innerHTML = renderReview(review);
+    } catch (e) {
+      el.innerHTML = `<p class="error">Failed to load: ${e instanceof Error ? e.message : e}</p>`;
+    }
+  }
+
+  main();
+</script>

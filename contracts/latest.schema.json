@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "latest.schema.json",
+  "title": "LatestIndex",
+  "type": "object",
+  "required": ["generated_at", "reviews"],
+  "properties": {
+    "generated_at": { "type": "string", "format": "date-time" },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "title", "summary", "score"],
+        "properties": {
+          "id": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "score": { "type": "number" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

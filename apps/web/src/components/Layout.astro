@@ -1,0 +1,35 @@
+---
+interface Props {
+  title?: string;
+}
+
+const { title = 'AutoReviewer' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a href="/" class="navbar-brand">AutoReviewer</a>
+        <ul class="navbar-nav">
+          <li><a href="/" id="nav-home">Recent</a></li>
+        </ul>
+      </div>
+    </nav>
+    <slot />
+    <footer class="site-footer">
+      AutoReviewer &mdash; AI-Generated Paper Reviews
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  @import '../styles/global.css';
+</style>

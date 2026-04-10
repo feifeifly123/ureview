@@ -1,0 +1,16 @@
+{
+  "name": "@autoreviewer/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

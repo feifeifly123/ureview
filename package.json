@@ -1,0 +1,17 @@
+{
+  "name": "autoreviewer",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "concurrently -n data,web -c blue,green \"node tools/serve_data.mjs\" \"pnpm --filter @autoreviewer/web dev\"",
+    "build:web": "pnpm --filter @autoreviewer/web build",
+    "check:data": "python3 tools/validate_data.py",
+    "build:indexes": "python3 tools/build_indexes.py",
+    "publish:data:stage": "python3 tools/publish_r2.py --stage",
+    "publish:data:prod": "python3 tools/publish_r2.py --prod"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

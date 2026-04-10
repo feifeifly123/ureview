@@ -1,0 +1,73 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout title="Daily Archive">
+  <div class="container">
+    <div class="content" id="day-reviews">
+      <p class="loading">Loading...</p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { dataClient } from '../lib/data-client';
+  import type { DailyReviewEntry } from '../lib/types';
+
+  function escapeHtml(s: string): string {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderItem(r: DailyReviewEntry, i: number): string {
+    const pct = Math.round((r.score / 10) * 100);
+    return `
+      <li class="paper-item">
+        <span class="paper-number">${i + 1}.</span>
+        <a class="paper-title" href="/review/?id=${encodeURIComponent(r.id)}">${escapeHtml(r.title)}</a>
+        <div class="paper-meta">
+          ${r.hf_rank ? `<span class="tag tag-rank">HF #${r.hf_rank}</span>` : ''}
+          <span class="score-display">
+            Score: <strong>${r.score.toFixed(1)}</strong>/10
+            <span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>
+          </span>
+        </div>
+        <div class="paper-summary">${escapeHtml(r.summary)}</div>
+      </li>
+    `;
+  }
+
+  async function main() {
+    const el = document.getElementById('day-reviews')!;
+    const date = new URLSearchParams(window.location.search).get('date');
+
+    if (!date) {
+      el.innerHTML = '<p class="error">Missing date parameter.</p>';
+      return;
+    }
+
+    try {
+      const data = await dataClient.getDaily(date);
+      document.title = `${data.date} | AutoReviewer`;
+      if (data.reviews.length === 0) {
+        el.innerHTML = '<p class="empty">No reviews for this date.</p>';
+        return;
+      }
+      el.innerHTML = `
+        <div class="day-header">
+          <h2>${escapeHtml(data.date)}</h2>
+          <span class="count">${data.reviews.length} paper(s)</span>
+          <a class="tag" href="/">Back to list</a>
+        </div>
+        <ul class="paper-list">
+          ${data.reviews.map((r, i) => renderItem(r, i)).join('')}
+        </ul>
+      `;
+    } catch (e) {
+      el.innerHTML = `<p class="error">Failed to load: ${e instanceof Error ? e.message : e}</p>`;
+    }
+  }
+
+  main();
+</script>

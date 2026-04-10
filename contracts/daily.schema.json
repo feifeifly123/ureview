@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "daily.schema.json",
+  "title": "DailyIndex",
+  "type": "object",
+  "required": ["date", "reviews"],
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "summary", "score"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "score": { "type": "number" },
+          "hf_rank": { "type": "integer" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

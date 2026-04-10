@@ -1,0 +1,454 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font-family: "Noto Sans", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #f5f5f5;
+}
+
+a {
+  color: #07c;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #005fa3;
+  text-decoration: underline;
+}
+
+/* ---- Navbar (OpenReview dark red header) ---- */
+.navbar {
+  background: #8c1b13;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  height: 50px;
+}
+
+.navbar-brand {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+}
+
+.navbar-brand:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 24px;
+  list-style: none;
+  padding: 0;
+}
+
+.navbar-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.navbar-nav a:hover,
+.navbar-nav a.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+}
+
+/* ---- Container ---- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+/* ---- Page header ---- */
+.page-header {
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  padding: 20px 0;
+  margin-bottom: 0;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 400;
+  color: #333;
+  margin: 0;
+}
+
+.page-header .subtitle {
+  font-size: 13px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* ---- Content area ---- */
+.content {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-top: none;
+  padding: 0;
+  min-height: 400px;
+}
+
+/* ---- Paper list (OpenReview style) ---- */
+.paper-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.paper-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  transition: background 0.1s;
+}
+
+.paper-item:hover {
+  background: #fafafa;
+}
+
+.paper-item:last-child {
+  border-bottom: none;
+}
+
+.paper-number {
+  display: inline-block;
+  color: #999;
+  font-size: 12px;
+  min-width: 24px;
+  margin-right: 8px;
+}
+
+.paper-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #07c;
+  cursor: pointer;
+  display: inline;
+}
+
+.paper-title:hover {
+  text-decoration: underline;
+}
+
+.paper-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #777;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.paper-summary {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ---- Tags & badges (OpenReview style) ---- */
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #555;
+  background: #f8f8f8;
+}
+
+.tag-score {
+  border-color: #4caf50;
+  color: #2e7d32;
+  background: #e8f5e9;
+  font-weight: 600;
+}
+
+.tag-confidence {
+  border-color: #2196f3;
+  color: #1565c0;
+  background: #e3f2fd;
+}
+
+.tag-rank {
+  border-color: #ff9800;
+  color: #e65100;
+  background: #fff3e0;
+  font-weight: 600;
+}
+
+.tag-date {
+  border-color: #bbb;
+  color: #666;
+}
+
+/* ---- Forum / Review detail (OpenReview forum style) ---- */
+.forum-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.forum-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+
+.forum-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.forum-actions {
+  margin-top: 8px;
+}
+
+.forum-actions a {
+  font-size: 12px;
+  margin-right: 16px;
+}
+
+.forum-actions .btn {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #555;
+  background: #f8f8f8;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.forum-actions .btn:hover {
+  background: #eee;
+  text-decoration: none;
+}
+
+/* ---- Forum note (abstract, review sections) ---- */
+.forum-note {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.forum-note:last-child {
+  border-bottom: none;
+}
+
+.note-heading {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8c1b13;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.note-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.65;
+}
+
+.note-content p {
+  margin-bottom: 8px;
+}
+
+.note-content ul {
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+
+.note-content li {
+  margin-bottom: 4px;
+}
+
+/* ---- Review card (collapsible block, OpenReview style) ---- */
+.review-block {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 12px 20px;
+  background: #fff;
+}
+
+.review-block-header {
+  padding: 10px 16px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+}
+
+.review-block-header .reviewer-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.review-block-header .review-tags {
+  display: flex;
+  gap: 6px;
+}
+
+.review-block-body {
+  padding: 16px;
+}
+
+.review-field {
+  margin-bottom: 14px;
+}
+
+.review-field:last-child {
+  margin-bottom: 0;
+}
+
+.review-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.review-field-value {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.review-field-value ul {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.review-field-value li {
+  margin-bottom: 3px;
+}
+
+/* ---- Score display ---- */
+.score-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.score-bar {
+  width: 60px;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #4caf50;
+}
+
+/* ---- Day page header ---- */
+.day-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.day-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.day-header .count {
+  font-size: 13px;
+  color: #888;
+}
+
+/* ---- States ---- */
+.loading, .error, .empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+  font-size: 14px;
+}
+
+.loading::before {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: 0 auto 12px;
+  border: 2px solid #ddd;
+  border-top-color: #8c1b13;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error {
+  color: #c62828;
+}
+
+/* ---- Footer ---- */
+.site-footer {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 16px 15px;
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+  .navbar-inner { padding: 0 10px; }
+  .paper-item { padding: 12px 14px; }
+  .forum-header { padding: 16px 14px; }
+  .forum-note { padding: 12px 14px; }
+  .review-block { margin: 12px 14px; }
+}

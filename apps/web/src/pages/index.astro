@@ -1,0 +1,64 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout title="AutoReviewer">
+  <div class="page-header">
+    <div class="container">
+      <h1>Recent Reviews</h1>
+      <div class="subtitle">AI-generated reviews of trending papers</div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="content" id="review-list">
+      <p class="loading">Loading...</p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { dataClient } from '../lib/data-client';
+  import type { LatestReviewEntry } from '../lib/types';
+
+  function escapeHtml(s: string): string {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderItem(r: LatestReviewEntry, i: number): string {
+    const pct = Math.round((r.score / 10) * 100);
+    return `
+      <li class="paper-item">
+        <span class="paper-number">${i + 1}.</span>
+        <a class="paper-title" href="/review/?id=${encodeURIComponent(r.id)}">${escapeHtml(r.title)}</a>
+        <div class="paper-meta">
+          <span class="tag tag-date">${r.date}</span>
+          <span class="score-display">
+            Score: <strong>${r.score.toFixed(1)}</strong>/10
+            <span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>
+          </span>
+        </div>
+        <div class="paper-summary">${escapeHtml(r.summary)}</div>
+      </li>
+    `;
+  }
+
+  async function main() {
+    const el = document.getElementById('review-list')!;
+    try {
+      const data = await dataClient.getLatest();
+      if (data.reviews.length === 0) {
+        el.innerHTML = '<p class="empty">No reviews yet.</p>';
+        return;
+      }
+      el.innerHTML = '<ul class="paper-list">' +
+        data.reviews.map((r, i) => renderItem(r, i)).join('') +
+        '</ul>';
+    } catch (e) {
+      el.innerHTML = `<p class="error">Failed to load: ${e instanceof Error ? e.message : e}</p>`;
+    }
+  }
+
+  main();
+</script>
