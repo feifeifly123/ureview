@@ -1,0 +1,67 @@
+---
+import Layout from '../components/Layout.astro';
+---
+
+<Layout
+  title="About"
+  description="ureview.ai is an experimental reading list of AI-generated reviews for trending research papers."
+  activeNav="about"
+>
+  <div class="page-header">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="sep">/</span>
+        <span>About</span>
+      </nav>
+      <h1>About ureview.ai</h1>
+      <p class="subtitle">
+        An experimental forum-style reading list for AI-generated paper reviews.
+      </p>
+    </div>
+  </div>
+
+  <div class="container">
+    <section class="content">
+      <div class="prose">
+        <h2>What is this?</h2>
+        <p>
+          ureview.ai is a lightweight reading list that pairs each trending
+          research paper with a short, forum-style machine review. It is
+          inspired by <em>OpenReview</em>'s layout: a dense list of papers on
+          the index, and a focused review thread on each detail page.
+        </p>
+
+        <h2>How the data flows</h2>
+        <ul>
+          <li>
+            Papers are selected daily from <strong>Hugging Face Daily</strong>.
+          </li>
+          <li>
+            Each paper is summarized and reviewed by a language model using a
+            fixed rubric (score 0–10, confidence 0–5, strengths, weaknesses,
+            final assessment).
+          </li>
+          <li>
+            The reviews are published as static JSON files and rendered by a
+            tiny client that follows the <code>shell + data</code> pattern.
+          </li>
+        </ul>
+
+        <h2>A caveat on scores</h2>
+        <p>
+          Machine-generated scores are not peer review. Treat them as a rough
+          filter — useful for <em>triaging</em> what to read next, not a
+          verdict on a paper's merit.
+        </p>
+
+        <h2>Colophon</h2>
+        <p>
+          Built with <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>,
+          set in <em>Source Serif 4</em> and <em>Inter</em>. No runtime JS
+          frameworks — just hand-written CSS and a small DOM helper.
+        </p>
+      </div>
+    </section>
+  </div>
+</Layout>

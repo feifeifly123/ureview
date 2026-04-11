@@ -2,110 +2,121 @@
 import Layout from '../components/Layout.astro';
 ---
 
-<Layout title="Review">
+<Layout
+  title="Review"
+  description="AI-generated review of a research paper."
+>
   <div class="container">
-    <div class="content" id="review-detail">
-      <p class="loading">Loading...</p>
-    </div>
+    <article class="content" id="review-detail">
+      <div class="state loading">
+        <strong>Loading review</strong>
+      </div>
+    </article>
   </div>
 </Layout>
 
 <script>
   import { dataClient } from '../lib/data-client';
+  import { el, mount } from '../lib/dom';
+  import { reviewBlock, stateView } from '../lib/render';
+  import { formatDate } from '../lib/utils';
   import type { Review } from '../lib/types';
 
-  function escapeHtml(s: string): string {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+  function buildHeader(r: Review): HTMLElement {
+    const dateStr = formatDate(r.date);
+    const reviewUrl = `/day/?date=${encodeURIComponent(r.date)}`;
+
+    const breadcrumb = el('nav', { class: 'breadcrumb', 'aria-label': 'Breadcrumb' }, [
+      el('a', { href: '/' }, 'Home'),
+      el('span', { class: 'sep' }, '/'),
+      el('a', { href: reviewUrl }, dateStr),
+      el('span', { class: 'sep' }, '/'),
+      el('span', {}, 'Review'),
+    ]);
+
+    const meta =
+      r.hf_rank != null
+        ? el('div', { class: 'forum-meta' }, [
+            el('span', { class: 'tag tag-rank' }, `HF Daily #${r.hf_rank}`),
+          ])
+        : null;
+
+    const copyBtn = el(
+      'button',
+      { class: 'btn', type: 'button', 'aria-label': 'Copy link' },
+      'Copy link'
+    );
+    let restoreT: number | undefined;
+    copyBtn.addEventListener('click', async () => {
+      if (restoreT) {
+        clearTimeout(restoreT);
+        restoreT = undefined;
+      }
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        copyBtn.textContent = 'Copied ✓';
+      } catch {
+        copyBtn.textContent = 'Copy failed';
+      }
+      restoreT = window.setTimeout(() => {
+        copyBtn.textContent = 'Copy link';
+        restoreT = undefined;
+      }, 1400);
+    });
+
+    const actions = el('div', { class: 'forum-actions' }, [
+      el(
+        'a',
+        {
+          class: 'btn btn-primary',
+          href: r.paper_url,
+          target: '_blank',
+          rel: 'noopener',
+        },
+        'Read PDF →'
+      ),
+      el('a', { class: 'btn', href: reviewUrl }, `Browse ${dateStr}`),
+      copyBtn,
+    ]);
+
+    return el('header', { class: 'forum-header fade-in' }, [
+      breadcrumb,
+      el('h1', { class: 'forum-title' }, r.title),
+      meta,
+      actions,
+    ]);
   }
 
-  function renderReview(r: Review): string {
-    const scorePct = Math.round((r.review.score / 10) * 100);
-    const confPct = Math.round((r.review.confidence / 5) * 100);
-    const strengths = r.review.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('');
-    const weaknesses = r.review.weaknesses.map(s => `<li>${escapeHtml(s)}</li>`).join('');
-
-    return `
-      <div class="forum-header">
-        <h1 class="forum-title">${escapeHtml(r.title)}</h1>
-        <div class="forum-meta">
-          <span class="tag tag-date">${r.date}</span>
-          ${r.hf_rank ? `<span class="tag tag-rank">HF Daily #${r.hf_rank}</span>` : ''}
-        </div>
-        <div class="forum-actions">
-          <a class="btn" href="${escapeHtml(r.paper_url)}" target="_blank" rel="noopener">PDF</a>
-          <a class="btn" href="/day/?date=${r.date}">Browse ${r.date}</a>
-          <a class="btn" href="/">Back to list</a>
-        </div>
-      </div>
-
-      <div class="forum-note">
-        <div class="note-heading">Abstract</div>
-        <div class="note-content">
-          <p>${escapeHtml(r.summary)}</p>
-        </div>
-      </div>
-
-      <div class="review-block">
-        <div class="review-block-header">
-          <span class="reviewer-label">AutoReviewer</span>
-          <span class="review-tags">
-            <span class="tag tag-score">Score: ${r.review.score.toFixed(1)}/10</span>
-            <span class="tag tag-confidence">Confidence: ${r.review.confidence}/5</span>
-          </span>
-        </div>
-        <div class="review-block-body">
-          <div class="review-field">
-            <div class="review-field-label">Rating</div>
-            <div class="review-field-value">
-              <span class="score-display">
-                <strong>${r.review.score.toFixed(1)}</strong>/10
-                <span class="score-bar"><span class="score-bar-fill" style="width:${scorePct}%"></span></span>
-              </span>
-              &nbsp;&nbsp;
-              <span class="score-display">
-                Confidence: <strong>${r.review.confidence}</strong>/5
-                <span class="score-bar"><span class="score-bar-fill" style="width:${confPct}%;background:#2196f3"></span></span>
-              </span>
-            </div>
-          </div>
-
-          <div class="review-field">
-            <div class="review-field-label">Strengths</div>
-            <div class="review-field-value"><ul>${strengths}</ul></div>
-          </div>
-
-          <div class="review-field">
-            <div class="review-field-label">Weaknesses</div>
-            <div class="review-field-value"><ul>${weaknesses}</ul></div>
-          </div>
-
-          <div class="review-field">
-            <div class="review-field-label">Overall Assessment</div>
-            <div class="review-field-value">${escapeHtml(r.review.final_comment)}</div>
-          </div>
-        </div>
-      </div>
-    `;
+  function buildAbstract(r: Review): HTMLElement {
+    return el('section', { class: 'forum-note' }, [
+      el('div', { class: 'note-heading' }, 'Abstract'),
+      el('div', { class: 'note-content' }, el('p', {}, r.summary)),
+    ]);
   }
 
   async function main() {
-    const el = document.getElementById('review-detail')!;
+    const container = document.getElementById('review-detail')!;
     const id = new URLSearchParams(window.location.search).get('id');
 
     if (!id) {
-      el.innerHTML = '<p class="error">Missing review ID.</p>';
+      mount(container, stateView('error', 'Missing review ID', 'No ?id= parameter supplied.'));
       return;
     }
 
+    let review: Review;
     try {
-      const review = await dataClient.getReview(id);
-      document.title = `${review.title} | AutoReviewer`;
-      el.innerHTML = renderReview(review);
+      review = await dataClient.getReview(id);
     } catch (e) {
-      el.innerHTML = `<p class="error">Failed to load: ${e instanceof Error ? e.message : e}</p>`;
+      mount(
+        container,
+        stateView('error', 'Failed to load review', e instanceof Error ? e.message : String(e))
+      );
+      return;
     }
+
+    document.title = `${review.title} — ureview.ai`;
+
+    mount(container, buildHeader(review), buildAbstract(review), reviewBlock(review.review));
   }
 
   main();

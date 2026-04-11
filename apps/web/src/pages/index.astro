@@ -2,62 +2,121 @@
 import Layout from '../components/Layout.astro';
 ---
 
-<Layout title="AutoReviewer">
+<Layout
+  title="ureview.ai"
+  description="AI-generated reviews of trending research papers — a Forum-style reading list."
+  activeNav="home"
+>
   <div class="page-header">
     <div class="container">
       <h1>Recent Reviews</h1>
-      <div class="subtitle">AI-generated reviews of trending papers</div>
+      <p class="subtitle">
+        A curated reading list of recent research papers, each paired with a
+        forum-style machine review.
+      </p>
+      <div class="toolbar">
+        <span class="count-chip" id="count-chip"></span>
+        <label class="sort-control">
+          Sort
+          <select id="sort-select">
+            <option value="score-desc">Score (high → low)</option>
+            <option value="date-desc">Date (newest)</option>
+            <option value="score-asc">Score (low → high)</option>
+          </select>
+        </label>
+      </div>
     </div>
   </div>
+
   <div class="container">
     <div class="content" id="review-list">
-      <p class="loading">Loading...</p>
+      <ul class="skeleton-list">
+        <li class="skeleton-item">
+          <div class="skeleton-line lg"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line sm"></div>
+        </li>
+        <li class="skeleton-item">
+          <div class="skeleton-line lg"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line sm"></div>
+        </li>
+        <li class="skeleton-item">
+          <div class="skeleton-line lg"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line sm"></div>
+        </li>
+      </ul>
     </div>
   </div>
 </Layout>
 
 <script>
   import { dataClient } from '../lib/data-client';
+  import { el, mount } from '../lib/dom';
+  import { paperItem, stateView } from '../lib/render';
   import type { LatestReviewEntry } from '../lib/types';
 
-  function escapeHtml(s: string): string {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+  type SortKey = 'score-desc' | 'date-desc' | 'score-asc';
+
+  function sortReviews(arr: LatestReviewEntry[], key: SortKey): LatestReviewEntry[] {
+    const copy = arr.slice();
+    switch (key) {
+      case 'score-desc':
+        return copy.sort((a, b) => b.score - a.score);
+      case 'score-asc':
+        return copy.sort((a, b) => a.score - b.score);
+      case 'date-desc':
+        return copy.sort((a, b) => b.date.localeCompare(a.date));
+    }
   }
 
-  function renderItem(r: LatestReviewEntry, i: number): string {
-    const pct = Math.round((r.score / 10) * 100);
-    return `
-      <li class="paper-item">
-        <span class="paper-number">${i + 1}.</span>
-        <a class="paper-title" href="/review/?id=${encodeURIComponent(r.id)}">${escapeHtml(r.title)}</a>
-        <div class="paper-meta">
-          <span class="tag tag-date">${r.date}</span>
-          <span class="score-display">
-            Score: <strong>${r.score.toFixed(1)}</strong>/10
-            <span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span>
-          </span>
-        </div>
-        <div class="paper-summary">${escapeHtml(r.summary)}</div>
-      </li>
-    `;
+  function renderList(container: Element, reviews: LatestReviewEntry[]) {
+    if (reviews.length === 0) {
+      mount(container, stateView('empty', 'No reviews yet', 'Check back soon.'));
+      return;
+    }
+    mount(
+      container,
+      el(
+        'ul',
+        { class: 'paper-list' },
+        reviews.map((r, i) => paperItem(r, i, { showDate: true }))
+      )
+    );
   }
 
   async function main() {
-    const el = document.getElementById('review-list')!;
+    const container = document.getElementById('review-list')!;
+    const countEl = document.getElementById('count-chip')!;
+    const sortEl = document.getElementById('sort-select') as HTMLSelectElement;
+
+    let data: LatestReviewEntry[] = [];
     try {
-      const data = await dataClient.getLatest();
-      if (data.reviews.length === 0) {
-        el.innerHTML = '<p class="empty">No reviews yet.</p>';
-        return;
-      }
-      el.innerHTML = '<ul class="paper-list">' +
-        data.reviews.map((r, i) => renderItem(r, i)).join('') +
-        '</ul>';
+      const res = await dataClient.getLatest();
+      data = res.reviews;
     } catch (e) {
-      el.innerHTML = `<p class="error">Failed to load: ${e instanceof Error ? e.message : e}</p>`;
+      mount(
+        container,
+        stateView('error', 'Failed to load', e instanceof Error ? e.message : String(e))
+      );
+      return;
     }
+
+    mount(
+      countEl,
+      el('strong', {}, String(data.length)),
+      ` paper${data.length === 1 ? '' : 's'}`
+    );
+
+    let currentSort: SortKey = 'score-desc';
+    const update = () => renderList(container, sortReviews(data, currentSort));
+    update();
+
+    sortEl.addEventListener('change', () => {
+      currentSort = sortEl.value as SortKey;
+      update();
+    });
   }
 
   main();
