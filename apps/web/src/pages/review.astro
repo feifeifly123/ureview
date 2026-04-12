@@ -18,7 +18,7 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { reviewBlock, stateView } from '../lib/render';
+  import { reviewBlock, responseTimeline, responseBlock, stateView } from '../lib/render';
   import { formatDate } from '../lib/utils';
   import type { Review } from '../lib/types';
 
@@ -104,8 +104,12 @@ import Layout from '../components/Layout.astro';
     }
 
     let review: Review;
+    let response;
     try {
-      review = await dataClient.getReview(id);
+      [review, response] = await Promise.all([
+        dataClient.getReview(id),
+        dataClient.getResponse(id),
+      ]);
     } catch (e) {
       mount(
         container,
@@ -116,7 +120,15 @@ import Layout from '../components/Layout.astro';
 
     document.title = `${review.title} — ureview.ai`;
 
-    mount(container, buildHeader(review), buildAbstract(review), reviewBlock(review.review));
+    const nodes: (Node | string)[] = [
+      buildHeader(review),
+      buildAbstract(review),
+      reviewBlock(review.review),
+    ];
+    if (response) {
+      nodes.push(responseTimeline(), responseBlock(response));
+    }
+    mount(container, ...nodes);
   }
 
   main();

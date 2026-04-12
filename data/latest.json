@@ -1,19 +1,20 @@
 {
-  "generated_at": "2026-04-09T10:30:00+08:00",
+  "generated_at": "2026-04-12T06:19:18.050596+00:00",
   "reviews": [
-    {
-      "id": "2026-04-09-paper-a",
-      "date": "2026-04-09",
-      "title": "Scaling Laws for Neural Language Models",
-      "summary": "本文研究了神经语言模型性能与模型大小、数据集大小和训练计算量之间的幂律关系。",
-      "score": 7.5
-    },
     {
       "id": "2026-04-09-paper-b",
       "date": "2026-04-09",
       "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
       "summary": "本文提出了思维链提示方法，通过在少样本示例中加入中间推理步骤来提升大语言模型的复杂推理能力。",
       "score": 6.0
+    },
+    {
+      "id": "2026-04-09-paper-a",
+      "date": "2026-04-09",
+      "title": "Scaling Laws for Neural Language Models",
+      "summary": "本文研究了神经语言模型性能与模型大小、数据集大小和训练计算量之间的幂律关系。",
+      "score": 7.5,
+      "has_response": true
     }
   ]
 }

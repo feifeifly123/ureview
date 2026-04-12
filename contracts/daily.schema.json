@@ -16,7 +16,8 @@
           "title": { "type": "string" },
           "summary": { "type": "string" },
           "score": { "type": "number" },
-          "hf_rank": { "type": "integer" }
+          "hf_rank": { "type": "integer" },
+          "has_response": { "type": "boolean" }
         },
         "additionalProperties": false
       }

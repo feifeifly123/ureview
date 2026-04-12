@@ -3,7 +3,7 @@
 
 import { el } from './dom';
 import { formatDate, formatScore, scoreToColor } from './utils';
-import type { ReviewDetail } from './types';
+import type { ReviewDetail, AuthorResponse } from './types';
 
 type PaperLike = {
   id: string;
@@ -12,6 +12,7 @@ type PaperLike = {
   score: number;
   date?: string;
   hf_rank?: number;
+  has_response?: boolean;
 };
 
 /** Score badge: big number + 10 cells. `size` controls visual weight. */
@@ -62,6 +63,9 @@ export function paperItem(
   if (r.hf_rank != null) {
     meta.push(el('span', { class: 'tag tag-rank' }, `HF #${r.hf_rank}`));
   }
+  if (r.has_response) {
+    meta.push(el('span', { class: 'tag tag-response' }, 'Author reply'));
+  }
   if (opts.showDate && r.date) {
     meta.push(el('span', { class: 'tag-date' }, formatDate(r.date)));
   }
@@ -101,6 +105,40 @@ export function stateView(
   return el('div', { class: `state ${variant}` }, [
     el('strong', {}, title),
     message ? el('span', {}, message) : null,
+  ]);
+}
+
+/** Vertical timeline connector between review and author response. */
+export function responseTimeline(): HTMLElement {
+  return el('div', { class: 'response-timeline' }, [
+    el('span', { class: 'timeline-dot' }),
+    el('span', { class: 'timeline-label' }, 'Author Response'),
+  ]);
+}
+
+/** Author response card, visually parallels reviewBlock. */
+export function responseBlock(resp: AuthorResponse): HTMLElement {
+  const dateStr = resp.submitted_at.length >= 10
+    ? formatDate(resp.submitted_at.slice(0, 10))
+    : resp.submitted_at;
+
+  return el('div', { class: 'response-block fade-in' }, [
+    el('div', { class: 'response-block-header' }, [
+      el('div', { class: 'reviewer-identity' }, [
+        el('span', { class: 'reviewer-avatar reviewer-avatar--author' }, 'A'),
+        el('div', { class: 'reviewer-text' }, [
+          el('div', { class: 'reviewer-name' }, resp.author_name),
+          el('div', { class: 'reviewer-sub' }, `Responded ${dateStr}`),
+        ]),
+      ]),
+    ]),
+    el('div', { class: 'response-block-body' }, [
+      el(
+        'div',
+        { class: 'response-content' },
+        resp.content.split('\n\n').map((para) => el('p', {}, para))
+      ),
+    ]),
   ]);
 }
 

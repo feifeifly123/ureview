@@ -38,6 +38,13 @@ def main() -> int:
         print("没有找到任何 review 文件")
         return 1
 
+    # 扫描 responses 目录获取已回应的 paper id
+    responses_dir = DATA / "responses"
+    response_ids: set[str] = set()
+    if responses_dir.exists():
+        for f in responses_dir.glob("*.json"):
+            response_ids.add(f.stem)
+
     # 按日期分组
     by_date: dict[str, list[dict]] = defaultdict(list)
     for r in reviews:
@@ -55,6 +62,7 @@ def main() -> int:
                     "summary": r["summary"],
                     "score": r["review"]["score"],
                     **({"hf_rank": r["hf_rank"]} if "hf_rank" in r else {}),
+                    **({"has_response": True} if r["id"] in response_ids else {}),
                 }
                 for r in items
             ],
@@ -72,6 +80,7 @@ def main() -> int:
                 "title": r["title"],
                 "summary": r["summary"],
                 "score": r["review"]["score"],
+                **({"has_response": True} if r["id"] in response_ids else {}),
             }
             for r in reviews[:50]
         ],

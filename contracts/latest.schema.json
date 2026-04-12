@@ -16,7 +16,8 @@
           "date": { "type": "string", "format": "date" },
           "title": { "type": "string" },
           "summary": { "type": "string" },
-          "score": { "type": "number" }
+          "score": { "type": "number" },
+          "has_response": { "type": "boolean" }
         },
         "additionalProperties": false
       }

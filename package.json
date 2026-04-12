@@ -9,7 +9,8 @@
     "check:data": "python3 tools/validate_data.py",
     "build:indexes": "python3 tools/build_indexes.py",
     "publish:data:stage": "python3 tools/publish_r2.py --stage",
-    "publish:data:prod": "python3 tools/publish_r2.py --prod"
+    "publish:data:prod": "python3 tools/publish_r2.py --prod",
+    "dev:author": "pnpm --filter @autoreviewer/author dev"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

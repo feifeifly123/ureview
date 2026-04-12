@@ -6,7 +6,8 @@
       "title": "Scaling Laws for Neural Language Models",
       "summary": "本文研究了神经语言模型性能与模型大小、数据集大小和训练计算量之间的幂律关系。",
       "score": 7.5,
-      "hf_rank": 1
+      "hf_rank": 1,
+      "has_response": true
     },
     {
       "id": "2026-04-09-paper-b",

@@ -29,6 +29,7 @@ export interface LatestReviewEntry {
   title: string;
   summary: string;
   score: number;
+  has_response?: boolean;
 }
 
 export interface DailyIndex {
@@ -42,4 +43,12 @@ export interface DailyReviewEntry {
   summary: string;
   score: number;
   hf_rank?: number;
+  has_response?: boolean;
+}
+
+export interface AuthorResponse {
+  paper_id: string;
+  author_name: string;
+  content: string;
+  submitted_at: string;
 }

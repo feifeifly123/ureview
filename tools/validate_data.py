@@ -78,6 +78,24 @@ def main() -> int:
                     errors.append(msg)
                     print(f" FAIL {msg}")
 
+    # 校验 responses/*.json
+    response_schema = load_json(CONTRACTS / "author-response.schema.json")
+    responses_dir = DATA / "responses"
+    if responses_dir.exists():
+        for f in sorted(responses_dir.glob("*.json")):
+            data = load_json(f)
+            try:
+                validate(instance=data, schema=response_schema)
+                if data["paper_id"] not in review_ids:
+                    msg = f"{f.name} 引用了不存在的 review: {data['paper_id']}"
+                    errors.append(msg)
+                    print(f" FAIL {msg}")
+                else:
+                    print(f"  OK  {f.relative_to(ROOT)}")
+            except ValidationError as e:
+                errors.append(f"{f.relative_to(ROOT)}: {e.message}")
+                print(f" FAIL {f.relative_to(ROOT)}: {e.message}")
+
     if errors:
         print(f"\n校验失败: {len(errors)} 个错误")
         return 1

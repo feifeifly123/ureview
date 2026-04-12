@@ -47,11 +47,14 @@ def main() -> int:
         region_name="auto",
     )
 
-    # 先上传单篇 review，再上传索引
+    # 先上传数据文件，再上传索引（索引引用 responses，所以 responses 要先传）
     upload_order = []
     reviews_dir = DATA / "reviews"
     if reviews_dir.exists():
         upload_order.extend(sorted(reviews_dir.glob("*.json")))
+    responses_dir = DATA / "responses"
+    if responses_dir.exists():
+        upload_order.extend(sorted(responses_dir.glob("*.json")))
     daily_dir = DATA / "daily"
     if daily_dir.exists():
         upload_order.extend(sorted(daily_dir.glob("*.json")))
