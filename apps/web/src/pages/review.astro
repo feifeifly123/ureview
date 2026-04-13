@@ -18,53 +18,32 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { reviewBlock, responseTimeline, responseBlock, stateView } from '../lib/render';
+  import { threadBlock, buildReviewBody, buildParagraphs, stateView } from '../lib/render';
   import { formatDate } from '../lib/utils';
-  import type { Review } from '../lib/types';
+  import type { Review, ThreadData } from '../lib/types';
 
+  const BADGE_LABELS: Record<string, string> = {
+    review: 'Official Review',
+    rebuttal: 'Rebuttal',
+    acknowledgement: 'Rebuttal Acknowledgement',
+    reply_comment: 'Reply Rebuttal Comment',
+  };
+
+  /** OpenReview-style paper header. */
   function buildHeader(r: Review): HTMLElement {
     const dateStr = formatDate(r.date);
-    const reviewUrl = `/day/?date=${encodeURIComponent(r.date)}`;
 
-    const breadcrumb = el('nav', { class: 'breadcrumb', 'aria-label': 'Breadcrumb' }, [
-      el('a', { href: '/' }, 'Home'),
-      el('span', { class: 'sep' }, '/'),
-      el('a', { href: reviewUrl }, dateStr),
-      el('span', { class: 'sep' }, '/'),
-      el('span', {}, 'Review'),
-    ]);
+    const metaItems: (Node | string)[] = [
+      el('span', {}, `${dateStr}`),
+    ];
+    if (r.hf_rank != null) {
+      metaItems.push(
+        el('span', { class: 'or-meta-sep' }, '\u00B7'),
+        el('span', {}, `HF Daily #${r.hf_rank}`)
+      );
+    }
 
-    const meta =
-      r.hf_rank != null
-        ? el('div', { class: 'forum-meta' }, [
-            el('span', { class: 'tag tag-rank' }, `HF Daily #${r.hf_rank}`),
-          ])
-        : null;
-
-    const copyBtn = el(
-      'button',
-      { class: 'btn', type: 'button', 'aria-label': 'Copy link' },
-      'Copy link'
-    );
-    let restoreT: number | undefined;
-    copyBtn.addEventListener('click', async () => {
-      if (restoreT) {
-        clearTimeout(restoreT);
-        restoreT = undefined;
-      }
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        copyBtn.textContent = 'Copied ✓';
-      } catch {
-        copyBtn.textContent = 'Copy failed';
-      }
-      restoreT = window.setTimeout(() => {
-        copyBtn.textContent = 'Copy link';
-        restoreT = undefined;
-      }, 1400);
-    });
-
-    const actions = el('div', { class: 'forum-actions' }, [
+    const actions = el('div', { class: 'or-paper-actions' }, [
       el(
         'a',
         {
@@ -73,24 +52,19 @@ import Layout from '../components/Layout.astro';
           target: '_blank',
           rel: 'noopener',
         },
-        'Read PDF →'
+        'Read PDF \u2192'
       ),
-      el('a', { class: 'btn', href: reviewUrl }, `Browse ${dateStr}`),
-      copyBtn,
+      el('a', { class: 'btn', href: `/day/?date=${encodeURIComponent(r.date)}` }, `Browse ${dateStr}`),
     ]);
 
-    return el('header', { class: 'forum-header fade-in' }, [
-      breadcrumb,
-      el('h1', { class: 'forum-title' }, r.title),
-      meta,
+    return el('header', { class: 'or-paper-header fade-in' }, [
+      el('h1', { class: 'or-paper-title' }, r.title),
+      el('div', { class: 'or-paper-meta' }, metaItems),
+      el('div', { class: 'or-paper-section' }, [
+        el('span', { class: 'or-paper-label' }, 'Abstract: '),
+        el('span', { class: 'or-paper-text' }, r.summary),
+      ]),
       actions,
-    ]);
-  }
-
-  function buildAbstract(r: Review): HTMLElement {
-    return el('section', { class: 'forum-note' }, [
-      el('div', { class: 'note-heading' }, 'Abstract'),
-      el('div', { class: 'note-content' }, el('p', {}, r.summary)),
     ]);
   }
 
@@ -104,11 +78,11 @@ import Layout from '../components/Layout.astro';
     }
 
     let review: Review;
-    let response;
+    let threadData: ThreadData | null;
     try {
-      [review, response] = await Promise.all([
+      [review, threadData] = await Promise.all([
         dataClient.getReview(id),
-        dataClient.getResponse(id),
+        dataClient.getThread(id),
       ]);
     } catch (e) {
       mount(
@@ -118,17 +92,47 @@ import Layout from '../components/Layout.astro';
       return;
     }
 
-    document.title = `${review.title} — ureview.ai`;
+    document.title = `${review.title} — Ureview.ai`;
 
-    const nodes: (Node | string)[] = [
-      buildHeader(review),
-      buildAbstract(review),
-      reviewBlock(review.review),
-    ];
-    if (response) {
-      nodes.push(responseTimeline(), responseBlock(response));
+    // First thread entry: Official Review
+    const reviewEntry = threadBlock({
+      type: 'review',
+      title: `Official Review by Ureview.ai Agent`,
+      byLine: 'by Ureview.ai Agent',
+      date: review.updated_at,
+      body: buildReviewBody(review.review),
+    });
+
+    // Subsequent thread entries
+    const threadNodes: HTMLElement[] = [];
+    const parentLabels = ['Official Review by Ureview.ai Agent'];
+
+    if (threadData && threadData.thread.length > 0) {
+      for (const entry of threadData.thread) {
+        const parentLabel = parentLabels[parentLabels.length - 1];
+        const isAgent = entry.type === 'acknowledgement';
+        const byName = isAgent ? 'Ureview.ai Agent' : (entry.author_name ?? 'Authors');
+        const badgeLabel = BADGE_LABELS[entry.type] ?? entry.type;
+        const title = `${badgeLabel} by ${byName}`;
+
+        threadNodes.push(
+          threadBlock({
+            type: entry.type,
+            title,
+            byLine: `by ${byName}`,
+            date: entry.submitted_at,
+            replyTo: parentLabel,
+            body: buildParagraphs(entry.content, entry.type),
+          })
+        );
+
+        parentLabels.push(title);
+      }
     }
-    mount(container, ...nodes);
+
+    const thread = el('div', { class: 'or-thread' }, [reviewEntry, ...threadNodes]);
+
+    mount(container, buildHeader(review), thread);
   }
 
   main();

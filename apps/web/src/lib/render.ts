@@ -2,8 +2,8 @@
 // Kept purely in TS so pages can `import { ... }` and compose.
 
 import { el } from './dom';
-import { formatDate, formatScore, scoreToColor } from './utils';
-import type { ReviewDetail, AuthorResponse } from './types';
+import { formatDate, formatScore, scoreToColor, relativeTime } from './utils';
+import type { ReviewDetail, AuthorResponse, ThreadEntry } from './types';
 
 type PaperLike = {
   id: string;
@@ -96,6 +96,43 @@ export function paperItem(
   ]);
 }
 
+/** Status badge for paper cards on the homepage. */
+export function statusBadge(hasResponse: boolean): HTMLElement {
+  const text = hasResponse ? 'AUTHOR RESPONSE PUBLISHED' : 'AWAITING AUTHOR RESPONSE';
+  const cls = hasResponse ? 'status-badge status-badge--green' : 'status-badge status-badge--amber';
+  return el('span', { class: cls }, text);
+}
+
+/** Card component for the redesigned homepage. */
+export function paperCard(r: PaperLike): HTMLElement {
+  const linkText = r.has_response ? 'Read response \u2192' : 'View review \u2192';
+
+  return el('div', { class: 'paper-card fade-in' }, [
+    statusBadge(!!r.has_response),
+    el('a', {
+      class: 'card-title',
+      href: `/review/?id=${encodeURIComponent(r.id)}`,
+    }, r.title),
+    el('div', { class: 'score-bar-row' }, [
+      el('span', { class: 'score-bar-label' }, `AI Score: ${formatScore(r.score)} / 10`),
+      el('div', { class: 'score-bar-track' }, [
+        el('div', {
+          class: 'score-bar-fill',
+          style: `width: ${Math.max(0, Math.min(100, r.score * 10))}%; background: ${scoreToColor(r.score)}`,
+        }),
+      ]),
+    ]),
+    el('p', { class: 'card-summary' }, r.summary),
+    el('div', { class: 'card-footer' }, [
+      el('a', {
+        class: 'card-link',
+        href: `/review/?id=${encodeURIComponent(r.id)}`,
+      }, linkText),
+      r.date ? el('span', { class: 'card-time' }, relativeTime(r.date)) : null,
+    ]),
+  ]);
+}
+
 /** Unified state block (loading / error / empty). */
 export function stateView(
   variant: 'loading' | 'error' | 'empty',
@@ -142,6 +179,109 @@ export function responseBlock(resp: AuthorResponse): HTMLElement {
   ]);
 }
 
+// ---------------------------------------------------------------------------
+// OpenReview 1:1 replica — thread components
+// ---------------------------------------------------------------------------
+
+const BADGE_LABELS: Record<string, string> = {
+  review: 'Official Review',
+  rebuttal: 'Rebuttal',
+  acknowledgement: 'Rebuttal Acknowledgement',
+  reply_comment: 'Reply Rebuttal Comment',
+};
+
+const CONTENT_LABELS: Record<string, string> = {
+  rebuttal: 'Rebuttal:',
+  acknowledgement: 'Acknowledgement:',
+  reply_comment: 'Comment:',
+};
+
+/** Build paragraph elements from content string. Prepend a colored label if applicable. */
+export function buildParagraphs(content: string, type?: string): HTMLElement {
+  const paragraphs = content.split('\n\n').map((para) => el('p', {}, para));
+  const label = type && CONTENT_LABELS[type]
+    ? el('span', { class: 'or-content-label' }, CONTENT_LABELS[type])
+    : null;
+  return el('div', { class: 'or-note-content' }, [label, ...paragraphs]);
+}
+
+/** Build the AI review body for the thread view. */
+export function buildReviewBody(review: ReviewDetail): HTMLElement {
+  const { score, confidence, strengths, weaknesses, final_comment } = review;
+
+  return el('div', { class: 'or-note-content' }, [
+    el('span', { class: 'or-content-label' }, 'Summary:'),
+    el('div', { class: 'review-field' }, [
+      el('div', { class: 'review-field-label' }, 'Rating'),
+      el('div', { class: 'rating-row' }, [
+        el('div', { class: 'rating-col' }, [
+          el('div', { class: 'rating-col-label' }, 'Score'),
+          scoreBadge(score, 'lg'),
+        ]),
+        el('div', { class: 'rating-col' }, [
+          el('div', { class: 'rating-col-label' }, 'Confidence'),
+          dotScale(confidence, 5, `${confidence}/5`),
+        ]),
+      ]),
+    ]),
+    el('div', { class: 'review-field' }, [
+      el('div', { class: 'review-field-label' }, 'Strengths'),
+      el(
+        'ul',
+        { class: 'review-field-value' },
+        strengths.map((s) => el('li', {}, s))
+      ),
+    ]),
+    el('div', { class: 'review-field' }, [
+      el('div', { class: 'review-field-label' }, 'Weaknesses'),
+      el(
+        'ul',
+        { class: 'review-field-value' },
+        weaknesses.map((s) => el('li', {}, s))
+      ),
+    ]),
+    el('div', { class: 'review-field' }, [
+      el('div', { class: 'review-field-label' }, 'Overall Assessment'),
+      el('div', { class: 'review-field-value' }, final_comment),
+    ]),
+  ]);
+}
+
+/** OpenReview-style thread entry block. */
+export function threadBlock(opts: {
+  type: string;
+  title: string;
+  byLine: string;
+  date: string;
+  replyTo?: string;
+  body: HTMLElement;
+}): HTMLElement {
+  const dateStr = opts.date.length >= 10
+    ? formatDate(opts.date.slice(0, 10))
+    : opts.date;
+
+  const badgeLabel = BADGE_LABELS[opts.type] ?? opts.type;
+
+  const replyEl = opts.replyTo
+    ? el('div', { class: 'or-reply-to' }, [
+        el('span', { class: 'or-reply-icon' }, '\u21B0'),
+        `Replying to ${opts.replyTo}`,
+      ])
+    : null;
+
+  return el('div', { class: 'or-entry fade-in' }, [
+    replyEl,
+    el('h4', { class: 'or-note-title' }, opts.title),
+    el('div', { class: 'or-note-meta' }, [
+      el('span', { class: `or-badge or-badge--${opts.type}` }, badgeLabel),
+      el('span', { class: 'or-meta-text' }, opts.byLine),
+      el('span', { class: 'or-meta-sep' }, '\u00B7'),
+      el('span', { class: 'or-meta-text' }, dateStr),
+    ]),
+    opts.body,
+  ]);
+}
+
 /** Full review-block panel (used by review.astro). */
 export function reviewBlock(review: ReviewDetail): HTMLElement {
   const { score, confidence, strengths, weaknesses, final_comment } = review;
@@ -151,7 +291,7 @@ export function reviewBlock(review: ReviewDetail): HTMLElement {
       el('div', { class: 'reviewer-identity' }, [
         el('span', { class: 'reviewer-avatar' }, 'U'),
         el('div', { class: 'reviewer-text' }, [
-          el('div', { class: 'reviewer-name' }, 'ureview.ai'),
+          el('div', { class: 'reviewer-name' }, 'Ureview.ai'),
           el('div', { class: 'reviewer-sub' }, 'AI-generated review'),
         ]),
       ]),

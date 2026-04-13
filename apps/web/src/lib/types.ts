@@ -52,3 +52,17 @@ export interface AuthorResponse {
   content: string;
   submitted_at: string;
 }
+
+export type ThreadEntryType = 'rebuttal' | 'acknowledgement' | 'reply_comment';
+
+export interface ThreadEntry {
+  type: ThreadEntryType;
+  author_name?: string;
+  content: string;
+  submitted_at: string;
+}
+
+export interface ThreadData {
+  paper_id: string;
+  thread: ThreadEntry[];
+}

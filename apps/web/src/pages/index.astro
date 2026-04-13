@@ -3,50 +3,96 @@ import Layout from '../components/Layout.astro';
 ---
 
 <Layout
-  title="ureview.ai"
-  description="AI-generated reviews of trending research papers — a Forum-style reading list."
+  title="Ureview.ai"
+  description="AI reviews for new papers, with invited author responses."
   activeNav="home"
 >
-  <div class="page-header">
+  <!-- Hero -->
+  <section class="hero">
     <div class="container">
-      <h1>Recent Reviews</h1>
-      <p class="subtitle">
-        A curated reading list of recent research papers, each paired with a
-        forum-style machine review.
+      <h1 class="hero-heading">
+        AI reviews for new papers, with invited author responses.
+      </h1>
+      <p class="hero-subtitle">
+        A public forum for AI-generated paper reviews, final author responses,
+        and public review threads.
       </p>
-      <div class="toolbar">
-        <span class="count-chip" id="count-chip"></span>
-        <label class="sort-control">
-          Sort
-          <select id="sort-select">
-            <option value="score-desc">Score (high → low)</option>
-            <option value="date-desc">Date (newest)</option>
-            <option value="score-asc">Score (low → high)</option>
-          </select>
-        </label>
-      </div>
+      <a href="#activity" class="btn-cta">Browse recent reviews</a>
+      <p class="hero-note">
+        Invited authors can respond through a private link sent by email.
+      </p>
+    </div>
+  </section>
+
+  <!-- Filter Tabs -->
+  <div class="container" id="activity">
+    <div class="filter-tabs" role="tablist" aria-label="Filter reviews">
+      <button class="filter-tab active" role="tab" aria-selected="true" data-filter="all">All</button>
+      <button class="filter-tab" role="tab" aria-selected="false" data-filter="needs-response">Needs Response</button>
+      <button class="filter-tab" role="tab" aria-selected="false" data-filter="responded">Author Responded</button>
+      <button class="filter-tab" role="tab" aria-selected="false" data-filter="recent">Recently Updated</button>
     </div>
   </div>
 
+  <!-- Two-column layout -->
   <div class="container">
-    <div class="content" id="review-list">
-      <ul class="skeleton-list">
-        <li class="skeleton-item">
-          <div class="skeleton-line lg"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line sm"></div>
-        </li>
-        <li class="skeleton-item">
-          <div class="skeleton-line lg"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line sm"></div>
-        </li>
-        <li class="skeleton-item">
-          <div class="skeleton-line lg"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line sm"></div>
-        </li>
-      </ul>
+    <div class="homepage-main">
+      <!-- Left: Recent Activity -->
+      <div class="activity-column">
+        <h2 class="section-heading">Recent Activity</h2>
+        <div id="activity-list">
+          <div class="paper-card skeleton-card">
+            <div class="skeleton-line lg"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line sm"></div>
+          </div>
+          <div class="paper-card skeleton-card">
+            <div class="skeleton-line lg"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line sm"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Sidebar -->
+      <aside class="sidebar-column">
+        <div class="sidebar-box" id="how-it-works">
+          <h3 class="sidebar-heading">How it works</h3>
+          <ol class="sidebar-steps">
+            <li>
+              <strong>New papers are reviewed by AI</strong>
+              <span>Trending papers receive an automated review with scores and analysis.</span>
+            </li>
+            <li>
+              <strong>Authors receive a private response link</strong>
+              <span>Paper authors are invited via email to submit a response.</span>
+            </li>
+            <li>
+              <strong>Authors submit a final response</strong>
+              <span>Authors can review the AI feedback and publish their reply.</span>
+            </li>
+            <li>
+              <strong>The public can read both sides</strong>
+              <span>Reviews and responses are published together as a public thread.</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="sidebar-box">
+          <h3 class="sidebar-heading">Why trust Ureview.ai</h3>
+          <p class="sidebar-text">
+            AI-generated scores are not peer review. They serve as a rough
+            triage filter. Author responses provide crucial context that
+            AI alone cannot capture. Final public threads give readers both
+            perspectives.
+          </p>
+        </div>
+
+        <div class="sidebar-box">
+          <h3 class="sidebar-heading">Recent author responses</h3>
+          <div id="recent-responses"></div>
+        </div>
+      </aside>
     </div>
   </div>
 </Layout>
@@ -54,42 +100,54 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { paperItem, stateView } from '../lib/render';
+  import { paperCard, stateView } from '../lib/render';
+  import { formatScore } from '../lib/utils';
   import type { LatestReviewEntry } from '../lib/types';
 
-  type SortKey = 'score-desc' | 'date-desc' | 'score-asc';
+  type FilterKey = 'all' | 'needs-response' | 'responded' | 'recent';
 
-  function sortReviews(arr: LatestReviewEntry[], key: SortKey): LatestReviewEntry[] {
-    const copy = arr.slice();
+  function filterReviews(arr: LatestReviewEntry[], key: FilterKey): LatestReviewEntry[] {
     switch (key) {
-      case 'score-desc':
-        return copy.sort((a, b) => b.score - a.score);
-      case 'score-asc':
-        return copy.sort((a, b) => a.score - b.score);
-      case 'date-desc':
-        return copy.sort((a, b) => b.date.localeCompare(a.date));
+      case 'all':
+        return arr;
+      case 'needs-response':
+        return arr.filter((r) => !r.has_response);
+      case 'responded':
+        return arr.filter((r) => r.has_response === true);
+      case 'recent':
+        return arr.slice().sort((a, b) => b.date.localeCompare(a.date));
     }
   }
 
-  function renderList(container: Element, reviews: LatestReviewEntry[]) {
+  function renderCards(container: Element, reviews: LatestReviewEntry[]) {
     if (reviews.length === 0) {
-      mount(container, stateView('empty', 'No reviews yet', 'Check back soon.'));
+      mount(container, stateView('empty', 'No reviews match', 'Try a different filter.'));
+      return;
+    }
+    mount(container, ...reviews.map((r) => paperCard(r)));
+  }
+
+  function renderResponsesSidebar(container: Element, reviews: LatestReviewEntry[]) {
+    const responded = reviews.filter((r) => r.has_response === true).slice(0, 4);
+    if (responded.length === 0) {
+      mount(container, el('p', { class: 'sidebar-text' }, 'No author responses yet.'));
       return;
     }
     mount(
       container,
-      el(
-        'ul',
-        { class: 'paper-list' },
-        reviews.map((r, i) => paperItem(r, i, { showDate: true }))
+      ...responded.map((r) =>
+        el('a', { class: 'response-compact', href: `/review/?id=${encodeURIComponent(r.id)}` }, [
+          el('span', { class: 'response-compact-title' }, r.title),
+          el('span', { class: 'response-compact-score' }, formatScore(r.score)),
+        ])
       )
     );
   }
 
   async function main() {
-    const container = document.getElementById('review-list')!;
-    const countEl = document.getElementById('count-chip')!;
-    const sortEl = document.getElementById('sort-select') as HTMLSelectElement;
+    const listContainer = document.getElementById('activity-list')!;
+    const responsesContainer = document.getElementById('recent-responses')!;
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.filter-tab');
 
     let data: LatestReviewEntry[] = [];
     try {
@@ -97,25 +155,28 @@ import Layout from '../components/Layout.astro';
       data = res.reviews;
     } catch (e) {
       mount(
-        container,
+        listContainer,
         stateView('error', 'Failed to load', e instanceof Error ? e.message : String(e))
       );
       return;
     }
 
-    mount(
-      countEl,
-      el('strong', {}, String(data.length)),
-      ` paper${data.length === 1 ? '' : 's'}`
-    );
-
-    let currentSort: SortKey = 'score-desc';
-    const update = () => renderList(container, sortReviews(data, currentSort));
+    let currentFilter: FilterKey = 'all';
+    const update = () => renderCards(listContainer, filterReviews(data, currentFilter));
     update();
+    renderResponsesSidebar(responsesContainer, data);
 
-    sortEl.addEventListener('change', () => {
-      currentSort = sortEl.value as SortKey;
-      update();
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        currentFilter = (tab.dataset.filter ?? 'all') as FilterKey;
+        update();
+      });
     });
   }
 

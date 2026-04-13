@@ -1,15 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "author-response.schema.json",
-  "title": "AuthorResponse",
+  "title": "ThreadData",
   "type": "object",
-  "required": ["paper_id", "author_name", "author_email", "content", "submitted_at"],
+  "required": ["paper_id", "thread"],
   "properties": {
     "paper_id": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}-.+" },
-    "author_name": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "author_email": { "type": "string", "format": "email" },
-    "content": { "type": "string", "minLength": 1, "maxLength": 10000 },
-    "submitted_at": { "type": "string", "format": "date-time" }
+    "thread": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "content", "submitted_at"],
+        "properties": {
+          "type": { "type": "string", "enum": ["rebuttal", "acknowledgement", "reply_comment"] },
+          "author_name": { "type": "string", "maxLength": 200 },
+          "author_email": { "type": "string", "format": "email" },
+          "content": { "type": "string", "maxLength": 10000 },
+          "submitted_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "additionalProperties": false
 }

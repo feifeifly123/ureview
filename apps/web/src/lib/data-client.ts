@@ -1,4 +1,4 @@
-import type { LatestIndex, Review, DailyIndex, AuthorResponse } from './types';
+import type { LatestIndex, Review, DailyIndex, ThreadData } from './types';
 
 const DATA_BASE = import.meta.env.PUBLIC_DATA_BASE ?? '/data';
 
@@ -13,11 +13,11 @@ export const dataClient = {
   getLatest: () => fetchJSON<LatestIndex>('/latest.json'),
   getReview: (id: string) => fetchJSON<Review>(`/reviews/${id}.json`),
   getDaily: (date: string) => fetchJSON<DailyIndex>(`/daily/${date}.json`),
-  getResponse: async (paperId: string): Promise<AuthorResponse | null> => {
+  getThread: async (paperId: string): Promise<ThreadData | null> => {
     const url = `${DATA_BASE}/responses/${paperId}.json`;
     const res = await fetch(url);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`fetch ${url}: ${res.status}`);
-    return res.json() as Promise<AuthorResponse>;
+    return res.json() as Promise<ThreadData>;
   },
 };

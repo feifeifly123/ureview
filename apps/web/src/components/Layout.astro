@@ -2,16 +2,17 @@
 interface Props {
   title?: string;
   description?: string;
-  activeNav?: 'home' | 'about' | null;
+  activeNav?: 'home' | 'about' | 'how-it-works' | null;
 }
 
 const {
-  title = 'ureview.ai',
+  title = 'Ureview.ai',
   description = 'AI-generated reviews of trending research papers.',
   activeNav = null,
 } = Astro.props;
 
-const fullTitle = title === 'ureview.ai' ? title : `${title} — ureview.ai`;
+const fullTitle = title === 'Ureview.ai' ? title : `${title} — Ureview.ai`;
+const authorUrl = import.meta.env.PUBLIC_AUTHOR_URL ?? '/author/';
 
 // Trim font weights to what the stylesheet actually references:
 //   Inter: 400 / 500 / 600 / 700 (base + medium + semibold + note headings)
@@ -34,7 +35,7 @@ const fontsHref =
     <meta name="color-scheme" content="light" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="ureview.ai" />
+    <meta property="og:site_name" content="Ureview.ai" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta name="twitter:card" content="summary" />
@@ -55,16 +56,17 @@ const fontsHref =
       <div class="navbar-inner">
         <a href="/" class="navbar-brand">
           <span class="brand-mark">U</span>
-          ureview.ai
+          Ureview.ai
         </a>
         <ul class="navbar-nav">
           <li>
-            <a href="/" class={activeNav === 'home' ? 'active' : ''}>Recent</a>
-          </li>
-          <li>
             <a href="/about/" class={activeNav === 'about' ? 'active' : ''}>About</a>
           </li>
+          <li>
+            <a href="/#how-it-works" class={activeNav === 'how-it-works' ? 'active' : ''}>How it works</a>
+          </li>
         </ul>
+        <a href={authorUrl} class="btn-author-link">I have an author link</a>
       </div>
     </nav>
 
@@ -74,7 +76,7 @@ const fontsHref =
 
     <footer class="site-footer">
       <div class="container">
-        ureview.ai &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
+        Ureview.ai &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
       </div>
     </footer>
   </body>
