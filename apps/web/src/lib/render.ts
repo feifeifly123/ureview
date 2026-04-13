@@ -2,7 +2,7 @@
 // Kept purely in TS so pages can `import { ... }` and compose.
 
 import { el } from './dom';
-import { formatDate, formatScore, scoreToColor, relativeTime } from './utils';
+import { formatDate, formatDateTime, formatScore, scoreToColor, relativeTime } from './utils';
 import type { ReviewDetail, AuthorResponse, ThreadEntry } from './types';
 
 type PaperLike = {
@@ -184,9 +184,9 @@ export function responseBlock(resp: AuthorResponse): HTMLElement {
 // ---------------------------------------------------------------------------
 
 const BADGE_LABELS: Record<string, string> = {
-  review: 'Official Review',
+  agent_review: 'Agent Review',
   rebuttal: 'Rebuttal',
-  acknowledgement: 'Rebuttal Acknowledgement',
+  acknowledgement: 'Rebuttal Ack',
   reply_comment: 'Reply Rebuttal Comment',
 };
 
@@ -250,17 +250,17 @@ export function buildReviewBody(review: ReviewDetail): HTMLElement {
 /** OpenReview-style thread entry block. */
 export function threadBlock(opts: {
   type: string;
+  actor: 'agent' | 'authors';
   title: string;
   byLine: string;
   date: string;
   replyTo?: string;
   body: HTMLElement;
+  searchText?: string;
 }): HTMLElement {
-  const dateStr = opts.date.length >= 10
-    ? formatDate(opts.date.slice(0, 10))
-    : opts.date;
-
+  const dateStr = formatDateTime(opts.date);
   const badgeLabel = BADGE_LABELS[opts.type] ?? opts.type;
+  const ts = Date.parse(opts.date);
 
   const replyEl = opts.replyTo
     ? el('div', { class: 'or-reply-to' }, [
@@ -269,17 +269,37 @@ export function threadBlock(opts: {
       ])
     : null;
 
-  return el('div', { class: 'or-entry fade-in' }, [
-    replyEl,
-    el('h4', { class: 'or-note-title' }, opts.title),
-    el('div', { class: 'or-note-meta' }, [
-      el('span', { class: `or-badge or-badge--${opts.type}` }, badgeLabel),
-      el('span', { class: 'or-meta-text' }, opts.byLine),
-      el('span', { class: 'or-meta-sep' }, '\u00B7'),
-      el('span', { class: 'or-meta-text' }, dateStr),
-    ]),
-    opts.body,
-  ]);
+  return el(
+    'section',
+    {
+      class: 'or-note-shell fade-in',
+      'data-note-type': opts.type,
+      'data-note-actor': opts.actor,
+      'data-note-search': (opts.searchText ?? `${opts.title} ${opts.byLine}`).toLowerCase(),
+      'data-note-ts': String(Number.isNaN(ts) ? 0 : ts),
+    },
+    [
+      el('div', { class: 'or-note-rail', 'aria-hidden': 'true' }, [
+        el('span', { class: 'or-rail-btn' }, '\u2212'),
+        el('span', { class: 'or-rail-btn or-rail-btn--stack' }, '\u2630'),
+      ]),
+      el('div', { class: 'or-note-card' }, [
+        replyEl,
+        el('div', { class: 'or-note-head' }, [
+          el('h4', { class: 'or-note-title' }, opts.title),
+        ]),
+        el('div', { class: 'or-note-meta' }, [
+          el('span', { class: `or-badge or-badge--${opts.type}` }, badgeLabel),
+          el('span', { class: 'or-meta-text' }, opts.byLine),
+          el('span', { class: 'or-meta-sep' }, '\u00B7'),
+          el('span', { class: 'or-meta-text' }, dateStr),
+          el('span', { class: 'or-meta-sep' }, '\u00B7'),
+          el('span', { class: 'or-meta-text' }, opts.actor === 'agent' ? 'AI Agent Reviewers, Authors' : 'Authors, AI Agent Reviewers'),
+        ]),
+        opts.body,
+      ]),
+    ]
+  );
 }
 
 /** Full review-block panel (used by review.astro). */

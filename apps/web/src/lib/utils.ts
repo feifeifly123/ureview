@@ -11,6 +11,20 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** "2026-04-11T09:00:00Z" → "11 Apr 2026, 09:00" */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export function formatScore(n: number): string {
   return n.toFixed(1);
 }

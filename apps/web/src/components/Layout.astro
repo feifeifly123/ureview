@@ -3,16 +3,21 @@ interface Props {
   title?: string;
   description?: string;
   activeNav?: 'home' | 'about' | 'how-it-works' | null;
+  chrome?: 'default' | 'forum';
+  hideFooter?: boolean;
 }
 
 const {
   title = 'Ureview.ai',
   description = 'AI-generated reviews of trending research papers.',
   activeNav = null,
+  chrome = 'default',
+  hideFooter = chrome === 'forum',
 } = Astro.props;
 
 const fullTitle = title === 'Ureview.ai' ? title : `${title} — Ureview.ai`;
 const authorUrl = import.meta.env.PUBLIC_AUTHOR_URL ?? '/author/';
+const isForumChrome = chrome === 'forum';
 
 // Trim font weights to what the stylesheet actually references:
 //   Inter: 400 / 500 / 600 / 700 (base + medium + semibold + note headings)
@@ -31,7 +36,7 @@ const fontsHref =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#8C1515" />
+    <meta name="theme-color" content={isForumChrome ? '#111827' : '#8C1515'} />
     <meta name="color-scheme" content="light" />
 
     <meta property="og:type" content="website" />
@@ -49,36 +54,71 @@ const fontsHref =
     <link rel="stylesheet" href={fontsHref} media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href={fontsHref} /></noscript>
   </head>
-  <body>
+  <body class={isForumChrome ? 'body--forum' : undefined}>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <nav class="navbar" aria-label="Primary">
-      <div class="navbar-inner">
-        <a href="/" class="navbar-brand">
-          <span class="brand-mark">U</span>
-          Ureview.ai
-        </a>
-        <ul class="navbar-nav">
-          <li>
-            <a href="/about/" class={activeNav === 'about' ? 'active' : ''}>About</a>
-          </li>
-          <li>
-            <a href="/#how-it-works" class={activeNav === 'how-it-works' ? 'active' : ''}>How it works</a>
-          </li>
-        </ul>
-        <a href={authorUrl} class="btn-author-link">I have an author link</a>
-      </div>
-    </nav>
+    {
+      isForumChrome ? (
+        <>
+          <header class="or-topbar" aria-label="Forum chrome">
+            <div class="or-topbar-inner">
+              <a href="/" class="or-topbar-brand">
+                <span class="brand-mark">U</span>
+                Ureview.ai
+              </a>
+
+              <label class="or-topbar-search" aria-label="Search review threads">
+                <span class="or-topbar-search-icon" aria-hidden="true">&#x2315;</span>
+                <input type="search" placeholder="Search review threads…" />
+              </label>
+
+              <nav class="or-topbar-links" aria-label="Forum sections">
+                <a href="/">Queue</a>
+                <a href="/">Threads</a>
+                <a href="/">Agent Desk</a>
+                <span class="or-topbar-user">agent@ureview</span>
+              </nav>
+            </div>
+          </header>
+
+          <div class="or-subbar" aria-label="Forum breadcrumb">
+            <div class="or-subbar-inner">
+              <a href="/" class="or-back-link">&larr; Back to Agent Review Console</a>
+            </div>
+          </div>
+        </>
+      ) : (
+        <nav class="navbar" aria-label="Primary">
+          <div class="navbar-inner">
+            <a href="/" class="navbar-brand">
+              <span class="brand-mark">U</span>
+              Ureview.ai
+            </a>
+            <ul class="navbar-nav">
+              <li>
+                <a href="/about/" class={activeNav === 'about' ? 'active' : ''}>About</a>
+              </li>
+              <li>
+                <a href="/#how-it-works" class={activeNav === 'how-it-works' ? 'active' : ''}>How it works</a>
+              </li>
+            </ul>
+            <a href={authorUrl} class="btn-author-link">I have an author link</a>
+          </div>
+        </nav>
+      )
+    }
 
     <main id="main">
       <slot />
     </main>
 
-    <footer class="site-footer">
-      <div class="container">
-        Ureview.ai &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
-      </div>
-    </footer>
+    {!hideFooter && (
+      <footer class="site-footer">
+        <div class="container">
+          Ureview.ai &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
+        </div>
+      </footer>
+    )}
   </body>
 </html>
 

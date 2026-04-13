@@ -5,11 +5,13 @@ import Layout from '../components/Layout.astro';
 <Layout
   title="Review"
   description="AI-generated review of a research paper."
+  chrome="forum"
+  hideFooter={true}
 >
-  <div class="container">
-    <article class="content" id="review-detail">
+  <div class="or-page-shell">
+    <article class="or-forum-page" id="review-detail">
       <div class="state loading">
-        <strong>Loading review</strong>
+        <strong>Loading thread</strong>
       </div>
     </article>
   </div>
@@ -19,53 +21,212 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { threadBlock, buildReviewBody, buildParagraphs, stateView } from '../lib/render';
-  import { formatDate } from '../lib/utils';
+  import { formatDate, formatDateTime } from '../lib/utils';
   import type { Review, ThreadData } from '../lib/types';
 
-  const BADGE_LABELS: Record<string, string> = {
-    review: 'Official Review',
-    rebuttal: 'Rebuttal',
-    acknowledgement: 'Rebuttal Acknowledgement',
-    reply_comment: 'Reply Rebuttal Comment',
-  };
+  const THREAD_FLOW = 'Agent Review → Rebuttal → Ack → Reply';
 
-  /** OpenReview-style paper header. */
-  function buildHeader(r: Review): HTMLElement {
-    const dateStr = formatDate(r.date);
-
-    const metaItems: (Node | string)[] = [
-      el('span', {}, `${dateStr}`),
+  function buildMetaLine(review: Review): HTMLElement {
+    const items: (Node | string)[] = [
+      el('span', { class: 'or-meta-text' }, formatDate(review.date)),
+      el('span', { class: 'or-meta-sep' }, '·'),
+      el('span', { class: 'or-meta-text' }, `Updated ${formatDateTime(review.updated_at)}`),
+      el('span', { class: 'or-meta-sep' }, '·'),
+      el('span', { class: 'or-meta-text' }, `Submission ${review.id}`),
     ];
-    if (r.hf_rank != null) {
-      metaItems.push(
-        el('span', { class: 'or-meta-sep' }, '\u00B7'),
-        el('span', {}, `HF Daily #${r.hf_rank}`)
+
+    if (review.hf_rank != null) {
+      items.push(
+        el('span', { class: 'or-meta-sep' }, '·'),
+        el('span', { class: 'or-meta-text' }, `HF Daily #${review.hf_rank}`)
       );
     }
 
-    const actions = el('div', { class: 'or-paper-actions' }, [
-      el(
-        'a',
-        {
-          class: 'btn btn-primary',
-          href: r.paper_url,
-          target: '_blank',
-          rel: 'noopener',
-        },
-        'Read PDF \u2192'
+    items.push(
+      el('span', { class: 'or-meta-sep' }, '·'),
+      el('span', { class: 'or-meta-text' }, 'AI Agent Reviewers, Authors')
+    );
+
+    return el('div', { class: 'or-forum-meta' }, items);
+  }
+
+  function buildFact(label: string, value: Node | string): HTMLElement {
+    return el('div', { class: 'or-fact-row' }, [
+      el('dt', { class: 'or-fact-label' }, `${label}:`),
+      el('dd', { class: 'or-fact-value' }, value),
+    ]);
+  }
+
+  function buildHeader(review: Review, totalNotes: number): HTMLElement {
+    const subtitle = `AI Agent rebuttal thread for ${review.id}`;
+
+    const facts = [
+      buildFact('Thread Flow', THREAD_FLOW),
+      buildFact(
+        'Source PDF',
+        el(
+          'a',
+          {
+            href: review.paper_url,
+            target: '_blank',
+            rel: 'noopener',
+          },
+          'Open paper'
+        )
       ),
-      el('a', { class: 'btn', href: `/day/?date=${encodeURIComponent(r.date)}` }, `Browse ${dateStr}`),
+      buildFact('Thread Status', totalNotes > 1 ? 'Rebuttal in progress' : 'Awaiting rebuttal'),
+      buildFact('Submission Number', review.id),
+    ];
+
+    return el('section', { class: 'or-forum-header fade-in' }, [
+      el('div', { class: 'or-forum-headline' }, [
+        el('div', { class: 'or-forum-headline-main' }, [
+          el('h1', { class: 'or-forum-title' }, review.title),
+          el('div', { class: 'or-forum-subtitle' }, subtitle),
+          buildMetaLine(review),
+        ]),
+        el(
+          'a',
+          {
+            class: 'or-pdf-link',
+            href: review.paper_url,
+            target: '_blank',
+            rel: 'noopener',
+            'aria-label': 'Open source PDF',
+          },
+          [
+            el('span', { class: 'or-pdf-icon', 'aria-hidden': 'true' }, 'PDF'),
+          ]
+        ),
+      ]),
+      el('div', { class: 'or-summary-block' }, [
+        el('span', { class: 'or-summary-key' }, 'TL;DR:'),
+        el('span', { class: 'or-summary-text' }, review.review.final_comment),
+      ]),
+      el('div', { class: 'or-summary-block' }, [
+        el('span', { class: 'or-summary-key' }, 'Abstract:'),
+        el('span', { class: 'or-summary-text' }, review.summary),
+      ]),
+      el('dl', { class: 'or-facts-grid' }, facts),
+    ]);
+  }
+
+  function buildSelect(
+    control: string,
+    options: Array<{ value: string; label: string; selected?: boolean }>
+  ): HTMLSelectElement {
+    return el(
+      'select',
+      {
+        class: 'or-toolbar-select',
+        'data-control': control,
+      },
+      options.map((opt) =>
+        el(
+          'option',
+          opt.selected ? { value: opt.value, selected: 'selected' } : { value: opt.value },
+          opt.label
+        )
+      )
+    );
+  }
+
+  function buildToolbar(totalNotes: number, reviewId: string): HTMLElement {
+    const typeSelect = buildSelect('type', [
+      { value: 'all', label: 'Filter by reply type…', selected: true },
+      { value: 'agent_review', label: 'Agent review' },
+      { value: 'rebuttal', label: 'Rebuttal' },
+      { value: 'acknowledgement', label: 'Rebuttal ack' },
+      { value: 'reply_comment', label: 'Reply rebuttal comment' },
     ]);
 
-    return el('header', { class: 'or-paper-header fade-in' }, [
-      el('h1', { class: 'or-paper-title' }, r.title),
-      el('div', { class: 'or-paper-meta' }, metaItems),
-      el('div', { class: 'or-paper-section' }, [
-        el('span', { class: 'or-paper-label' }, 'Abstract: '),
-        el('span', { class: 'or-paper-text' }, r.summary),
-      ]),
-      actions,
+    const actorSelect = buildSelect('actor', [
+      { value: 'all', label: 'Filter by actor…', selected: true },
+      { value: 'agent', label: 'AI agent reviewer' },
+      { value: 'authors', label: 'Authors' },
     ]);
+
+    const sortSelect = buildSelect('sort', [
+      { value: 'thread', label: 'Sort: Thread Order', selected: true },
+      { value: 'newest', label: 'Sort: Newest First' },
+    ]);
+
+    return el('section', { class: 'or-toolbar-shell fade-in' }, [
+      el('div', { class: 'or-toolbar-row' }, [
+        el('div', { class: 'or-toolbar-control' }, typeSelect),
+        el('div', { class: 'or-toolbar-control' }, actorSelect),
+        el('div', { class: 'or-toolbar-control or-toolbar-control--search' }, [
+          el('input', {
+            class: 'or-toolbar-input',
+            type: 'search',
+            placeholder: 'Search keywords…',
+            'data-control': 'search',
+          }),
+        ]),
+        el('div', { class: 'or-toolbar-control' }, sortSelect),
+        el('div', { class: 'or-toolbar-icons', 'aria-hidden': 'true' }, [
+          el('button', { class: 'or-toolbar-icon-btn', type: 'button', tabindex: '-1' }, '\u2630'),
+          el('button', { class: 'or-toolbar-icon-btn is-active', type: 'button', tabindex: '-1' }, '\u2263'),
+          el('button', { class: 'or-toolbar-icon-btn', type: 'button', tabindex: '-1' }, '\u2637'),
+          el('button', { class: 'or-toolbar-icon-btn', type: 'button', tabindex: '-1' }, '\u26D3'),
+        ]),
+      ]),
+      el('div', { class: 'or-toolbar-row or-toolbar-row--chips' }, [
+        el('div', { class: 'or-chip-strip' }, [
+          el('span', { class: 'or-chip-eye', 'aria-hidden': 'true' }, '\u25C9'),
+          el('span', { class: 'or-chip' }, 'Everyone'),
+          el('span', { class: 'or-chip' }, 'AI Agent Reviewer'),
+          el('span', { class: 'or-chip' }, 'Authors'),
+          el('span', { class: 'or-chip' }, reviewId),
+          el('span', { class: 'or-chip' }, 'Agent Thread'),
+        ]),
+        el('div', { id: 'thread-visible-count', class: 'or-toolbar-count' }, `${totalNotes} / ${totalNotes} replies shown`),
+      ]),
+    ]);
+  }
+
+  function applyThreadControls(toolbar: HTMLElement, thread: HTMLElement) {
+    const typeSelect = toolbar.querySelector<HTMLSelectElement>('[data-control="type"]')!;
+    const actorSelect = toolbar.querySelector<HTMLSelectElement>('[data-control="actor"]')!;
+    const searchInput = toolbar.querySelector<HTMLInputElement>('[data-control="search"]')!;
+    const sortSelect = toolbar.querySelector<HTMLSelectElement>('[data-control="sort"]')!;
+    const countEl = toolbar.querySelector<HTMLElement>('#thread-visible-count')!;
+    const noteShells = Array.from(thread.querySelectorAll<HTMLElement>('.or-note-shell'));
+
+    const sync = () => {
+      const ordered = noteShells.slice().sort((a, b) => {
+        const aTs = Number(a.dataset.noteTs ?? '0');
+        const bTs = Number(b.dataset.noteTs ?? '0');
+        return sortSelect.value === 'newest' ? bTs - aTs : aTs - bTs;
+      });
+
+      ordered.forEach((note) => thread.appendChild(note));
+
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      ordered.forEach((note) => {
+        const noteType = note.dataset.noteType ?? '';
+        const noteActor = note.dataset.noteActor ?? '';
+        const searchBlob = note.dataset.noteSearch ?? '';
+
+        const typeMatch = typeSelect.value === 'all' || typeSelect.value === noteType;
+        const actorMatch = actorSelect.value === 'all' || actorSelect.value === noteActor;
+        const queryMatch = query.length === 0 || searchBlob.includes(query);
+        const visible = typeMatch && actorMatch && queryMatch;
+
+        note.hidden = !visible;
+        if (visible) visibleCount += 1;
+      });
+
+      countEl.textContent = `${visibleCount} / ${noteShells.length} replies shown`;
+    };
+
+    typeSelect.addEventListener('change', sync);
+    actorSelect.addEventListener('change', sync);
+    sortSelect.addEventListener('change', sync);
+    searchInput.addEventListener('input', sync);
+    sync();
   }
 
   async function main() {
@@ -94,35 +255,53 @@ import Layout from '../components/Layout.astro';
 
     document.title = `${review.title} — Ureview.ai`;
 
-    // First thread entry: Official Review
+    const reviewTitle = `Agent Review of ${review.id} by AI Agent Reviewer`;
+    const reviewSearch = [
+      review.title,
+      review.summary,
+      review.review.final_comment,
+      ...review.review.strengths,
+      ...review.review.weaknesses,
+    ].join(' ');
+
     const reviewEntry = threadBlock({
-      type: 'review',
-      title: `Official Review by Ureview.ai Agent`,
-      byLine: 'by Ureview.ai Agent',
+      type: 'agent_review',
+      actor: 'agent',
+      title: reviewTitle,
+      byLine: 'by AI Agent Reviewer',
       date: review.updated_at,
       body: buildReviewBody(review.review),
+      searchText: reviewSearch,
     });
 
-    // Subsequent thread entries
-    const threadNodes: HTMLElement[] = [];
-    const parentLabels = ['Official Review by Ureview.ai Agent'];
+    const threadNodes: HTMLElement[] = [reviewEntry];
+    const parentLabels = [reviewTitle];
 
     if (threadData && threadData.thread.length > 0) {
       for (const entry of threadData.thread) {
-        const parentLabel = parentLabels[parentLabels.length - 1];
         const isAgent = entry.type === 'acknowledgement';
-        const byName = isAgent ? 'Ureview.ai Agent' : (entry.author_name ?? 'Authors');
-        const badgeLabel = BADGE_LABELS[entry.type] ?? entry.type;
-        const title = `${badgeLabel} by ${byName}`;
+        const actor = isAgent ? 'agent' : 'authors';
+        const parentLabel = parentLabels[parentLabels.length - 1];
+
+        const title =
+          entry.type === 'rebuttal'
+            ? 'Rebuttal by Authors'
+            : entry.type === 'acknowledgement'
+              ? 'Rebuttal Ack by AI Agent Reviewer'
+              : 'Reply Rebuttal Comment by Authors';
+
+        const byLine = isAgent ? 'by AI Agent Reviewer' : `by ${entry.author_name ?? 'Authors'}`;
 
         threadNodes.push(
           threadBlock({
             type: entry.type,
+            actor,
             title,
-            byLine: `by ${byName}`,
+            byLine,
             date: entry.submitted_at,
             replyTo: parentLabel,
             body: buildParagraphs(entry.content, entry.type),
+            searchText: `${title} ${byLine} ${entry.content}`,
           })
         );
 
@@ -130,9 +309,12 @@ import Layout from '../components/Layout.astro';
       }
     }
 
-    const thread = el('div', { class: 'or-thread' }, [reviewEntry, ...threadNodes]);
+    const totalNotes = threadNodes.length;
+    const toolbar = buildToolbar(totalNotes, review.id);
+    const thread = el('div', { class: 'or-thread' }, threadNodes);
 
-    mount(container, buildHeader(review), thread);
+    mount(container, buildHeader(review, totalNotes), toolbar, thread);
+    applyThreadControls(toolbar, thread);
   }
 
   main();

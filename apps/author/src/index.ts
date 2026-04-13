@@ -106,7 +106,7 @@ const FONT_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@500;600&display=swap">`;
 
 function responseKey(pid: string): string {
-  return responseKey(pid);
+  return `responses/${pid}.json`;
 }
 
 function page(title: string, body: string): Response {
@@ -119,14 +119,14 @@ function page(title: string, body: string): Response {
 ${FONT_LINK}
 <style>
 :root {
-  --color-primary: #8C1515;
-  --color-author: #0D7377;
+  --color-primary: #1D4ED8;
+  --color-author: #0F766E;
   --color-ink: #1A1A1A;
   --color-ink-2: #4A4A4A;
-  --color-ink-3: #8A8A8A;
-  --color-paper: #FDFDFC;
-  --color-canvas: #F4F3EF;
-  --color-rule: #E8E6E1;
+  --color-ink-3: #64748B;
+  --color-paper: #FFFFFF;
+  --color-canvas: #F3F5F8;
+  --color-rule: #D6DDE8;
   --font-serif: 'Source Serif 4', Charter, Georgia, serif;
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
 }
@@ -179,11 +179,11 @@ textarea { min-height: 200px; resize: vertical; line-height: 1.7; }
   transition: background 150ms;
 }
 .btn-author { background: var(--color-author); color: #fff; }
-.btn-author:hover { background: #0A5C5F; }
+.btn-author:hover { background: #115E59; }
 .btn-author:disabled { opacity: 0.6; cursor: not-allowed; }
 .hint { font-size: 12px; color: var(--color-ink-3); margin-top: 6px; }
-.error-box { background: #FEF2F2; border: 1px solid #E8BABA; color: #8C1515; padding: 12px 16px; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
-.success-box { background: #F0FAF0; border: 1px solid #A7D8A7; color: #2E7D32; padding: 12px 16px; border-radius: 4px; font-size: 14px; }
+.error-box { background: #FEF2F2; border: 1px solid #FBCFE8; color: #BE185D; padding: 12px 16px; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
+.success-box { background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; padding: 12px 16px; border-radius: 4px; font-size: 14px; }
 .draft-hint { font-size: 12px; color: var(--color-author); margin-bottom: 16px; }
 a { color: var(--color-primary); }
 </style>
@@ -235,10 +235,10 @@ function errorPage(title: string, message: string): Response {
 }
 
 function formPage(paperId: string, email: string, token: string): Response {
-  return page('Submit Response', `
+  return page('Submit Rebuttal', `
 <div class="card">
-  <h1>Author Response</h1>
-  <p class="subtitle">You are responding to review of paper: <strong>${esc(paperId)}</strong></p>
+  <h1>Author Rebuttal</h1>
+  <p class="subtitle">You are replying to the AI agent review for paper: <strong>${esc(paperId)}</strong></p>
 
   <div id="draft-notice" class="draft-hint" style="display:none">Draft restored from your browser.</div>
   <div id="error-msg" class="error-box" style="display:none"></div>
@@ -251,12 +251,12 @@ function formPage(paperId: string, email: string, token: string): Response {
              placeholder="Your name as it will appear publicly">
     </div>
     <div class="field">
-      <label for="content">Your Response</label>
+      <label for="content">Your Rebuttal</label>
       <textarea id="content" name="content" required maxlength="10000"
-                placeholder="Write your response to the review..."></textarea>
+                placeholder="Write your rebuttal to the AI agent review..."></textarea>
       <div class="hint">Separate paragraphs with blank lines. Max 10,000 characters.</div>
     </div>
-    <button type="submit" class="btn btn-author" id="submit-btn">Submit Response</button>
+    <button type="submit" class="btn btn-author" id="submit-btn">Submit Rebuttal</button>
   </form>
 </div>
 
@@ -321,13 +321,13 @@ function formPage(paperId: string, email: string, token: string): Response {
 
       form.style.display = 'none';
       draftNotice.style.display = 'none';
-      successMsg.textContent = 'Your response has been submitted successfully. It will appear on the review page shortly.';
+      successMsg.textContent = 'Your rebuttal has been submitted successfully. It will appear on the review page shortly.';
       successMsg.style.display = 'block';
     } catch(err) {
       errorMsg.textContent = err.message;
       errorMsg.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit Response';
+      submitBtn.textContent = 'Submit Rebuttal';
     }
   });
 })();
@@ -338,8 +338,8 @@ function formPage(paperId: string, email: string, token: string): Response {
 function alreadySubmittedPage(): Response {
   return page('Already Submitted', `
 <div class="card">
-  <h1>Response Already Submitted</h1>
-  <p class="subtitle">A response has already been submitted for this paper. If you need to update it, please contact us.</p>
+  <h1>Rebuttal Already Submitted</h1>
+  <p class="subtitle">A rebuttal has already been submitted for this paper. If you need to update it, please contact us.</p>
   <p><a href="/">← Back to portal</a></p>
 </div>
   `);
@@ -409,13 +409,18 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     return json({}, { error: 'A response has already been submitted for this paper' }, 409);
   }
 
-  // Build response object
+  // Build rebuttal thread object
   const response = {
     paper_id: pid,
-    author_name: name,
-    author_email: email,
-    content,
-    submitted_at: new Date().toISOString(),
+    thread: [
+      {
+        type: 'rebuttal',
+        author_name: name,
+        author_email: email,
+        content,
+        submitted_at: new Date().toISOString(),
+      },
+    ],
   };
 
   // Write to R2

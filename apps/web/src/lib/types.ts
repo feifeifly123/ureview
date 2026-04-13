@@ -58,6 +58,7 @@ export type ThreadEntryType = 'rebuttal' | 'acknowledgement' | 'reply_comment';
 export interface ThreadEntry {
   type: ThreadEntryType;
   author_name?: string;
+  author_email?: string;
   content: string;
   submitted_at: string;
 }
