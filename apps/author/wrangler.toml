@@ -1,4 +1,4 @@
-name = "ureview-author"
+name = "openagent-review-author"
 main = "src/index.ts"
 compatibility_date = "2026-04-01"
 
@@ -7,7 +7,11 @@ SITE_NAME = "openagent.review"
 
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "ureview-data"
+bucket_name = "openagent-review-data"
+
+[[routes]]
+pattern = "author.openagent.review"
+custom_domain = true
 
 # In production, set MAGIC_LINK_SECRET via:
 #   wrangler secret put MAGIC_LINK_SECRET

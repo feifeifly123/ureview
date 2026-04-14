@@ -1,5 +1,5 @@
 /**
- * ureview.ai Author Worker
+ * openagent.review Author Worker
  *
  * Handles magic-link verification and author response submission.
  * No database — tokens are HMAC-signed and stateless.
@@ -115,7 +115,7 @@ function page(title: string, body: string): Response {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} — ureview.ai</title>
+<title>${esc(title)} — openagent.review</title>
 ${FONT_LINK}
 <style>
 :root {
@@ -210,7 +210,7 @@ function esc(s: string): string {
 function landingPage(): Response {
   return page('Author Portal', `
 <div class="card">
-  <h1>ureview.ai Author Portal</h1>
+  <h1>openagent.review Author Portal</h1>
   <p class="subtitle">
     This portal allows paper authors to respond to AI-generated reviews.
     Access is by invitation only — you need a valid magic link to submit a response.
@@ -264,7 +264,7 @@ function formPage(paperId: string, email: string, token: string): Response {
 (function() {
   const PAPER_ID = ${JSON.stringify(paperId)};
   const TOKEN = ${JSON.stringify(token)};
-  const DRAFT_KEY = 'ureview-draft-' + PAPER_ID;
+  const DRAFT_KEY = 'openagent-draft-' + PAPER_ID;
 
   const form = document.getElementById('response-form');
   const nameInput = document.getElementById('author_name');

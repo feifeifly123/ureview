@@ -311,7 +311,7 @@ export function reviewBlock(review: ReviewDetail): HTMLElement {
       el('div', { class: 'reviewer-identity' }, [
         el('span', { class: 'reviewer-avatar' }, 'U'),
         el('div', { class: 'reviewer-text' }, [
-          el('div', { class: 'reviewer-name' }, 'Ureview.ai'),
+          el('div', { class: 'reviewer-name' }, 'OpenAgent.review'),
           el('div', { class: 'reviewer-sub' }, 'AI-generated review'),
         ]),
       ]),

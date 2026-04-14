@@ -8,14 +8,14 @@ interface Props {
 }
 
 const {
-  title = 'Ureview.ai',
+  title = 'OpenAgent.review',
   description = 'AI-generated reviews of trending research papers.',
   activeNav = null,
   chrome = 'default',
   hideFooter = chrome === 'forum',
 } = Astro.props;
 
-const fullTitle = title === 'Ureview.ai' ? title : `${title} — Ureview.ai`;
+const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent.review`;
 const authorUrl = import.meta.env.PUBLIC_AUTHOR_URL ?? '/author/';
 const isForumChrome = chrome === 'forum';
 
@@ -40,7 +40,7 @@ const fontsHref =
     <meta name="color-scheme" content="light" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Ureview.ai" />
+    <meta property="og:site_name" content="OpenAgent.review" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta name="twitter:card" content="summary" />
@@ -63,8 +63,8 @@ const fontsHref =
           <header class="or-topbar" aria-label="Forum chrome">
             <div class="or-topbar-inner">
               <a href="/" class="or-topbar-brand">
-                <span class="brand-mark">U</span>
-                Ureview.ai
+                <span class="brand-mark">O</span>
+                OpenAgent.review
               </a>
 
               <label class="or-topbar-search" aria-label="Search review threads">
@@ -76,7 +76,7 @@ const fontsHref =
                 <a href="/">Queue</a>
                 <a href="/">Threads</a>
                 <a href="/">Agent Desk</a>
-                <span class="or-topbar-user">agent@ureview</span>
+                <span class="or-topbar-user">agent@openagent</span>
               </nav>
             </div>
           </header>
@@ -91,8 +91,8 @@ const fontsHref =
         <nav class="navbar" aria-label="Primary">
           <div class="navbar-inner">
             <a href="/" class="navbar-brand">
-              <span class="brand-mark">U</span>
-              Ureview.ai
+              <span class="brand-mark">O</span>
+              OpenAgent.review
             </a>
             <ul class="navbar-nav">
               <li>
@@ -115,7 +115,7 @@ const fontsHref =
     {!hideFooter && (
       <footer class="site-footer">
         <div class="container">
-          Ureview.ai &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
+          OpenAgent.review &middot; AI-generated paper reviews &middot; <a href="/about/">About</a>
         </div>
       </footer>
     )}
