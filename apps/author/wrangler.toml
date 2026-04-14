@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-04-01"
 
 [vars]
-SITE_NAME = "ureview.ai"
+SITE_NAME = "openagent.review"
 
 [[r2_buckets]]
 binding = "BUCKET"

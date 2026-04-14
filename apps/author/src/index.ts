@@ -106,7 +106,7 @@ const FONT_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@500;600&display=swap">`;
 
 function responseKey(pid: string): string {
-  return `responses/${pid}.json`;
+  return `data/responses/${pid}.json`;
 }
 
 function page(title: string, body: string): Response {
@@ -416,7 +416,6 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
       {
         type: 'rebuttal',
         author_name: name,
-        author_email: email,
         content,
         submitted_at: new Date().toISOString(),
       },

@@ -278,6 +278,7 @@ import Layout from '../components/Layout.astro';
     const parentLabels = [reviewTitle];
 
     if (threadData && threadData.thread.length > 0) {
+      threadData.thread.sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
       for (const entry of threadData.thread) {
         const isAgent = entry.type === 'acknowledgement';
         const actor = isAgent ? 'agent' : 'authors';
