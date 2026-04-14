@@ -229,6 +229,51 @@ import Layout from '../components/Layout.astro';
     sync();
   }
 
+  /** Build thread entry nodes from thread data. */
+  function buildThreadNodes(
+    threadData: ThreadData | null,
+    reviewTitle: string,
+    reviewEntry: HTMLElement
+  ): { nodes: HTMLElement[]; parentLabels: string[] } {
+    const nodes: HTMLElement[] = [reviewEntry];
+    const parentLabels = [reviewTitle];
+
+    if (threadData && threadData.thread.length > 0) {
+      threadData.thread.sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
+      for (const entry of threadData.thread) {
+        const isAgent = entry.type === 'acknowledgement';
+        const actor = isAgent ? 'agent' : 'authors';
+        const parentLabel = parentLabels[parentLabels.length - 1];
+
+        const title =
+          entry.type === 'rebuttal'
+            ? 'Rebuttal by Authors'
+            : entry.type === 'acknowledgement'
+              ? 'Rebuttal Ack by AI Agent Reviewer'
+              : 'Reply Rebuttal Comment by Authors';
+
+        const byLine = isAgent ? 'by AI Agent Reviewer' : `by ${entry.author_name ?? 'Authors'}`;
+
+        nodes.push(
+          threadBlock({
+            type: entry.type,
+            actor,
+            title,
+            byLine,
+            date: entry.submitted_at,
+            replyTo: parentLabel,
+            body: buildParagraphs(entry.content, entry.type),
+            searchText: `${title} ${byLine} ${entry.content}`,
+          })
+        );
+
+        parentLabels.push(title);
+      }
+    }
+
+    return { nodes, parentLabels };
+  }
+
   async function main() {
     const container = document.getElementById('review-detail')!;
     const id = new URLSearchParams(window.location.search).get('id');
@@ -238,13 +283,10 @@ import Layout from '../components/Layout.astro';
       return;
     }
 
+    // Phase 1: fetch review and render immediately
     let review: Review;
-    let threadData: ThreadData | null;
     try {
-      [review, threadData] = await Promise.all([
-        dataClient.getReview(id),
-        dataClient.getThread(id),
-      ]);
+      review = await dataClient.getReview(id);
     } catch (e) {
       mount(
         container,
@@ -274,48 +316,36 @@ import Layout from '../components/Layout.astro';
       searchText: reviewSearch,
     });
 
-    const threadNodes: HTMLElement[] = [reviewEntry];
-    const parentLabels = [reviewTitle];
+    // Render header + review immediately (1 note, no thread yet)
+    const threadEl = el('div', { class: 'or-thread' }, [reviewEntry]);
+    const toolbar = buildToolbar(1, review.id);
+    mount(container, buildHeader(review, 1), toolbar, threadEl);
+    applyThreadControls(toolbar, threadEl);
 
-    if (threadData && threadData.thread.length > 0) {
-      threadData.thread.sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
-      for (const entry of threadData.thread) {
-        const isAgent = entry.type === 'acknowledgement';
-        const actor = isAgent ? 'agent' : 'authors';
-        const parentLabel = parentLabels[parentLabels.length - 1];
-
-        const title =
-          entry.type === 'rebuttal'
-            ? 'Rebuttal by Authors'
-            : entry.type === 'acknowledgement'
-              ? 'Rebuttal Ack by AI Agent Reviewer'
-              : 'Reply Rebuttal Comment by Authors';
-
-        const byLine = isAgent ? 'by AI Agent Reviewer' : `by ${entry.author_name ?? 'Authors'}`;
-
-        threadNodes.push(
-          threadBlock({
-            type: entry.type,
-            actor,
-            title,
-            byLine,
-            date: entry.submitted_at,
-            replyTo: parentLabel,
-            body: buildParagraphs(entry.content, entry.type),
-            searchText: `${title} ${byLine} ${entry.content}`,
-          })
-        );
-
-        parentLabels.push(title);
-      }
+    // Phase 2: fetch thread in background, append if present
+    let threadData: ThreadData | null;
+    try {
+      threadData = await dataClient.getThread(id);
+    } catch {
+      // Thread fetch failed silently — review is already visible
+      return;
     }
 
-    const totalNotes = threadNodes.length;
-    const toolbar = buildToolbar(totalNotes, review.id);
-    const thread = el('div', { class: 'or-thread' }, threadNodes);
+    if (threadData && threadData.thread.length > 0) {
+      const { nodes } = buildThreadNodes(threadData, reviewTitle, reviewEntry);
+      // nodes[0] is the reviewEntry already in DOM — append the rest
+      for (let i = 1; i < nodes.length; i++) {
+        threadEl.appendChild(nodes[i]);
+      }
 
-    mount(container, buildHeader(review, totalNotes), toolbar, thread);
-    applyThreadControls(toolbar, thread);
+      // Update toolbar count and header status
+      const totalNotes = nodes.length;
+      const countEl = document.getElementById('thread-visible-count');
+      if (countEl) countEl.textContent = `${totalNotes} / ${totalNotes} replies shown`;
+
+      // Re-run controls to pick up new nodes
+      applyThreadControls(toolbar, threadEl);
+    }
   }
 
   main();
