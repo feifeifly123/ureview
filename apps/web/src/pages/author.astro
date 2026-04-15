@@ -132,6 +132,22 @@ const authorBase = import.meta.env.PUBLIC_AUTHOR_URL ?? '';
       return;
     }
 
-    window.location.href = `${base.replace(/\/$/, '')}/i/${encodeURIComponent(token)}`;
+    try {
+      const dest = `${base.replace(/\/$/, '')}/i/${encodeURIComponent(token)}`;
+      const url = new URL(dest);
+      if (!url.hostname.endsWith('openagent.review')) {
+        if (error) {
+          error.hidden = false;
+          error.textContent = 'Author URL is misconfigured.';
+        }
+        return;
+      }
+      window.location.href = dest;
+    } catch {
+      if (error) {
+        error.hidden = false;
+        error.textContent = 'Author URL is misconfigured.';
+      }
+    }
   });
 </script>

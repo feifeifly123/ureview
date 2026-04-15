@@ -14,7 +14,6 @@
         "properties": {
           "type": { "type": "string", "enum": ["rebuttal", "acknowledgement", "reply_comment"] },
           "author_name": { "type": "string", "maxLength": 200 },
-          "author_email": { "type": "string", "format": "email" },
           "content": { "type": "string", "maxLength": 10000 },
           "submitted_at": { "type": "string", "format": "date-time" }
         },

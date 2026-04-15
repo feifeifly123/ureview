@@ -52,7 +52,6 @@ def main() -> int:
     # 构建 payload
     payload = {
         "pid": args.paper_id,
-        "email": args.email,
         "exp": int(time.time()) + args.expiry_days * 86400,
     }
     payload_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")

@@ -22,7 +22,6 @@ interface Env {
 
 interface TokenPayload {
   pid: string;
-  email: string;
   exp: number;
 }
 
@@ -364,7 +363,15 @@ textarea {
 </html>`;
 
   return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy':
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'",
+    },
   });
 }
 
@@ -479,7 +486,7 @@ function errorPage(title: string, message: string): Response {
   );
 }
 
-function formPage(paperId: string, email: string, token: string): Response {
+function formPage(paperId: string, token: string): Response {
   return page(
     'Draft author response',
     `
@@ -532,7 +539,7 @@ function formPage(paperId: string, email: string, token: string): Response {
 
         <div class="action-row">
           <button type="submit" class="btn btn-primary" id="submit-btn">Publish response</button>
-          <span class="small-text">Invited author email: ${esc(email)}</span>
+          <span class="small-text">One-time publication for this paper.</span>
         </div>
       </form>
     </section>
@@ -708,17 +715,29 @@ async function handleInvite(url: URL, env: Env): Promise<Response> {
   const result = await verifyToken(token, env.MAGIC_LINK_SECRET);
   if (result.valid === false) return errorPage('Invalid invitation', result.reason);
 
-  const { pid, email } = result.payload;
+  const { pid } = result.payload;
   const existing = await env.BUCKET.head(responseKey(pid));
   if (existing) return alreadySubmittedPage();
-  return formPage(pid, email, token);
+  return formPage(pid, token);
 }
 
 async function handleSubmit(request: Request, env: Env): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  if (origin && !origin.endsWith('.openagent.review') && origin !== 'https://openagent.review') {
+    return new Response(JSON.stringify({ error: 'Cross-origin request rejected' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
+    });
+  }
+
   const json = (body: object, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
     });
 
   let body: { token: string; author_name: string; content: string };
