@@ -1047,7 +1047,8 @@ ul.review-field-value li {
   font-size: var(--text-base);
   line-height: 1.75;
   color: var(--color-ink);
-  max-width: 68ch;
+  max-width: 72ch;
+  margin-inline: auto;
 }
 .prose h2 {
   font-family: var(--font-serif);
@@ -1502,8 +1503,16 @@ ul.review-field-value li {
 
 @media (max-width: 640px) {
   .container { padding: 0 var(--space-3); }
-  .navbar-inner { padding: 0 var(--space-3); height: 52px; gap: var(--space-3); }
-  .navbar-brand { font-size: var(--text-md); }
+  .navbar-inner {
+    padding: 0 var(--space-3);
+    height: auto;
+    min-height: 52px;
+    gap: var(--space-2);
+  }
+  .navbar-brand { font-size: 14px; gap: 6px; }
+  .navbar-brand .brand-mark { width: 20px; height: 20px; font-size: 12px; }
+  .navbar-nav { gap: 0; }
+  .navbar-nav a { padding: 6px 8px; font-size: 13px; }
 
   .page-header { padding: var(--space-5) 0 var(--space-4); }
   .page-header h1 { font-size: var(--text-2xl); }
@@ -1531,8 +1540,12 @@ ul.review-field-value li {
   .hero-heading { font-size: var(--text-2xl); }
   .hero-subtitle { font-size: var(--text-sm); }
   .filter-tabs { padding: var(--space-4) 0 var(--space-2); }
-  .btn-author-link { font-size: var(--text-xs); padding: 5px var(--space-3); }
+  .btn-author-link { font-size: 12px; padding: 6px 12px; }
   .paper-card { padding: var(--space-4); }
+
+  .browse-status-tabs { gap: 6px; }
+  .browse-status-tab { padding: 6px 10px; font-size: 12px; }
+  .browse-status-tab span { font-size: 11px; padding: 1px 6px; }
 }
 
 /* =========================================================================
@@ -3204,6 +3217,9 @@ body.body--forum {
     position: static;
   }
 
+  .thread-main-column { order: 1; }
+  .thread-summary-rail { order: 2; }
+
   .home-stats-grid,
   .thread-highlight-grid,
   .not-found-shell {
@@ -3233,14 +3249,6 @@ body.body--forum {
   .thread-page-shell {
     padding-left: 14px;
     padding-right: 14px;
-  }
-
-  .navbar-inner {
-    height: auto;
-    min-height: 60px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-    flex-wrap: wrap;
   }
 
   .hero-heading--left,
@@ -3283,6 +3291,7 @@ body.body--forum {
   .browse-sort-label,
   .thread-toolbar-sort {
     width: 100%;
+    flex: 0 0 auto;
   }
 
   .not-found-shell {
