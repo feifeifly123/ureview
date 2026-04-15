@@ -39,10 +39,20 @@ const authorBase = import.meta.env.PUBLIC_AUTHOR_URL ?? '';
           <textarea id="author-token" rows="2" placeholder="Paste your invite URL or token here"></textarea>
           <div class="author-token-actions">
             <button type="submit" class="btn-cta">Open author portal</button>
-            <span class="author-token-hint">The response link is private and tied to a specific paper.</span>
+            <span class="author-token-hint">The response link is private and tied to a specific paper. Takes about 3–5 minutes.</span>
           </div>
           <p id="author-token-error" class="author-token-error" hidden></p>
         </form>
+      </div>
+
+      <div class="author-steps-card">
+        <span class="sidebar-kicker">Why respond?</span>
+        <h2>Your response matters</h2>
+        <ul class="author-policy-list">
+          <li>Clarify misunderstandings in the machine review.</li>
+          <li>Add missing evidence or context that the model may have overlooked.</li>
+          <li>Preserve accurate public context for readers browsing the thread.</li>
+        </ul>
       </div>
 
       <div class="author-steps-card">
@@ -73,6 +83,16 @@ const authorBase = import.meta.env.PUBLIC_AUTHOR_URL ?? '';
           <li>Your display name and written response.</li>
           <li>The fact that the response was published after the machine review.</li>
           <li>The resulting thread, which readers can browse like a forum page.</li>
+        </ul>
+      </section>
+
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">Privacy</span>
+        <h3 class="sidebar-heading">What stays private</h3>
+        <ul class="author-policy-list">
+          <li>Your email address is never published.</li>
+          <li>Your draft remains private until you choose to publish.</li>
+          <li>The invite link is single-use and tied to one paper.</li>
         </ul>
       </section>
 

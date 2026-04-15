@@ -132,13 +132,27 @@ import Layout from '../components/Layout.astro';
             el('span', { class: statusClass }, status),
             review.hf_rank != null ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`) : null,
           ]),
-          threadData?.thread?.length
-            ? el('button', {
-                class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                type: 'button',
-                'data-jump-to-response': 'true',
-              }, 'Jump to author response \u2193')
-            : null,
+          el('div', { class: 'thread-jump-links' }, [
+            el('button', {
+              class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+              type: 'button',
+              'data-jump-to': 'ai-review',
+            }, 'AI review \u2193'),
+            threadData?.thread?.length
+              ? el('button', {
+                  class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                  type: 'button',
+                  'data-jump-to': 'author-response',
+                }, 'Author response \u2193')
+              : null,
+            threadData?.thread?.length
+              ? el('button', {
+                  class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                  type: 'button',
+                  'data-jump-to': 'latest',
+                }, 'Latest update \u2193')
+              : null,
+          ]),
           el('h1', { class: 'thread-header-title' }, review.title),
           el('p', { class: 'thread-header-subtitle' }, 'Machine review, author rebuttal, and thread history in one place.'),
           el('div', { class: 'thread-header-meta' }, [
@@ -162,6 +176,25 @@ import Layout from '../components/Layout.astro';
           el('p', {}, review.summary),
         ]),
       ]),
+      threadData?.thread?.length
+        ? el('div', { class: 'thread-disagreement-card' }, [
+            el('span', { class: 'thread-highlight-label' }, 'At a glance'),
+            el('dl', { class: 'thread-disagreement-grid' }, [
+              el('div', {}, [
+                el('dt', {}, 'AI assessment'),
+                el('dd', {}, review.review.final_comment),
+              ]),
+              el('div', {}, [
+                el('dt', {}, 'Key concern'),
+                el('dd', {}, review.review.weaknesses[0] ?? 'None noted'),
+              ]),
+              el('div', {}, [
+                el('dt', {}, 'Author response'),
+                el('dd', {}, (threadData.thread[0]?.content ?? '').split('\n\n')[0]),
+              ]),
+            ]),
+          ])
+        : null,
     ]);
   }
 
@@ -369,10 +402,13 @@ import Layout from '../components/Layout.astro';
     applyThreadControls(toolbar, threadEl, review.id);
     attachCopyLink(container);
 
-    const jumpBtn = container.querySelector<HTMLButtonElement>('[data-jump-to-response]');
-    jumpBtn?.addEventListener('click', () => {
-      const target = container.querySelector<HTMLElement>('[data-note-group="author-response"]');
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    container.querySelectorAll<HTMLButtonElement>('[data-jump-to]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.jumpTo === 'latest'
+          ? [...container.querySelectorAll<HTMLElement>('.or-note-shell')].pop()
+          : container.querySelector<HTMLElement>(`[data-note-group="${btn.dataset.jumpTo}"]`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
   }
 
