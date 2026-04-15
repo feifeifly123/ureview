@@ -2,10 +2,7 @@
 import Layout from '../components/Layout.astro';
 ---
 
-<Layout
-  title="Not found"
-  description="The page you requested could not be found."
->
+<Layout title="Not found" description="The page you requested could not be found.">
   <div class="page-header">
     <div class="container">
       <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -15,21 +12,23 @@ import Layout from '../components/Layout.astro';
       </nav>
       <h1>Page not found</h1>
       <p class="subtitle">
-        The page you requested doesn't exist — it may have moved, or the link
-        may be out of date.
+        The link may be out of date, the paper may have moved, or the route may not exist yet.
       </p>
     </div>
   </div>
 
-  <div class="container">
-    <section class="content">
-      <div class="prose">
-        <h2>Where to next?</h2>
-        <ul>
-          <li><a href="/">Recent reviews</a> — latest paper reviews</li>
-          <li><a href="/about/">About</a> — what this site is</li>
-        </ul>
-      </div>
-    </section>
+  <div class="container not-found-shell">
+    <a class="not-found-card" href="/browse/">
+      <strong>Browse recent reviews</strong>
+      <span>Return to the main queue and open a thread from there.</span>
+    </a>
+    <a class="not-found-card" href="/about/">
+      <strong>Read how the site works</strong>
+      <span>See the rubric, caveats, and author response policy.</span>
+    </a>
+    <a class="not-found-card" href="/author/">
+      <strong>Open the author portal</strong>
+      <span>Paste a private invite token or review the author flow.</span>
+    </a>
   </div>
 </Layout>

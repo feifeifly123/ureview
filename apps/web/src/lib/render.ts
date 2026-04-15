@@ -184,15 +184,15 @@ export function responseBlock(resp: AuthorResponse): HTMLElement {
 // ---------------------------------------------------------------------------
 
 const BADGE_LABELS: Record<string, string> = {
-  agent_review: 'Agent Review',
-  rebuttal: 'Rebuttal',
-  acknowledgement: 'Rebuttal Ack',
-  reply_comment: 'Reply Rebuttal Comment',
+  agent_review: 'AI Review',
+  rebuttal: 'Author Response',
+  acknowledgement: 'Agent Follow-up',
+  reply_comment: 'Comment',
 };
 
 const CONTENT_LABELS: Record<string, string> = {
-  rebuttal: 'Rebuttal:',
-  acknowledgement: 'Acknowledgement:',
+  rebuttal: 'Author response:',
+  acknowledgement: 'Agent follow-up:',
   reply_comment: 'Comment:',
 };
 

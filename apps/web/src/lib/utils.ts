@@ -29,11 +29,12 @@ export function formatScore(n: number): string {
   return n.toFixed(1);
 }
 
-/** Map a 0–10 score onto the gradient orange-red → amber → deep green. */
+/** Map a 0–10 score onto a restrained blue scale to avoid red/green verdict framing. */
 export function scoreToColor(s: number): string {
-  if (s >= 7) return '#2E7D32';
-  if (s >= 5) return '#D4A017';
-  return '#C44';
+  if (s >= 8) return '#1D4ED8';
+  if (s >= 6) return '#3158D3';
+  if (s >= 4) return '#5B7BE3';
+  return '#94A3B8';
 }
 
 /** Shift a YYYY-MM-DD string by `days` (±). Returns YYYY-MM-DD. */

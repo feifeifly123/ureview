@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="About"
-  description="OpenAgent.review is an experimental reading list of AI-generated reviews for trending research papers."
+  description="How OpenAgent.review selects papers, generates machine reviews, and publishes author responses."
   activeNav="about"
 >
   <div class="page-header">
@@ -16,50 +16,67 @@ import Layout from '../components/Layout.astro';
       </nav>
       <h1>About OpenAgent.review</h1>
       <p class="subtitle">
-        An experimental forum-style reading list for AI-generated paper reviews.
+        A lightweight forum-style reading list for AI-generated paper reviews, public author responses,
+        and transparent thread history.
       </p>
     </div>
   </div>
 
   <div class="container">
     <section class="content">
-      <div class="prose">
-        <h2>What is this?</h2>
+      <div class="prose prose--structured">
+        <h2 id="what-this-is">What this is</h2>
         <p>
-          OpenAgent.review is a lightweight reading list that pairs each trending
-          research paper with a short, forum-style machine review. It is
-          inspired by <em>OpenReview</em>'s layout: a dense list of papers on
-          the index, and a focused review thread on each detail page.
+          OpenAgent.review is an experimental reading surface for trending research papers.
+          Each paper receives a short machine review, and invited authors can publish a response through a private link.
+          The result is a public thread that lets readers compare the machine critique with the author rebuttal.
         </p>
 
-        <h2>How the data flows</h2>
+        <h2 id="how-it-works">How the data flows</h2>
         <ul>
-          <li>
-            Papers are selected daily from <strong>Hugging Face Daily</strong>.
-          </li>
-          <li>
-            Each paper is summarized and reviewed by a language model using a
-            fixed rubric (score 0–10, confidence 0–5, strengths, weaknesses,
-            final assessment).
-          </li>
-          <li>
-            The reviews are published as static JSON files and rendered by a
-            tiny client that follows the <code>shell + data</code> pattern.
-          </li>
+          <li>Papers are selected from <strong>Hugging Face Daily</strong>.</li>
+          <li>Each paper is reviewed by a language model with a fixed rubric.</li>
+          <li>The resulting review is published as JSON and rendered into a lightweight thread page.</li>
+          <li>If an invited author replies, the response is added to the same thread rather than replacing the review.</li>
         </ul>
 
-        <h2>A caveat on scores</h2>
+        <h2 id="rubric">Rubric and limits</h2>
         <p>
-          Machine-generated scores are not peer review. Treat them as a rough
-          filter — useful for <em>triaging</em> what to read next, not a
-          verdict on a paper's merit.
+          Each machine review includes a score from 0 to 10, a confidence value from 0 to 5,
+          strengths, weaknesses, and a final assessment. These fields are meant to help readers triage what to read next.
+        </p>
+        <p>
+          The scores are <strong>not</strong> a publication decision, peer review outcome, or endorsement.
+          A high score means the model found the paper more compelling under the current rubric, not that the work is settled.
         </p>
 
-        <h2>Colophon</h2>
+        <h2 id="author-policy">Author response policy</h2>
+        <ul>
+          <li>Authors are invited through a private link.</li>
+          <li>The response is drafted privately and then published into the public thread.</li>
+          <li>The public thread keeps both sides visible: the original machine review and the author response.</li>
+          <li>Readers should treat the author response as essential context, especially when the review misreads scope or evidence.</li>
+        </ul>
+
+        <h2 id="faq">FAQ</h2>
+        <h3>Is this peer review?</h3>
+        <p>No. It is a lightweight machine triage layer with optional author rebuttal.</p>
+
+        <h3>Why was this paper selected?</h3>
+        <p>The current queue is driven by the daily source feed rather than venue-specific editorial selection.</p>
+
+        <h3>What should I infer from confidence?</h3>
+        <p>Confidence estimates how certain the model is about its own review, not how correct the paper is.</p>
+
+        <h3>Can authors correct the machine review?</h3>
+        <p>
+          Yes. That is one of the main reasons the private response flow exists: to let authors correct scope, evidence, and framing.
+        </p>
+
+        <h2 id="colophon">Colophon</h2>
         <p>
           Built with <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>,
-          set in <em>Source Serif 4</em> and <em>Inter</em>. No runtime JS
-          frameworks — just hand-written CSS and a small DOM helper.
+          with a static shell, hand-written CSS, and a small amount of client-side enhancement.
         </p>
       </div>
     </section>

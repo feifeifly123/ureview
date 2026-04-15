@@ -5,6 +5,15 @@
  * No database — tokens are HMAC-signed and stateless.
  */
 
+interface R2Bucket {
+  head(key: string): Promise<unknown>;
+  put(
+    key: string,
+    value: string,
+    options?: { httpMetadata?: { contentType?: string } }
+  ): Promise<void>;
+}
+
 interface Env {
   MAGIC_LINK_SECRET: string;
   BUCKET: R2Bucket;
@@ -17,12 +26,7 @@ interface TokenPayload {
   exp: number;
 }
 
-// ---------------------------------------------------------------------------
-// Crypto helpers
-// ---------------------------------------------------------------------------
-
 function b64urlDecode(s: string): Uint8Array {
-  // Restore padding
   const padded = s + '='.repeat((4 - (s.length % 4)) % 4);
   const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
   const bytes = new Uint8Array(binary.length);
@@ -37,7 +41,6 @@ function b64urlEncode(buf: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** HMAC signature is always 16 bytes → 22 base64url chars. */
 const SIG_B64_LEN = 22;
 
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -57,7 +60,6 @@ async function verifyToken(
   const payloadB64 = token.slice(0, dotIdx);
   const sigB64 = token.slice(dotIdx + 1);
 
-  // Import secret as HMAC key
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -66,30 +68,21 @@ async function verifyToken(
     ['sign']
   );
 
-  // Recompute HMAC over the payload base64 string
   const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
   const expectedSig = b64urlEncode(mac.slice(0, 16));
 
-  // Reject wrong-length signatures before timing-safe compare
-  if (sigB64.length !== SIG_B64_LEN) {
-    return { valid: false, reason: 'Invalid signature' };
-  }
-  const a = new TextEncoder().encode(expectedSig);
-  const b = new TextEncoder().encode(sigB64);
-  if (!timingSafeEqual(a, b)) {
+  if (sigB64.length !== SIG_B64_LEN) return { valid: false, reason: 'Invalid signature' };
+  if (!timingSafeEqual(new TextEncoder().encode(expectedSig), new TextEncoder().encode(sigB64))) {
     return { valid: false, reason: 'Invalid signature' };
   }
 
-  // Decode and parse payload
   let payload: TokenPayload;
   try {
-    const decoded = new TextDecoder().decode(b64urlDecode(payloadB64));
-    payload = JSON.parse(decoded);
+    payload = JSON.parse(new TextDecoder().decode(b64urlDecode(payloadB64)));
   } catch {
     return { valid: false, reason: 'Cannot parse token payload' };
   }
 
-  // Check expiry
   if (Date.now() / 1000 > payload.exp) {
     return { valid: false, reason: 'This invitation has expired' };
   }
@@ -97,16 +90,21 @@ async function verifyToken(
   return { valid: true, payload };
 }
 
-// ---------------------------------------------------------------------------
-// HTML templates
-// ---------------------------------------------------------------------------
-
 const FONT_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@500;600&display=swap">`;
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@500;600&display=swap">`;
 
 function responseKey(pid: string): string {
   return `data/responses/${pid}.json`;
+}
+
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function page(title: string, body: string): Response {
@@ -119,77 +117,249 @@ function page(title: string, body: string): Response {
 ${FONT_LINK}
 <style>
 :root {
-  --color-primary: #1D4ED8;
-  --color-author: #0F766E;
-  --color-ink: #1A1A1A;
-  --color-ink-2: #4A4A4A;
-  --color-ink-3: #64748B;
-  --color-paper: #FFFFFF;
-  --color-canvas: #F3F5F8;
-  --color-rule: #D6DDE8;
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --surface-soft: #f4f5f7;
+  --border: #e3e6ea;
+  --text: #141821;
+  --text-muted: #5f6775;
+  --blue: #3158d3;
+  --blue-soft: #eaf1ff;
+  --green: #2f8f5b;
+  --green-soft: #eaf7ee;
+  --amber: #a15c00;
+  --amber-soft: #fff1d6;
+  --danger: #b42318;
+  --danger-soft: #fee4e2;
   --font-serif: 'Source Serif 4', Charter, Georgia, serif;
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
 body {
+  margin: 0;
   font-family: var(--font-sans);
-  color: var(--color-ink);
-  background: var(--color-canvas);
+  color: var(--text);
+  background: var(--bg);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-.container { max-width: 640px; margin: 0 auto; padding: 48px 16px; }
-.card {
-  background: var(--color-paper);
-  border: 1px solid var(--color-rule);
-  border-radius: 6px;
-  padding: 32px;
-  box-shadow: 0 1px 2px rgba(26,26,26,0.04);
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 20px 64px;
 }
-h1 {
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 700;
+}
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--text);
+  color: white;
   font-family: var(--font-serif);
-  font-size: 24px;
-  font-weight: 600;
+}
+.hero-kicker,
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.page-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 8px 30px rgba(20, 24, 33, 0.04);
+}
+.card + .card { margin-top: 18px; }
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+h1 { font-size: 34px; }
+h2 { font-size: 26px; }
+h3 { font-size: 18px; }
+p { margin: 0 0 14px; color: var(--text-muted); }
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
   margin-bottom: 8px;
 }
-.subtitle { color: var(--color-ink-2); font-size: 14px; margin-bottom: 24px; }
-label { display: block; font-size: 13px; font-weight: 600; color: var(--color-ink-2); margin-bottom: 6px; }
 input, textarea {
   width: 100%;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  border: 1px solid var(--color-rule);
-  border-radius: 4px;
-  padding: 10px 12px;
-  background: var(--color-paper);
-  color: var(--color-ink);
-  transition: border-color 150ms;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text);
+  background: white;
 }
-input:focus, textarea:focus { outline: none; border-color: var(--color-author); }
-textarea { min-height: 200px; resize: vertical; line-height: 1.7; }
-.field { margin-bottom: 20px; }
+input:focus, textarea:focus {
+  outline: 2px solid rgba(49, 88, 211, 0.18);
+  border-color: var(--blue);
+}
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+.small-text { font-size: 13px; color: var(--text-muted); }
+.form-grid {
+  display: grid;
+  gap: 18px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .btn {
-  display: inline-block;
-  padding: 10px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 150ms;
 }
-.btn-author { background: var(--color-author); color: #fff; }
-.btn-author:hover { background: #115E59; }
-.btn-author:disabled { opacity: 0.6; cursor: not-allowed; }
-.hint { font-size: 12px; color: var(--color-ink-3); margin-top: 6px; }
-.error-box { background: #FEF2F2; border: 1px solid #FBCFE8; color: #BE185D; padding: 12px 16px; border-radius: 4px; font-size: 14px; margin-bottom: 16px; }
-.success-box { background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; padding: 12px 16px; border-radius: 4px; font-size: 14px; }
-.draft-hint { font-size: 12px; color: var(--color-author); margin-bottom: 16px; }
-a { color: var(--color-primary); }
+.btn-primary {
+  background: var(--text);
+  color: white;
+}
+.btn-primary:hover { opacity: 0.92; }
+.btn-secondary {
+  background: white;
+  border-color: var(--border);
+  color: var(--text);
+}
+.notice {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.notice-error { background: var(--danger-soft); color: var(--danger); }
+.notice-success { background: var(--green-soft); color: var(--green); }
+.notice-draft { background: var(--blue-soft); color: var(--blue); }
+.meta-list,
+.policy-list,
+.flow-list {
+  padding-left: 18px;
+  margin: 0;
+  color: var(--text-muted);
+}
+.meta-list li,
+.policy-list li,
+.flow-list li { margin-bottom: 10px; }
+.flow-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0 22px;
+}
+.flow-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.preview {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  border-radius: 14px;
+  padding: 16px;
+}
+.preview h3 { margin-bottom: 10px; }
+.preview-body h4 {
+  font-size: 14px;
+  margin: 14px 0 4px;
+  color: var(--text);
+}
+.preview-body p {
+  font-size: 14px;
+  color: var(--text);
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+.footer-note {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.token-box {
+  display: grid;
+  gap: 12px;
+}
+.error-link {
+  display: inline-flex;
+  margin-top: 12px;
+  font-weight: 700;
+}
+@media (max-width: 920px) {
+  .page-grid { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .shell { padding: 28px 14px 40px; }
+  .card { padding: 20px; border-radius: 16px; }
+  h1 { font-size: 28px; }
+}
 </style>
 </head>
 <body>
-<div class="container">${body}</div>
+<div class="shell">
+  <div class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">O</span>openagent.review</a>
+    <a href="/">Back to site</a>
+  </div>
+  ${body}
+</div>
 </body>
 </html>`;
 
@@ -198,66 +368,195 @@ a { color: var(--color-primary); }
   });
 }
 
-function esc(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function landingPage(): Response {
-  return page('Author Portal', `
-<div class="card">
-  <h1>openagent.review Author Portal</h1>
-  <p class="subtitle">
-    This portal allows paper authors to respond to AI-generated reviews.
-    Access is by invitation only — you need a valid magic link to submit a response.
-  </p>
-  <p style="font-size: 14px; color: var(--color-ink-2);">
-    If you have received an invitation link, please use it directly.
-    If you believe your paper has been reviewed and would like to respond,
-    please contact us.
-  </p>
+  return page(
+    'For authors',
+    `
+<div class="page-grid">
+  <main>
+    <section class="card">
+      <span class="hero-kicker">Private author flow</span>
+      <h1>Respond to a machine review through a secure invite link.</h1>
+      <p>
+        Paste the token or the full invite URL from your email. This opens the private author portal,
+        where you can review the critique, draft a structured response, preview it, and publish it.
+      </p>
+      <form id="token-form" class="token-box">
+        <label for="token-input">Invite token or invite URL</label>
+        <textarea id="token-input" placeholder="https://author.example.com/i/your-token-here"></textarea>
+        <div class="action-row">
+          <button type="submit" class="btn btn-primary">Open author portal</button>
+          <span class="small-text">You can paste the raw token or the full magic link.</span>
+        </div>
+        <div id="token-error" class="notice notice-error" style="display:none"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <span class="section-kicker">What the author flow includes</span>
+      <div class="flow-strip">
+        <span class="flow-pill">1. Review AI critique</span>
+        <span class="flow-pill">2. Draft rebuttal</span>
+        <span class="flow-pill">3. Preview</span>
+        <span class="flow-pill">4. Publish</span>
+      </div>
+      <ul class="flow-list">
+        <li>The machine review stays visible. Your response is added as a new note in the thread.</li>
+        <li>Your display name and reply become public when you publish.</li>
+        <li>If a link is expired or malformed, the portal will explain why.</li>
+      </ul>
+    </section>
+  </main>
+
+  <aside>
+    <section class="card">
+      <span class="section-kicker">Publication policy</span>
+      <h3>What becomes public</h3>
+      <ul class="policy-list">
+        <li>Your display name and response text.</li>
+        <li>The timestamp showing when the response was published.</li>
+        <li>The resulting public thread that readers can browse alongside the AI review.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <span class="section-kicker">Need help?</span>
+      <h3>Common cases</h3>
+      <ul class="policy-list">
+        <li>Paste the full URL if you are not sure where the token begins.</li>
+        <li>If your invitation expired, you will need a new invite from the sender.</li>
+        <li>If you already submitted once, the portal will stop duplicate publication.</li>
+      </ul>
+    </section>
+  </aside>
 </div>
-  `);
+<script>
+(function() {
+  const form = document.getElementById('token-form');
+  const input = document.getElementById('token-input');
+  const error = document.getElementById('token-error');
+
+  function normalizeToken(value) {
+    const raw = value.trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw);
+      const match = url.pathname.match(/\/i\/([^/?#]+)/);
+      if (match && match[1]) return match[1];
+      const qp = url.searchParams.get('token');
+      if (qp) return qp;
+    } catch (_) {}
+    const pathMatch = raw.match(/\/i\/([^/?#]+)/);
+    if (pathMatch && pathMatch[1]) return pathMatch[1];
+    return raw.replace(/^\/+|\/+$/g, '');
+  }
+
+  form.addEventListener('submit', function(event) {
+    event.preventDefault();
+    const token = normalizeToken(input.value);
+    if (!token) {
+      error.style.display = 'block';
+      error.textContent = 'Paste the invite token or the full invite URL.';
+      return;
+    }
+    window.location.href = '/i/' + encodeURIComponent(token);
+  });
+})();
+</script>`
+  );
 }
 
 function errorPage(title: string, message: string): Response {
-  return page(title, `
-<div class="card">
+  return page(
+    title,
+    `
+<section class="card">
+  <span class="section-kicker">Invite error</span>
   <h1>${esc(title)}</h1>
-  <p class="subtitle">${esc(message)}</p>
-  <p><a href="/">← Back to portal</a></p>
-</div>
-  `);
+  <p>${esc(message)}</p>
+  <a class="error-link" href="/">← Back to author portal</a>
+</section>`
+  );
 }
 
 function formPage(paperId: string, email: string, token: string): Response {
-  return page('Submit Rebuttal', `
-<div class="card">
-  <h1>Author Rebuttal</h1>
-  <p class="subtitle">You are replying to the AI agent review for paper: <strong>${esc(paperId)}</strong></p>
+  return page(
+    'Draft author response',
+    `
+<div class="page-grid">
+  <main>
+    <section class="card">
+      <span class="hero-kicker">Private response draft</span>
+      <h1>Draft your response for ${esc(paperId)}</h1>
+      <p>
+        This response will appear in the public thread next to the machine review.
+        Use the structure below to clarify what the review got right, what needs correction, and what readers should know.
+      </p>
+      <div class="flow-strip">
+        <span class="flow-pill">Review critique</span>
+        <span class="flow-pill">Draft response</span>
+        <span class="flow-pill">Preview</span>
+        <span class="flow-pill">Publish</span>
+      </div>
 
-  <div id="draft-notice" class="draft-hint" style="display:none">Draft restored from your browser.</div>
-  <div id="error-msg" class="error-box" style="display:none"></div>
-  <div id="success-msg" class="success-box" style="display:none"></div>
+      <div id="draft-notice" class="notice notice-draft" style="display:none">Draft restored from this browser.</div>
+      <div id="error-msg" class="notice notice-error" style="display:none"></div>
+      <div id="success-msg" class="notice notice-success" style="display:none"></div>
 
-  <form id="response-form">
-    <div class="field">
-      <label for="author_name">Display Name</label>
-      <input type="text" id="author_name" name="author_name" required maxlength="200"
-             placeholder="Your name as it will appear publicly">
-    </div>
-    <div class="field">
-      <label for="content">Your Rebuttal</label>
-      <textarea id="content" name="content" required maxlength="10000"
-                placeholder="Write your rebuttal to the AI agent review..."></textarea>
-      <div class="hint">Separate paragraphs with blank lines. Max 10,000 characters.</div>
-    </div>
-    <button type="submit" class="btn btn-author" id="submit-btn">Submit Rebuttal</button>
-  </form>
+      <form id="response-form" class="form-grid">
+        <div>
+          <label for="author_name">Display name</label>
+          <input type="text" id="author_name" maxlength="200" required placeholder="Your name as it will appear publicly">
+        </div>
+
+        <div class="two-col">
+          <div>
+            <label for="what_right">What the review got right</label>
+            <textarea id="what_right" maxlength="4000" placeholder="Points where the machine review was directionally accurate."></textarea>
+          </div>
+          <div>
+            <label for="needs_correction">What needs correction</label>
+            <textarea id="needs_correction" maxlength="4000" placeholder="Clarify mistakes, missing scope, or unsupported claims."></textarea>
+          </div>
+        </div>
+
+        <div>
+          <label for="additional_evidence">Additional evidence or appendix pointers</label>
+          <textarea id="additional_evidence" maxlength="4000" placeholder="Point to experiments, ablations, appendices, code, or relevant discussion."></textarea>
+        </div>
+
+        <div>
+          <label for="final_response">Final response</label>
+          <textarea id="final_response" maxlength="4000" required placeholder="A concise final reply that readers should take away from the thread."></textarea>
+        </div>
+
+        <div class="action-row">
+          <button type="submit" class="btn btn-primary" id="submit-btn">Publish response</button>
+          <span class="small-text">Invited author email: ${esc(email)}</span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <aside>
+    <section class="card preview">
+      <span class="section-kicker">Live preview</span>
+      <h3>How your response will look</h3>
+      <div id="preview-body" class="preview-body">
+        <p>Start typing to preview your public response.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <span class="section-kicker">Before you publish</span>
+      <ul class="policy-list">
+        <li>Your display name and response text will be public.</li>
+        <li>The machine review remains visible alongside your response.</li>
+        <li>Publishing through this link is a one-time action for this paper.</li>
+      </ul>
+      <div class="footer-note">Paper ID: <strong>${esc(paperId)}</strong></div>
+    </section>
+  </aside>
 </div>
 
 <script>
@@ -268,39 +567,95 @@ function formPage(paperId: string, email: string, token: string): Response {
 
   const form = document.getElementById('response-form');
   const nameInput = document.getElementById('author_name');
-  const contentInput = document.getElementById('content');
+  const whatRight = document.getElementById('what_right');
+  const needsCorrection = document.getElementById('needs_correction');
+  const evidence = document.getElementById('additional_evidence');
+  const finalResponse = document.getElementById('final_response');
   const submitBtn = document.getElementById('submit-btn');
   const errorMsg = document.getElementById('error-msg');
   const successMsg = document.getElementById('success-msg');
   const draftNotice = document.getElementById('draft-notice');
+  const previewBody = document.getElementById('preview-body');
 
-  // Restore draft from localStorage
-  try {
-    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (draft) {
-      if (draft.author_name) nameInput.value = draft.author_name;
-      if (draft.content) contentInput.value = draft.content;
-      draftNotice.style.display = 'block';
+  function getSections() {
+    return [
+      ['What the review got right', whatRight.value.trim()],
+      ['What needs correction', needsCorrection.value.trim()],
+      ['Additional evidence or appendix pointers', evidence.value.trim()],
+      ['Final response', finalResponse.value.trim()],
+    ].filter(([, value]) => value.length > 0);
+  }
+
+  function composeSections() {
+    return getSections().map(([title, value]) => title + '\n' + value).join('\n\n');
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderPreview() {
+    const sections = getSections();
+
+    if (!sections.length) {
+      previewBody.innerHTML = '<p>Start typing to preview your public response.</p>';
+      return;
     }
-  } catch(e) {}
 
-  // Auto-save draft
+    previewBody.innerHTML = sections
+      .map(([title, value]) => '<h4>' + esc(title) + '</h4><p>' + esc(value).replace(/\n/g, '<br>') + '</p>')
+      .join('');
+  }
+
   function saveDraft() {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         author_name: nameInput.value,
-        content: contentInput.value,
+        what_right: whatRight.value,
+        needs_correction: needsCorrection.value,
+        additional_evidence: evidence.value,
+        final_response: finalResponse.value,
       }));
-    } catch(e) {}
+    } catch (_) {}
   }
-  nameInput.addEventListener('input', saveDraft);
-  contentInput.addEventListener('input', saveDraft);
 
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
+  function restoreDraft() {
+    try {
+      const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      if (!draft) return;
+      if (draft.author_name) nameInput.value = draft.author_name;
+      if (draft.what_right) whatRight.value = draft.what_right;
+      if (draft.needs_correction) needsCorrection.value = draft.needs_correction;
+      if (draft.additional_evidence) evidence.value = draft.additional_evidence;
+      if (draft.final_response) finalResponse.value = draft.final_response;
+      draftNotice.style.display = 'block';
+    } catch (_) {}
+  }
+
+  [nameInput, whatRight, needsCorrection, evidence, finalResponse].forEach((node) => {
+    node.addEventListener('input', function() {
+      saveDraft();
+      renderPreview();
+    });
+  });
+
+  restoreDraft();
+  renderPreview();
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
     errorMsg.style.display = 'none';
+    successMsg.style.display = 'none';
+
+    const content = composeSections();
+    if (!content.trim()) {
+      errorMsg.textContent = 'Please add at least one response section before publishing.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Submitting...';
+    submitBtn.textContent = 'Publishing...';
 
     try {
       const res = await fetch('/api/submit', {
@@ -309,141 +664,119 @@ function formPage(paperId: string, email: string, token: string): Response {
         body: JSON.stringify({
           token: TOKEN,
           author_name: nameInput.value.trim(),
-          content: contentInput.value.trim(),
+          content,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
 
-      // Clear draft on success
-      try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
-
+      try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
       form.style.display = 'none';
       draftNotice.style.display = 'none';
-      successMsg.textContent = 'Your rebuttal has been submitted successfully. It will appear on the review page shortly.';
+      successMsg.textContent = 'Your response has been published. It will appear in the public thread shortly.';
       successMsg.style.display = 'block';
-    } catch(err) {
-      errorMsg.textContent = err.message;
+    } catch (err) {
+      errorMsg.textContent = err && err.message ? err.message : 'Submission failed';
       errorMsg.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit Rebuttal';
+      submitBtn.textContent = 'Publish response';
     }
   });
 })();
-</script>
-  `);
+</script>`
+  );
 }
 
 function alreadySubmittedPage(): Response {
-  return page('Already Submitted', `
-<div class="card">
-  <h1>Rebuttal Already Submitted</h1>
-  <p class="subtitle">A rebuttal has already been submitted for this paper. If you need to update it, please contact us.</p>
-  <p><a href="/">← Back to portal</a></p>
-</div>
-  `);
+  return page(
+    'Already submitted',
+    `
+<section class="card">
+  <span class="section-kicker">Duplicate submission blocked</span>
+  <h1>Response already published</h1>
+  <p>This invite has already been used to publish a response for this paper.</p>
+  <a class="error-link" href="/">← Back to author portal</a>
+</section>`
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Route handlers
-// ---------------------------------------------------------------------------
-
 async function handleInvite(url: URL, env: Env): Promise<Response> {
-  const token = url.pathname.slice(3); // strip "/i/"
-  if (!token) return errorPage('Invalid Link', 'No token provided.');
+  const token = url.pathname.slice(3);
+  if (!token) return errorPage('Invalid link', 'No token was provided.');
 
   const result = await verifyToken(token, env.MAGIC_LINK_SECRET);
-  if (!result.valid) {
-    return errorPage('Invalid Invitation', result.reason);
-  }
+  if (result.valid === false) return errorPage('Invalid invitation', result.reason);
 
   const { pid, email } = result.payload;
-
-  // Check if response already exists
   const existing = await env.BUCKET.head(responseKey(pid));
   if (existing) return alreadySubmittedPage();
-
   return formPage(pid, email, token);
 }
 
 async function handleSubmit(request: Request, env: Env): Promise<Response> {
-  const json = (headers: Record<string, string>, body: object, status = 200) =>
+  const json = (body: object, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
     });
 
   let body: { token: string; author_name: string; content: string };
   try {
     body = await request.json();
   } catch {
-    return json({}, { error: 'Invalid JSON body' }, 400);
+    return json({ error: 'Invalid JSON body' }, 400);
   }
 
   if (!body.token || !body.author_name || !body.content) {
-    return json({}, { error: 'Missing required fields: token, author_name, content' }, 400);
+    return json({ error: 'Missing required fields: token, author_name, content' }, 400);
   }
 
-  const name = body.author_name.trim();
+  const authorName = body.author_name.trim();
   const content = body.content.trim();
-
-  if (name.length < 1 || name.length > 200) {
-    return json({}, { error: 'author_name must be 1-200 characters' }, 400);
+  if (authorName.length < 1 || authorName.length > 200) {
+    return json({ error: 'author_name must be 1-200 characters' }, 400);
   }
   if (content.length < 1 || content.length > 10000) {
-    return json({}, { error: 'content must be 1-10000 characters' }, 400);
+    return json({ error: 'content must be 1-10000 characters' }, 400);
   }
 
-  // Verify token
   const result = await verifyToken(body.token, env.MAGIC_LINK_SECRET);
-  if (!result.valid) {
-    return json({}, { error: result.reason }, 403);
-  }
+  if (result.valid === false) return json({ error: result.reason }, 403);
 
-  const { pid, email } = result.payload;
-
-  // Check for existing response (idempotency)
+  const { pid } = result.payload;
   const existing = await env.BUCKET.head(responseKey(pid));
   if (existing) {
-    return json({}, { error: 'A response has already been submitted for this paper' }, 409);
+    return json({ error: 'A response has already been submitted for this paper' }, 409);
   }
 
-  // Build rebuttal thread object
   const response = {
     paper_id: pid,
     thread: [
       {
         type: 'rebuttal',
-        author_name: name,
+        author_name: authorName,
         content,
         submitted_at: new Date().toISOString(),
       },
     ],
   };
 
-  // Write to R2
   await env.BUCKET.put(responseKey(pid), JSON.stringify(response, null, 2), {
     httpMetadata: { contentType: 'application/json' },
   });
 
-  return json({}, { ok: true, paper_id: pid });
+  return json({ ok: true, paper_id: pid });
 }
-
-// ---------------------------------------------------------------------------
-// Worker entry
-// ---------------------------------------------------------------------------
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
     if (url.pathname === '/') return landingPage();
     if (url.pathname.startsWith('/i/')) return handleInvite(url, env);
     if (url.pathname === '/api/submit' && request.method === 'POST') {
       return handleSubmit(request, env);
     }
-
     return new Response('Not Found', { status: 404 });
   },
 };

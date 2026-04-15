@@ -1,6 +1,6 @@
 import type { LatestIndex, Review, DailyIndex, ThreadData } from './types';
 
-const DATA_BASE = import.meta.env.PUBLIC_DATA_BASE ?? '/data';
+const DATA_BASE = ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.PUBLIC_DATA_BASE) ?? '/data';
 
 async function fetchJSON<T>(path: string): Promise<T> {
   const url = `${DATA_BASE}${path}`;

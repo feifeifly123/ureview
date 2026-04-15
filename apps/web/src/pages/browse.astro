@@ -1,0 +1,257 @@
+---
+import Layout from '../components/Layout.astro';
+import { getLatestDigests, getLatestIndex } from '../lib/server-data';
+import { formatDate, formatDateTime, formatScore } from '../lib/utils';
+
+const latest = getLatestIndex();
+const reviews = getLatestDigests();
+
+const needsResponseCount = reviews.filter((review) => !review.has_response).length;
+const counts = {
+  all: reviews.length,
+  'needs-response': needsResponseCount,
+  responded: reviews.length - needsResponseCount,
+};
+
+const browsePayload = reviews.map((review) => ({
+  id: review.id,
+  score: review.score,
+  date: review.date,
+  lastActivityAt: review.last_activity_at ?? review.updated_at ?? review.date,
+}));
+---
+
+<Layout
+  title="Browse reviews"
+  description="Browse the recent OpenAgent.review queue with filters for response status, search, and recency."
+  activeNav="browse"
+>
+  <div class="page-header page-header--browse">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="sep">/</span>
+        <span>Browse</span>
+      </nav>
+      <div class="page-header-grid">
+        <div>
+          <h1>Browse recent reviews</h1>
+          <p class="subtitle">
+            Scan the queue like an index page: filter by author response status, search titles and summaries,
+            then jump into the thread that looks worth reading.
+          </p>
+        </div>
+        <div class="page-header-aside">
+          <div class="count-chip"><strong>{reviews.length}</strong> reviews in the current snapshot</div>
+          <div class="page-header-meta">Generated {formatDateTime(latest.generated_at)}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container browse-shell">
+    <section class="browse-toolbar-card" aria-label="Browse controls">
+      <div class="browse-toolbar-top">
+        <label class="browse-search">
+          <span class="sr-only">Search review queue</span>
+          <input id="browse-search" type="search" placeholder="Search title or summary" />
+        </label>
+
+        <label class="browse-sort-label">
+          <span>Sort</span>
+          <select id="browse-sort">
+            <option value="updated">Recently updated</option>
+            <option value="newest">Newest review</option>
+            <option value="score">Highest score</option>
+          </select>
+        </label>
+
+        <button type="button" class="btn-secondary btn-secondary--compact" id="browse-copy-link">
+          Copy current view
+        </button>
+      </div>
+
+      <div class="browse-status-tabs" role="tablist" aria-label="Filter browse view by status">
+        <button class="browse-status-tab active" type="button" role="tab" aria-selected="true" data-status-filter="all">
+          All <span>{counts.all}</span>
+        </button>
+        <button class="browse-status-tab" type="button" role="tab" aria-selected="false" data-status-filter="needs-response">
+          Needs response <span>{counts['needs-response']}</span>
+        </button>
+        <button class="browse-status-tab" type="button" role="tab" aria-selected="false" data-status-filter="responded">
+          Author responded <span>{counts.responded}</span>
+        </button>
+      </div>
+
+      <div class="browse-toolbar-bottom">
+        <div id="browse-results-count" class="browse-results-count">Showing {reviews.length} results</div>
+        <button type="button" class="browse-clear-filters" id="browse-clear-filters">Clear filters</button>
+      </div>
+    </section>
+
+    <section class="browse-list" id="browse-list" aria-live="polite">
+      {reviews.map((review) => (
+        <article
+          class="browse-card"
+          data-browse-card
+          data-review-id={review.id}
+          data-status={review.has_response ? 'responded' : 'needs-response'}
+          data-title={review.title.toLowerCase()}
+          data-summary={review.summary.toLowerCase()}
+        >
+          <div class="browse-card-main">
+            <div class="browse-card-top">
+              <div class="browse-card-chips">
+                <span class="topic-chip topic-chip--ai">AI review</span>
+                <span class={review.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
+                  {review.has_response ? 'Author responded' : 'Needs response'}
+                </span>
+                {review.hf_rank != null && <span class="topic-chip topic-chip--ghost">HF #{review.hf_rank}</span>}
+              </div>
+              <div class="browse-card-updated">Last activity {formatDateTime(review.last_activity_at ?? review.updated_at ?? review.date)}</div>
+            </div>
+
+            <a class="browse-card-title" href={`/review/?id=${encodeURIComponent(review.id)}`}>{review.title}</a>
+            <p class="browse-card-summary">{review.summary}</p>
+
+            <div class="browse-card-footer">
+              <span>Reviewed {formatDate(review.date)}</span>
+              <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
+                {review.has_response ? 'Open public thread →' : 'Open review →'}
+              </a>
+            </div>
+          </div>
+
+          <aside class="browse-card-aside">
+            <dl class="browse-card-metrics">
+              <div>
+                <dt>Score</dt>
+                <dd>{formatScore(review.score)}/10</dd>
+              </div>
+              <div>
+                <dt>Confidence</dt>
+                <dd>{review.confidence ?? 0}/5</dd>
+              </div>
+              <div>
+                <dt>Notes</dt>
+                <dd>{review.response_count + 1}</dd>
+              </div>
+            </dl>
+          </aside>
+        </article>
+      ))}
+    </section>
+
+    <div class="state empty" id="browse-empty-state" hidden>
+      <strong>No reviews match this view</strong>
+      <span>Clear the filters or try a broader search.</span>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ browsePayload }}>
+  const cards = Array.from(document.querySelectorAll('[data-browse-card]'));
+  const list = document.getElementById('browse-list');
+  const empty = document.getElementById('browse-empty-state');
+  const searchInput = document.getElementById('browse-search');
+  const sortSelect = document.getElementById('browse-sort');
+  const statusButtons = Array.from(document.querySelectorAll('[data-status-filter]'));
+  const resultsCount = document.getElementById('browse-results-count');
+  const clearFilters = document.getElementById('browse-clear-filters');
+  const copyLinkButton = document.getElementById('browse-copy-link');
+
+  const cardData = new Map(browsePayload.map((entry) => [entry.id, entry]));
+  let currentStatus = 'all';
+
+  function updateUrl() {
+    const url = new URL(window.location.href);
+    const q = searchInput?.value.trim() ?? '';
+    if (currentStatus !== 'all') url.searchParams.set('status', currentStatus);
+    else url.searchParams.delete('status');
+    if (sortSelect?.value && sortSelect.value !== 'updated') url.searchParams.set('sort', sortSelect.value);
+    else url.searchParams.delete('sort');
+    if (q) url.searchParams.set('q', q);
+    else url.searchParams.delete('q');
+    history.replaceState({}, '', url);
+  }
+
+  function sorted(cardsToSort) {
+    const sortValue = sortSelect?.value ?? 'updated';
+    return cardsToSort.slice().sort((a, b) => {
+      const aData = cardData.get(a.dataset.reviewId ?? '');
+      const bData = cardData.get(b.dataset.reviewId ?? '');
+      if (!aData || !bData) return 0;
+      if (sortValue === 'score') return bData.score - aData.score;
+      if (sortValue === 'newest') return Date.parse(bData.date) - Date.parse(aData.date);
+      return Date.parse(bData.lastActivityAt) - Date.parse(aData.lastActivityAt);
+    });
+  }
+
+  function sync() {
+    const q = searchInput?.value.trim().toLowerCase() ?? '';
+    const visible = cards.filter((card) => {
+      const matchesStatus = currentStatus === 'all' || card.dataset.status === currentStatus;
+      const searchBlob = `${card.dataset.title ?? ''} ${card.dataset.summary ?? ''}`;
+      const matchesSearch = q.length === 0 || searchBlob.includes(q);
+      return matchesStatus && matchesSearch;
+    });
+
+    const visibleSet = new Set(visible);
+    cards.forEach((card) => {
+      card.hidden = !visibleSet.has(card);
+    });
+    sorted(visible).forEach((card) => list?.appendChild(card));
+
+    if (resultsCount) {
+      resultsCount.textContent = `Showing ${visible.length} result${visible.length === 1 ? '' : 's'}`;
+    }
+    if (empty) empty.hidden = visible.length !== 0;
+    updateUrl();
+  }
+
+  function setStatus(status) {
+    currentStatus = status;
+    statusButtons.forEach((button) => {
+      const active = button.dataset.statusFilter === status;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    sync();
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const initialStatus = params.get('status');
+  const initialSort = params.get('sort');
+  const initialQuery = params.get('q');
+  if (searchInput && initialQuery) searchInput.value = initialQuery;
+  if (sortSelect && initialSort) sortSelect.value = initialSort;
+
+  statusButtons.forEach((button) => {
+    button.addEventListener('click', () => setStatus(button.dataset.statusFilter ?? 'all'));
+  });
+  searchInput?.addEventListener('input', sync);
+  sortSelect?.addEventListener('change', sync);
+
+  clearFilters?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    if (sortSelect) sortSelect.value = 'updated';
+    setStatus('all');
+  });
+
+  copyLinkButton?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      copyLinkButton.textContent = 'Copied';
+      setTimeout(() => {
+        copyLinkButton.textContent = 'Copy current view';
+      }, 1200);
+    } catch {
+      copyLinkButton.textContent = 'Copy failed';
+      setTimeout(() => {
+        copyLinkButton.textContent = 'Copy current view';
+      }, 1200);
+    }
+  });
+
+  setStatus(initialStatus && ['all', 'needs-response', 'responded'].includes(initialStatus) ? initialStatus : 'all');
+</script>

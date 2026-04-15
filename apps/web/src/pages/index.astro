@@ -1,184 +1,307 @@
 ---
 import Layout from '../components/Layout.astro';
+import { getLatestDigests, getLatestIndex, getRespondedDigests } from '../lib/server-data';
+import { formatDate, formatScore } from '../lib/utils';
+
+const latest = getLatestIndex();
+const reviews = getLatestDigests();
+const responded = getRespondedDigests();
+const sample = responded[0] ?? reviews[0];
+const generatedAt = latest.generated_at;
+
+const totalCount = reviews.length;
+const awaitingCount = reviews.filter((review) => !review.has_response).length;
+const respondedCount = totalCount - awaitingCount;
+const updatedThisWeek = reviews.filter((review) => {
+  const ts = Date.parse(review.last_activity_at ?? review.updated_at ?? review.date);
+  return Date.parse(generatedAt) - ts <= 7 * 24 * 60 * 60 * 1000;
+}).length;
+
+function activityLabel(iso?: string): string {
+  if (!iso) return 'Updated recently';
+  const diff = Date.parse(generatedAt) - Date.parse(iso);
+  const hours = Math.max(0, Math.floor(diff / (60 * 60 * 1000)));
+  if (hours < 1) return 'Updated recently';
+  if (hours < 24) return `Updated ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Updated 1 day ago';
+  return `Updated ${days} days ago`;
+}
+
+const reviewPayload = reviews.map((review) => ({
+  id: review.id,
+  status: review.has_response ? 'responded' : 'needs-response',
+  lastActivityAt: review.last_activity_at ?? review.updated_at ?? review.date,
+}));
 ---
 
 <Layout
   title="OpenAgent.review"
-  description="AI reviews for new papers, with invited author responses."
+  description="Machine reviews for trending papers, public author replies, and lightweight thread pages."
   activeNav="home"
 >
-  <!-- Hero -->
-  <section class="hero">
-    <div class="container">
-      <h1 class="hero-heading">
-        AI reviews for new papers, with invited author responses.
-      </h1>
-      <p class="hero-subtitle">
-        A public forum for AI-generated paper reviews, final author responses,
-        and public review threads.
-      </p>
-      <a href="#activity" class="btn-cta">Browse recent reviews</a>
-      <p class="hero-note">
-        Invited authors can respond through a private link sent by email.
-      </p>
+  <section class="hero hero--product">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow">Machine review forum</span>
+        <h1 class="hero-heading hero-heading--left">
+          Machine reviews for trending papers. Public author replies. Read both sides.
+        </h1>
+        <p class="hero-subtitle hero-subtitle--left">
+          OpenAgent.review is a lightweight forum for browsing AI-generated paper reviews,
+          invited author responses, and thread-style discussion around fast-moving research.
+        </p>
+        <div class="hero-actions">
+          <a href="/browse/" class="btn-cta">Browse recent reviews</a>
+          <a href="/author/" class="btn-secondary">For authors</a>
+        </div>
+        <p class="hero-note hero-note--inline">
+          Scores are machine-generated triage signals, not peer review verdicts.
+        </p>
+      </div>
+
+      {sample && (
+        <aside class="hero-preview-card" aria-label="Sample thread preview">
+          <div class="hero-preview-top">
+            <span class="topic-chip topic-chip--ai">AI review</span>
+            <span class={sample.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
+              {sample.has_response ? 'Author responded' : 'Needs response'}
+            </span>
+          </div>
+          <h2 class="hero-preview-title">{sample.title}</h2>
+          <p class="hero-preview-summary">{sample.summary}</p>
+          <dl class="hero-preview-metrics">
+            <div>
+              <dt>Score</dt>
+              <dd>{formatScore(sample.score)}/10</dd>
+            </div>
+            <div>
+              <dt>Confidence</dt>
+              <dd>{sample.confidence ?? 0}/5</dd>
+            </div>
+            <div>
+              <dt>Last activity</dt>
+              <dd>{activityLabel(sample.last_activity_at ?? sample.updated_at)}</dd>
+            </div>
+          </dl>
+          <div class="hero-preview-footer">
+            <span>{sample.hf_rank != null ? `HF Daily #${sample.hf_rank}` : 'Trending paper'}</span>
+            <a href={`/review/?id=${encodeURIComponent(sample.id)}`}>Open thread →</a>
+          </div>
+        </aside>
+      )}
     </div>
   </section>
 
-  <!-- Filter Tabs -->
-  <div class="container" id="activity">
-    <div class="filter-tabs" role="tablist" aria-label="Filter reviews">
-      <button class="filter-tab active" role="tab" aria-selected="true" data-filter="all">All</button>
-      <button class="filter-tab" role="tab" aria-selected="false" data-filter="needs-response">Needs Response</button>
-      <button class="filter-tab" role="tab" aria-selected="false" data-filter="responded">Author Responded</button>
-      <button class="filter-tab" role="tab" aria-selected="false" data-filter="recent">Recently Updated</button>
+  <section class="home-stats">
+    <div class="container home-stats-grid">
+      <article class="stat-tile">
+        <span class="stat-label">Reviewed</span>
+        <strong class="stat-value">{totalCount}</strong>
+        <span class="stat-meta">Current queue snapshot</span>
+      </article>
+      <article class="stat-tile">
+        <span class="stat-label">Awaiting reply</span>
+        <strong class="stat-value">{awaitingCount}</strong>
+        <span class="stat-meta">Invited authors can respond</span>
+      </article>
+      <article class="stat-tile">
+        <span class="stat-label">Public threads</span>
+        <strong class="stat-value">{respondedCount}</strong>
+        <span class="stat-meta">Author reply already published</span>
+      </article>
+      <article class="stat-tile">
+        <span class="stat-label">Updated this week</span>
+        <strong class="stat-value">{updatedThisWeek}</strong>
+        <span class="stat-meta">Based on latest thread activity</span>
+      </article>
     </div>
-  </div>
+  </section>
 
-  <!-- Two-column layout -->
-  <div class="container">
-    <div class="homepage-main">
-      <!-- Left: Recent Activity -->
-      <div class="activity-column">
-        <h2 class="section-heading">Recent Activity</h2>
-        <div id="activity-list">
-          <div class="paper-card skeleton-card">
-            <div class="skeleton-line lg"></div>
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line sm"></div>
-          </div>
-          <div class="paper-card skeleton-card">
-            <div class="skeleton-line lg"></div>
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line sm"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Sidebar -->
-      <aside class="sidebar-column">
-        <div class="sidebar-box" id="how-it-works">
-          <h3 class="sidebar-heading">How it works</h3>
-          <ol class="sidebar-steps">
-            <li>
-              <strong>New papers are reviewed by AI</strong>
-              <span>Trending papers receive an automated review with scores and analysis.</span>
-            </li>
-            <li>
-              <strong>Authors receive a private response link</strong>
-              <span>Paper authors are invited via email to submit a response.</span>
-            </li>
-            <li>
-              <strong>Authors submit a final response</strong>
-              <span>Authors can review the AI feedback and publish their reply.</span>
-            </li>
-            <li>
-              <strong>The public can read both sides</strong>
-              <span>Reviews and responses are published together as a public thread.</span>
-            </li>
-          </ol>
-        </div>
-
-        <div class="sidebar-box">
-          <h3 class="sidebar-heading">Why trust OpenAgent.review</h3>
-          <p class="sidebar-text">
-            AI-generated scores are not peer review. They serve as a rough
-            triage filter. Author responses provide crucial context that
-            AI alone cannot capture. Final public threads give readers both
-            perspectives.
+  <div class="container home-shell" id="activity">
+    <div class="home-main-column">
+      <div class="section-heading-row">
+        <div>
+          <span class="section-eyebrow">Index</span>
+          <h2 class="section-heading section-heading--tight">Recent reviews</h2>
+          <p class="section-copy">
+            Start with the queue, then open a thread to compare the machine review with the author response.
           </p>
         </div>
+        <a href="/browse/" class="section-link">Open full browse view</a>
+      </div>
 
-        <div class="sidebar-box">
-          <h3 class="sidebar-heading">Recent author responses</h3>
-          <div id="recent-responses"></div>
-        </div>
-      </aside>
+      <div class="filter-tabs filter-tabs--soft" role="tablist" aria-label="Filter recent reviews">
+        <button class="filter-tab active" role="tab" aria-selected="true" data-filter="all">
+          All <span>{totalCount}</span>
+        </button>
+        <button class="filter-tab" role="tab" aria-selected="false" data-filter="needs-response">
+          Needs response <span>{awaitingCount}</span>
+        </button>
+        <button class="filter-tab" role="tab" aria-selected="false" data-filter="responded">
+          Author responded <span>{respondedCount}</span>
+        </button>
+        <button class="filter-tab" role="tab" aria-selected="false" data-filter="recent">
+          Recently updated <span>{updatedThisWeek}</span>
+        </button>
+      </div>
+
+      <div class="home-card-list" id="home-card-list">
+        {reviews.map((review) => (
+          <article
+            class="home-card"
+            data-home-card
+            data-review-id={review.id}
+            data-status={review.has_response ? 'responded' : 'needs-response'}
+            data-last-activity={review.last_activity_at ?? review.updated_at ?? review.date}
+          >
+            <div class="home-card-top">
+              <div class="home-card-chips">
+                <span class="topic-chip topic-chip--ai">AI review</span>
+                <span class={review.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
+                  {review.has_response ? 'Author responded' : 'Needs response'}
+                </span>
+                {review.hf_rank != null && <span class="topic-chip topic-chip--ghost">HF #{review.hf_rank}</span>}
+              </div>
+              <span class="home-card-updated">{activityLabel(review.last_activity_at ?? review.updated_at)}</span>
+            </div>
+            <a class="home-card-title" href={`/review/?id=${encodeURIComponent(review.id)}`}>
+              {review.title}
+            </a>
+            <p class="home-card-summary">{review.summary}</p>
+            <dl class="home-card-metrics">
+              <div>
+                <dt>Score</dt>
+                <dd>{formatScore(review.score)}/10</dd>
+              </div>
+              <div>
+                <dt>Confidence</dt>
+                <dd>{review.confidence ?? 0}/5</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{review.has_response ? 'Public thread' : 'Awaiting reply'}</dd>
+              </div>
+            </dl>
+            <div class="home-card-footer">
+              <span>{formatDate(review.date)}</span>
+              <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
+                {review.has_response ? 'Read both sides →' : 'Open AI review →'}
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div class="state empty" id="home-empty-state" hidden>
+        <strong>No reviews match this filter</strong>
+        <span>Try a different slice of the queue.</span>
+      </div>
     </div>
+
+    <aside class="home-sidebar">
+      <section class="sidebar-box sidebar-box--guide" id="how-it-works">
+        <span class="sidebar-kicker">How to read this site</span>
+        <h3 class="sidebar-heading">Read the review as a starting point, not a verdict.</h3>
+        <ol class="sidebar-steps sidebar-steps--calm">
+          <li>
+            <strong>Machine review</strong>
+            <span>The first note summarizes strengths, weaknesses, score, and confidence.</span>
+          </li>
+          <li>
+            <strong>Author response</strong>
+            <span>Invited authors can publish a private rebuttal as a public note in the thread.</span>
+          </li>
+          <li>
+            <strong>Thread history</strong>
+            <span>Each update remains visible so readers can trace what changed and when.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">Scoring caveat</span>
+        <h3 class="sidebar-heading">What the numbers mean</h3>
+        <p class="sidebar-text">
+          Score is a rough triage cue. Confidence indicates how certain the model is about its own review.
+          Neither replaces peer review or author context.
+        </p>
+        <a href="/about/#rubric" class="sidebar-inline-link">See rubric and limits</a>
+      </section>
+
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">For authors</span>
+        <h3 class="sidebar-heading">Respond through a private link</h3>
+        <p class="sidebar-text">
+          If you received an invite, you can draft a structured response, preview it, and publish it into the public thread.
+        </p>
+        <a href="/author/" class="sidebar-inline-link">Open the author portal</a>
+      </section>
+
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">Recent author replies</span>
+        <h3 class="sidebar-heading">Latest published responses</h3>
+        <div class="response-compact-list">
+          {responded.length > 0 ? (
+            responded.map((review) => (
+              <a class="response-compact response-compact--rich" href={`/review/?id=${encodeURIComponent(review.id)}`}>
+                <div>
+                  <span class="response-compact-title">{review.title}</span>
+                  <span class="response-compact-meta">{activityLabel(review.last_activity_at ?? review.updated_at)}</span>
+                </div>
+                <span class="response-compact-score">{formatScore(review.score)}</span>
+              </a>
+            ))
+          ) : (
+            <p class="sidebar-text">No author responses yet.</p>
+          )}
+        </div>
+      </section>
+    </aside>
   </div>
 </Layout>
 
-<script>
-  import { dataClient } from '../lib/data-client';
-  import { el, mount } from '../lib/dom';
-  import { paperCard, stateView } from '../lib/render';
-  import { formatScore } from '../lib/utils';
-  import type { LatestReviewEntry } from '../lib/types';
+<script define:vars={{ reviewPayload }}>
+  const cards = Array.from(document.querySelectorAll('[data-home-card]'));
+  const tabs = Array.from(document.querySelectorAll('.filter-tab'));
+  const list = document.getElementById('home-card-list');
+  const empty = document.getElementById('home-empty-state');
+  const payloadById = new Map(reviewPayload.map((entry) => [entry.id, entry]));
 
-  type FilterKey = 'all' | 'needs-response' | 'responded' | 'recent';
+  function orderedCards(filter) {
+    const visible = cards.filter((card) => {
+      if (filter === 'all' || filter === 'recent') return true;
+      return card.dataset.status === filter;
+    });
 
-  function filterReviews(arr: LatestReviewEntry[], key: FilterKey): LatestReviewEntry[] {
-    switch (key) {
-      case 'all':
-        return arr;
-      case 'needs-response':
-        return arr.filter((r) => !r.has_response);
-      case 'responded':
-        return arr.filter((r) => r.has_response === true);
-      case 'recent':
-        return arr.slice().sort((a, b) => b.date.localeCompare(a.date));
-    }
-  }
+    if (filter !== 'recent') return visible;
 
-  function renderCards(container: Element, reviews: LatestReviewEntry[]) {
-    if (reviews.length === 0) {
-      mount(container, stateView('empty', 'No reviews match', 'Try a different filter.'));
-      return;
-    }
-    mount(container, ...reviews.map((r) => paperCard(r)));
-  }
-
-  function renderResponsesSidebar(container: Element, reviews: LatestReviewEntry[]) {
-    const responded = reviews.filter((r) => r.has_response === true).slice(0, 4);
-    if (responded.length === 0) {
-      mount(container, el('p', { class: 'sidebar-text' }, 'No author responses yet.'));
-      return;
-    }
-    mount(
-      container,
-      ...responded.map((r) =>
-        el('a', { class: 'response-compact', href: `/review/?id=${encodeURIComponent(r.id)}` }, [
-          el('span', { class: 'response-compact-title' }, r.title),
-          el('span', { class: 'response-compact-score' }, formatScore(r.score)),
-        ])
-      )
-    );
-  }
-
-  async function main() {
-    const listContainer = document.getElementById('activity-list')!;
-    const responsesContainer = document.getElementById('recent-responses')!;
-    const tabs = document.querySelectorAll<HTMLButtonElement>('.filter-tab');
-
-    let data: LatestReviewEntry[] = [];
-    try {
-      const res = await dataClient.getLatest();
-      data = res.reviews;
-    } catch (e) {
-      mount(
-        listContainer,
-        stateView('error', 'Failed to load', e instanceof Error ? e.message : String(e))
-      );
-      return;
-    }
-
-    let currentFilter: FilterKey = 'all';
-    const update = () => renderCards(listContainer, filterReviews(data, currentFilter));
-    update();
-    renderResponsesSidebar(responsesContainer, data);
-
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        tabs.forEach((t) => {
-          t.classList.remove('active');
-          t.setAttribute('aria-selected', 'false');
-        });
-        tab.classList.add('active');
-        tab.setAttribute('aria-selected', 'true');
-        currentFilter = (tab.dataset.filter ?? 'all') as FilterKey;
-        update();
-      });
+    return visible.slice().sort((a, b) => {
+      const aData = payloadById.get(a.dataset.reviewId ?? '');
+      const bData = payloadById.get(b.dataset.reviewId ?? '');
+      return Date.parse(bData?.lastActivityAt ?? '0') - Date.parse(aData?.lastActivityAt ?? '0');
     });
   }
 
-  main();
+  function applyFilter(filter) {
+    const visible = orderedCards(filter);
+    const visibleSet = new Set(visible);
+    cards.forEach((card) => {
+      card.hidden = !visibleSet.has(card);
+    });
+    visible.forEach((card) => list?.appendChild(card));
+    if (empty) empty.hidden = visible.length !== 0;
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((item) => {
+        item.classList.remove('active');
+        item.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      applyFilter(tab.dataset.filter ?? 'all');
+    });
+  });
 </script>

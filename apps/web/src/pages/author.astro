@@ -1,0 +1,137 @@
+---
+import Layout from '../components/Layout.astro';
+
+const authorBase = import.meta.env.PUBLIC_AUTHOR_URL ?? '';
+---
+
+<Layout
+  title="For authors"
+  description="Enter your private invite token to respond to an OpenAgent.review machine review."
+  activeNav="author"
+>
+  <div class="page-header">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="sep">/</span>
+        <span>For authors</span>
+      </nav>
+      <h1>For authors</h1>
+      <p class="subtitle">
+        Paste the private token from your invite email to review the machine critique,
+        draft a response, and publish a public rebuttal.
+      </p>
+    </div>
+  </div>
+
+  <div class="container author-page-shell">
+    <section class="author-page-main">
+      <div class="author-entry-card">
+        <span class="sidebar-kicker">Private entry</span>
+        <h2>Open your private author link</h2>
+        <p>
+          You can paste either the raw token or the full invite URL you received by email.
+          We will extract the token and send you to the secure author portal.
+        </p>
+
+        <form id="author-token-form" class="author-token-form">
+          <label for="author-token">Invite token or invite URL</label>
+          <textarea id="author-token" rows="4" placeholder="https://author.example.com/i/your-token-here"></textarea>
+          <div class="author-token-actions">
+            <button type="submit" class="btn-cta">Open author portal</button>
+            <span class="author-token-hint">The response link is private and tied to a specific paper.</span>
+          </div>
+          <p id="author-token-error" class="author-token-error" hidden></p>
+        </form>
+      </div>
+
+      <div class="author-steps-card">
+        <span class="sidebar-kicker">What happens next</span>
+        <h2>Structured rebuttal flow</h2>
+        <ol class="sidebar-steps sidebar-steps--calm">
+          <li>
+            <strong>Check the AI review</strong>
+            <span>Read the machine critique, score, and confidence before you respond.</span>
+          </li>
+          <li>
+            <strong>Draft your reply</strong>
+            <span>Clarify mistakes, point to additional evidence, and leave a concise final response.</span>
+          </li>
+          <li>
+            <strong>Preview before publishing</strong>
+            <span>Your response is shown in the public thread alongside the machine review.</span>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <aside class="author-page-sidebar">
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">Publication policy</span>
+        <h3 class="sidebar-heading">What becomes public</h3>
+        <ul class="author-policy-list">
+          <li>Your display name and written response.</li>
+          <li>The fact that the response was published after the machine review.</li>
+          <li>The resulting thread, which readers can browse like a forum page.</li>
+        </ul>
+      </section>
+
+      <section class="sidebar-box">
+        <span class="sidebar-kicker">Need help?</span>
+        <h3 class="sidebar-heading">Common cases</h3>
+        <p class="sidebar-text">
+          If you do not have a token handy, open the original invite email directly.
+          If the link expired or looks broken, you will need a fresh invite from the sender.
+        </p>
+      </section>
+    </aside>
+  </div>
+</Layout>
+
+<script define:vars={{ authorBase }}>
+  const form = document.getElementById('author-token-form');
+  const input = document.getElementById('author-token');
+  const error = document.getElementById('author-token-error');
+
+  function normalizeToken(value) {
+    const raw = value.trim();
+    if (!raw) return '';
+
+    try {
+      const url = new URL(raw);
+      const match = url.pathname.match(/\/i\/([^/?#]+)/);
+      if (match?.[1]) return match[1];
+      const tokenParam = url.searchParams.get('token');
+      if (tokenParam) return tokenParam;
+    } catch {
+      // fall through to raw parsing
+    }
+
+    const pathMatch = raw.match(/\/i\/([^/?#]+)/);
+    if (pathMatch?.[1]) return pathMatch[1];
+    return raw.replace(/^\/+|\/+$/g, '');
+  }
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const token = normalizeToken(input?.value ?? '');
+    if (!token) {
+      if (error) {
+        error.hidden = false;
+        error.textContent = 'Paste the invite token or the full invite URL.';
+      }
+      return;
+    }
+
+    const base = authorBase.trim();
+    if (!base) {
+      if (error) {
+        error.hidden = false;
+        error.textContent = 'This site needs PUBLIC_AUTHOR_URL configured before token redirects will work.';
+      }
+      return;
+    }
+
+    window.location.href = `${base.replace(/\/$/, '')}/i/${encodeURIComponent(token)}`;
+  });
+</script>
