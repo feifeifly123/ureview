@@ -28,10 +28,12 @@ function activityLabel(iso?: string): string {
   return `Updated ${days} days ago`;
 }
 
+const weekMs = 7 * 24 * 60 * 60 * 1000;
 const reviewPayload = reviews.map((review) => ({
   id: review.id,
   status: review.has_response ? 'responded' : 'needs-response',
   lastActivityAt: review.last_activity_at ?? review.updated_at ?? review.date,
+  recentlyUpdated: (Date.parse(generatedAt) - Date.parse(review.last_activity_at ?? review.updated_at ?? review.date)) <= weekMs,
 }));
 ---
 
@@ -270,7 +272,11 @@ const reviewPayload = reviews.map((review) => ({
 
   function orderedCards(filter) {
     const visible = cards.filter((card) => {
-      if (filter === 'all' || filter === 'recent') return true;
+      if (filter === 'all') return true;
+      if (filter === 'recent') {
+        const data = payloadById.get(card.dataset.reviewId ?? '');
+        return data?.recentlyUpdated === true;
+      }
       return card.dataset.status === filter;
     });
 
@@ -304,4 +310,33 @@ const reviewPayload = reviews.map((review) => ({
       applyFilter(tab.dataset.filter ?? 'all');
     });
   });
+</script>
+
+<script>
+  import { dataClient } from '../lib/data-client';
+
+  (async () => {
+    try {
+      const { reviews } = await dataClient.getLatest();
+      const fresh = new Map(reviews.map((r) => [r.id, r.has_response === true]));
+
+      document.querySelectorAll<HTMLElement>('[data-home-card]').forEach((card) => {
+        const id = card.dataset.reviewId;
+        if (!id || !fresh.has(id)) return;
+        const hasResponse = fresh.get(id)!;
+        const newStatus = hasResponse ? 'responded' : 'needs-response';
+        if (card.dataset.status === newStatus) return;
+
+        card.dataset.status = newStatus;
+        const chips = card.querySelectorAll('.topic-chip');
+        const statusChip = chips[1];
+        if (statusChip) {
+          statusChip.className = hasResponse
+            ? 'topic-chip topic-chip--author'
+            : 'topic-chip topic-chip--waiting';
+          statusChip.textContent = hasResponse ? 'Author responded' : 'Needs response';
+        }
+      });
+    } catch { /* SSG content remains visible as fallback */ }
+  })();
 </script>

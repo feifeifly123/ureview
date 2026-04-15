@@ -196,13 +196,40 @@ const CONTENT_LABELS: Record<string, string> = {
   reply_comment: 'Comment:',
 };
 
-/** Build paragraph elements from content string. Prepend a colored label if applicable. */
+const REBUTTAL_SECTION_TITLES = new Set([
+  'What the review got right',
+  'What needs correction',
+  'Additional evidence or appendix pointers',
+  'Final response',
+]);
+
+/** Build paragraph elements from content string. Prepend a colored label if applicable.
+ *  For rebuttal type, detects structured content (Title\nBody blocks) from the author form. */
 export function buildParagraphs(content: string, type?: string): HTMLElement {
-  const paragraphs = content.split('\n\n').map((para) => el('p', {}, para));
+  const blocks = content.split('\n\n').filter((b) => b.trim());
   const label = type && CONTENT_LABELS[type]
     ? el('span', { class: 'or-content-label' }, CONTENT_LABELS[type])
     : null;
-  return el('div', { class: 'or-note-content' }, [label, ...paragraphs]);
+
+  const elements: (HTMLElement | null)[] = [label];
+
+  for (const block of blocks) {
+    if (type === 'rebuttal') {
+      const nlIdx = block.indexOf('\n');
+      if (nlIdx !== -1) {
+        const firstLine = block.slice(0, nlIdx).trim();
+        const rest = block.slice(nlIdx + 1).trim();
+        if (REBUTTAL_SECTION_TITLES.has(firstLine)) {
+          elements.push(el('h4', { class: 'or-section-title' }, firstLine));
+          if (rest) elements.push(el('p', {}, rest));
+          continue;
+        }
+      }
+    }
+    elements.push(el('p', {}, block));
+  }
+
+  return el('div', { class: 'or-note-content' }, elements);
 }
 
 /** Build the AI review body for the thread view. */

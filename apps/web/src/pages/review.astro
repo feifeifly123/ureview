@@ -200,8 +200,10 @@ import Layout from '../components/Layout.astro';
     return 'Comment';
   }
 
-  function noteGroup(entry: ThreadEntry): 'author-response' | 'comments' {
-    return entry.type === 'rebuttal' ? 'author-response' : 'comments';
+  function noteGroup(entry: ThreadEntry): 'ai-review' | 'author-response' | 'comments' {
+    if (entry.type === 'rebuttal') return 'author-response';
+    if (entry.type === 'acknowledgement') return 'ai-review';
+    return 'comments';
   }
 
   function buildThreadNodes(review: Review, threadData: ThreadData | null): HTMLElement[] {

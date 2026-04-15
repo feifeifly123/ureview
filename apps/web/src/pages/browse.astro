@@ -255,3 +255,32 @@ const browsePayload = reviews.map((review) => ({
 
   setStatus(initialStatus && ['all', 'needs-response', 'responded'].includes(initialStatus) ? initialStatus : 'all');
 </script>
+
+<script>
+  import { dataClient } from '../lib/data-client';
+
+  (async () => {
+    try {
+      const { reviews } = await dataClient.getLatest();
+      const fresh = new Map(reviews.map((r) => [r.id, r.has_response === true]));
+
+      document.querySelectorAll<HTMLElement>('[data-browse-card]').forEach((card) => {
+        const id = card.dataset.reviewId;
+        if (!id || !fresh.has(id)) return;
+        const hasResponse = fresh.get(id)!;
+        const newStatus = hasResponse ? 'responded' : 'needs-response';
+        if (card.dataset.status === newStatus) return;
+
+        card.dataset.status = newStatus;
+        const chips = card.querySelectorAll('.topic-chip');
+        const statusChip = chips[1];
+        if (statusChip) {
+          statusChip.className = hasResponse
+            ? 'topic-chip topic-chip--author'
+            : 'topic-chip topic-chip--waiting';
+          statusChip.textContent = hasResponse ? 'Author responded' : 'Needs response';
+        }
+      });
+    } catch { /* SSG content remains visible as fallback */ }
+  })();
+</script>
