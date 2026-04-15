@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从 data/reviews/*.json 重新生成 latest.json 和 daily/*.json 索引。"""
+"""Rebuild latest.json and daily/*.json indexes from data/reviews/*.json."""
 
 import json
 import sys
@@ -22,12 +22,12 @@ def write_json(path: Path, obj: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=2)
-    print(f"  写入 {path.relative_to(ROOT)}")
+    print(f"  Wrote {path.relative_to(ROOT)}")
 
 
 def main() -> int:
     if not REVIEWS_DIR.exists():
-        print("data/reviews/ 目录不存在")
+        print("data/reviews/ directory does not exist")
         return 1
 
     reviews = []
@@ -35,22 +35,22 @@ def main() -> int:
         reviews.append(load_json(f))
 
     if not reviews:
-        print("没有找到任何 review 文件")
+        print("No review files found")
         return 1
 
-    # 扫描 responses 目录获取已回应的 paper id
+    # Scan responses directory for responded paper IDs
     responses_dir = DATA / "responses"
     response_ids: set[str] = set()
     if responses_dir.exists():
         for f in responses_dir.glob("*.json"):
             response_ids.add(f.stem)
 
-    # 按日期分组
+    # Group by date
     by_date: dict[str, list[dict]] = defaultdict(list)
     for r in reviews:
         by_date[r["date"]].append(r)
 
-    # 生成 daily/*.json
+    # Generate daily/*.json
     DAILY_DIR.mkdir(parents=True, exist_ok=True)
     for date, items in sorted(by_date.items()):
         daily = {
@@ -69,7 +69,7 @@ def main() -> int:
         }
         write_json(DAILY_DIR / f"{date}.json", daily)
 
-    # 生成 latest.json（最新 50 篇，按日期倒序）
+    # Generate latest.json (newest 50, sorted by updated_at desc)
     reviews.sort(key=lambda r: r["updated_at"], reverse=True)
     latest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -87,7 +87,7 @@ def main() -> int:
     }
     write_json(DATA / "latest.json", latest)
 
-    print(f"\n索引生成完成: {len(reviews)} 篇 review, {len(by_date)} 天")
+    print(f"\nIndex generation complete: {len(reviews)} reviews, {len(by_date)} days")
     return 0
 
 

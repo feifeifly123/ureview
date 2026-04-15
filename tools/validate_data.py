@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""校验 data/ 下所有 JSON 是否符合 contracts/ 中的 schema，并检查索引引用一致性。"""
+"""Validate all JSON files under data/ against contracts/ schemas and check index reference consistency."""
 
 import json
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 try:
     from jsonschema import validate, ValidationError
 except ImportError:
-    print("请先安装 jsonschema: pip install jsonschema")
+    print("Please install jsonschema first: pip install jsonschema")
     sys.exit(1)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,7 +28,7 @@ def main() -> int:
     latest_schema = load_json(CONTRACTS / "latest.schema.json")
     daily_schema = load_json(CONTRACTS / "daily.schema.json")
 
-    # 收集所有 review 文件的 id
+    # Collect all review file IDs
     review_ids: set[str] = set()
     reviews_dir = DATA / "reviews"
     if reviews_dir.exists():
@@ -42,7 +42,7 @@ def main() -> int:
                 errors.append(f"{f.relative_to(ROOT)}: {e.message}")
                 print(f" FAIL {f.relative_to(ROOT)}: {e.message}")
 
-    # 校验 latest.json
+    # Validate latest.json
     latest_path = DATA / "latest.json"
     if latest_path.exists():
         data = load_json(latest_path)
@@ -53,14 +53,14 @@ def main() -> int:
             errors.append(f"latest.json: {e.message}")
             print(f" FAIL latest.json: {e.message}")
 
-        # 检查引用一致性
+        # Check reference consistency
         for entry in data.get("reviews", []):
             if entry["id"] not in review_ids:
-                msg = f"latest.json 引用了不存在的 review: {entry['id']}"
+                msg = f"latest.json references non-existent review: {entry['id']}"
                 errors.append(msg)
                 print(f" FAIL {msg}")
 
-    # 校验 daily/*.json
+    # Validate daily/*.json
     daily_dir = DATA / "daily"
     if daily_dir.exists():
         for f in sorted(daily_dir.glob("*.json")):
@@ -74,11 +74,11 @@ def main() -> int:
 
             for entry in data.get("reviews", []):
                 if entry["id"] not in review_ids:
-                    msg = f"{f.name} 引用了不存在的 review: {entry['id']}"
+                    msg = f"{f.name} references non-existent review: {entry['id']}"
                     errors.append(msg)
                     print(f" FAIL {msg}")
 
-    # 校验 responses/*.json
+    # Validate responses/*.json
     response_schema = load_json(CONTRACTS / "author-response.schema.json")
     responses_dir = DATA / "responses"
     if responses_dir.exists():
@@ -87,7 +87,7 @@ def main() -> int:
             try:
                 validate(instance=data, schema=response_schema)
                 if data["paper_id"] not in review_ids:
-                    msg = f"{f.name} 引用了不存在的 review: {data['paper_id']}"
+                    msg = f"{f.name} references non-existent review: {data['paper_id']}"
                     errors.append(msg)
                     print(f" FAIL {msg}")
                 else:
@@ -97,10 +97,10 @@ def main() -> int:
                 print(f" FAIL {f.relative_to(ROOT)}: {e.message}")
 
     if errors:
-        print(f"\n校验失败: {len(errors)} 个错误")
+        print(f"\nValidation failed: {len(errors)} error(s)")
         return 1
 
-    print("\n全部校验通过")
+    print("\nAll validations passed")
     return 0
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从 Hugging Face 获取每日热门论文。（v1 stub）"""
+"""Fetch daily trending papers from Hugging Face. (v1 stub)"""
 
 import json
 import sys
@@ -14,7 +14,7 @@ def main() -> int:
     today = date.today().isoformat()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-    # TODO: 替换为真实 HF Daily Papers API 调用
+    # TODO: Replace with real HF Daily Papers API call
     # https://huggingface.co/api/daily_papers
     stub_papers = [
         {
@@ -35,7 +35,7 @@ def main() -> int:
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(stub_papers, f, ensure_ascii=False, indent=2)
 
-    print(f"已保存 {len(stub_papers)} 篇论文到 {out_path.relative_to(ROOT)}")
+    print(f"Saved {len(stub_papers)} papers to {out_path.relative_to(ROOT)}")
     return 0
 
 

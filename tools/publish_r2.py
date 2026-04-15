@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""将 data/ 目录上传到 Cloudflare R2。"""
+"""Upload data/ directory to Cloudflare R2."""
 
 import os
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 try:
     import boto3
 except ImportError:
-    print("请先安装 boto3: pip install boto3")
+    print("Please install boto3 first: pip install boto3")
     sys.exit(1)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,7 +18,7 @@ DATA = ROOT / "data"
 def get_env(key: str) -> str:
     val = os.environ.get(key)
     if not val:
-        print(f"缺少环境变量: {key}")
+        print(f"Missing environment variable: {key}")
         sys.exit(1)
     return val
 
@@ -29,7 +29,7 @@ def main() -> int:
     elif "--stage" in sys.argv:
         env = "stage"
     else:
-        print("用法: publish_r2.py --stage | --prod")
+        print("Usage: publish_r2.py --stage | --prod")
         return 1
 
     account_id = get_env("R2_ACCOUNT_ID")
@@ -47,7 +47,7 @@ def main() -> int:
         region_name="auto",
     )
 
-    # 先上传数据文件，再上传索引（索引引用 responses，所以 responses 要先传）
+    # Upload data files first, then indexes (indexes reference responses, so responses go first)
     upload_order = []
     reviews_dir = DATA / "reviews"
     if reviews_dir.exists():
@@ -76,10 +76,10 @@ def main() -> int:
                 "CacheControl": cache_control,
             },
         )
-        print(f"  上传 data/{key}")
+        print(f"  Uploaded data/{key}")
         count += 1
 
-    print(f"\n[{env}] 上传完成: {count} 个文件 → {bucket}")
+    print(f"\n[{env}] Upload complete: {count} files -> {bucket}")
     return 0
 
 

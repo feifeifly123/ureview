@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""为获取的论文生成 AI review。（v1 stub）"""
+"""Generate AI reviews for fetched papers. (v1 stub)"""
 
 import json
 import re
@@ -23,8 +23,8 @@ def main() -> int:
     raw_path = RAW_DIR / f"{today}.json"
 
     if not raw_path.exists():
-        print(f"未找到原始数据: {raw_path.relative_to(ROOT)}")
-        print("请先运行 fetch_hf.py")
+        print(f"Raw data not found: {raw_path.relative_to(ROOT)}")
+        print("Please run fetch_hf.py first")
         return 1
 
     with open(raw_path, encoding="utf-8") as f:
@@ -37,7 +37,7 @@ def main() -> int:
         slug = slugify(paper["title"])
         review_id = f"{today}-{slug}"
 
-        # TODO: 替换为真实 LLM API 调用
+        # TODO: Replace with real LLM API call
         review = {
             "id": review_id,
             "slug": slug,
@@ -49,9 +49,9 @@ def main() -> int:
             "review": {
                 "score": 5.0,
                 "confidence": 2,
-                "strengths": ["[Stub] 待替换为真实 review"],
-                "weaknesses": ["[Stub] 待替换为真实 review"],
-                "final_comment": "[Stub] 这是一个占位 review，请接入 LLM 后重新生成。",
+                "strengths": ["[Stub] Placeholder for real review"],
+                "weaknesses": ["[Stub] Placeholder for real review"],
+                "final_comment": "[Stub] This is a placeholder review. Connect to an LLM to generate real reviews.",
             },
             "updated_at": now,
         }
@@ -59,9 +59,9 @@ def main() -> int:
         out_path = REVIEWS_DIR / f"{review_id}.json"
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(review, f, ensure_ascii=False, indent=2)
-        print(f"  生成 {out_path.relative_to(ROOT)}")
+        print(f"  Generated {out_path.relative_to(ROOT)}")
 
-    print(f"\n已生成 {len(papers)} 篇 review")
+    print(f"\nGenerated {len(papers)} reviews")
     return 0
 
 
