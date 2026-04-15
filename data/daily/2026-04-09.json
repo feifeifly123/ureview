@@ -4,7 +4,7 @@
     {
       "id": "2026-04-09-paper-a",
       "title": "Scaling Laws for Neural Language Models",
-      "summary": "本文研究了神经语言模型性能与模型大小、数据集大小和训练计算量之间的幂律关系。",
+      "summary": "This paper investigates the power-law relationships between neural language model performance and model size, dataset size, and training compute.",
       "score": 7.5,
       "hf_rank": 1,
       "has_response": true
@@ -12,7 +12,7 @@
     {
       "id": "2026-04-09-paper-b",
       "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
-      "summary": "本文提出了思维链提示方法，通过在少样本示例中加入中间推理步骤来提升大语言模型的复杂推理能力。",
+      "summary": "This paper proposes chain-of-thought prompting, which improves complex reasoning in large language models by incorporating intermediate reasoning steps into few-shot examples.",
       "score": 6.0,
       "hf_rank": 3
     }

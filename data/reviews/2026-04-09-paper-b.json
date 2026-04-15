@@ -5,20 +5,20 @@
   "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
   "paper_url": "https://arxiv.org/abs/2201.11903",
   "hf_rank": 3,
-  "summary": "本文提出了思维链提示方法，通过在少样本示例中加入中间推理步骤来提升大语言模型的复杂推理能力。",
+  "summary": "This paper proposes chain-of-thought prompting, which improves complex reasoning in large language models by incorporating intermediate reasoning steps into few-shot examples.",
   "review": {
     "score": 6.0,
     "confidence": 3,
     "strengths": [
-      "方法简洁优雅，无需修改模型即可提升推理能力",
-      "在数学和常识推理任务上有显著提升"
+      "The method is elegant and simple, improving reasoning without modifying the model",
+      "Significant improvements on mathematical and commonsense reasoning tasks"
     ],
     "weaknesses": [
-      "对小模型效果有限，存在明显的规模门槛",
-      "思维链的质量高度依赖人工示例的设计",
-      "缺少对思维链正确性的系统分析"
+      "Limited effectiveness on small models, with a clear scale threshold",
+      "Chain-of-thought quality is highly dependent on the design of human-crafted examples",
+      "Lacks systematic analysis of chain-of-thought correctness"
     ],
-    "final_comment": "思维链提示是一种实用且有影响力的技术，但其有效性与模型规模强相关，应用时需注意这一限制。"
+    "final_comment": "Chain-of-thought prompting is a practical and influential technique, but its effectiveness is strongly correlated with model scale. This limitation should be noted when applying it."
   },
   "updated_at": "2026-04-09T10:15:00+08:00"
 }

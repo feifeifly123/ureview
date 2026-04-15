@@ -5,20 +5,20 @@
   "title": "Scaling Laws for Neural Language Models",
   "paper_url": "https://arxiv.org/abs/2001.08361",
   "hf_rank": 1,
-  "summary": "本文研究了神经语言模型性能与模型大小、数据集大小和训练计算量之间的幂律关系。",
+  "summary": "This paper investigates the power-law relationships between neural language model performance and model size, dataset size, and training compute.",
   "review": {
     "score": 7.5,
     "confidence": 4,
     "strengths": [
-      "实验设计严谨，覆盖了多个数量级的模型规模",
-      "发现的幂律关系具有很强的预测能力",
-      "对未来大规模训练的资源分配提供了实用指导"
+      "Rigorous experimental design covering multiple orders of magnitude in model scale",
+      "The discovered power-law relationships have strong predictive power",
+      "Provides practical guidance for resource allocation in future large-scale training"
     ],
     "weaknesses": [
-      "仅关注 Transformer 架构，缺少与其他架构的对比",
-      "训练数据的多样性对 scaling law 的影响未充分讨论"
+      "Focuses only on the Transformer architecture, lacking comparisons with other architectures",
+      "The impact of training data diversity on scaling laws is not sufficiently discussed"
     ],
-    "final_comment": "这是一篇重要的实证研究，为大规模语言模型的训练提供了有价值的指导。建议后续工作扩展到更多架构和数据类型。"
+    "final_comment": "This is an important empirical study that provides valuable guidance for training large-scale language models. Future work should extend to more architectures and data types."
   },
   "updated_at": "2026-04-09T09:20:00+08:00"
 }
