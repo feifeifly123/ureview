@@ -6,7 +6,6 @@
     AUTHOR_BASE_URL=http://127.0.0.1:8787 \
     python3 tools/create_author_invite.py \
         --paper-id 2026-04-09-paper-a \
-        --email author@example.com \
         --expiry-days 14
 """
 
@@ -32,7 +31,7 @@ def b64url_encode(data: bytes) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="生成作者邀请 magic link")
     parser.add_argument("--paper-id", required=True, help="论文 ID (如 2026-04-09-paper-a)")
-    parser.add_argument("--email", required=True, help="作者邮箱")
+    parser.add_argument("--email", default=None, help="作者邮箱 (仅供记录，不含在 token 中)")
     parser.add_argument("--expiry-days", type=int, default=14, help="链接有效期 (天，默认 14)")
     args = parser.parse_args()
 
@@ -65,7 +64,8 @@ def main() -> int:
     url = f"{base_url}/i/{token}"
 
     print(f"Paper:   {args.paper_id}")
-    print(f"Email:   {args.email}")
+    if args.email:
+        print(f"Email:   {args.email} (仅供记录)")
     print(f"Expires: {args.expiry_days} days")
     print(f"\nInvite URL:\n{url}")
 

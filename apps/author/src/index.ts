@@ -723,7 +723,10 @@ async function handleInvite(url: URL, env: Env): Promise<Response> {
 
 async function handleSubmit(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin');
-  if (origin && !origin.endsWith('.openagent.review') && origin !== 'https://openagent.review') {
+  if (origin
+    && !origin.endsWith('.openagent.review')
+    && origin !== 'https://openagent.review'
+    && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return new Response(JSON.stringify({ error: 'Cross-origin request rejected' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },

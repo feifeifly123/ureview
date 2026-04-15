@@ -254,6 +254,8 @@ const browsePayload = reviews.map((review) => ({
   });
 
   setStatus(initialStatus && ['all', 'needs-response', 'responded'].includes(initialStatus) ? initialStatus : 'all');
+
+  document.addEventListener('browse:refresh', sync);
 </script>
 
 <script>
@@ -281,6 +283,7 @@ const browsePayload = reviews.map((review) => ({
           statusChip.textContent = hasResponse ? 'Author responded' : 'Needs response';
         }
       });
+      document.dispatchEvent(new Event('browse:refresh'));
     } catch { /* SSG content remains visible as fallback */ }
   })();
 </script>

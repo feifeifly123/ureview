@@ -135,7 +135,8 @@ const authorBase = import.meta.env.PUBLIC_AUTHOR_URL ?? '';
     try {
       const dest = `${base.replace(/\/$/, '')}/i/${encodeURIComponent(token)}`;
       const url = new URL(dest);
-      if (!url.hostname.endsWith('openagent.review')) {
+      const hn = url.hostname;
+      if (!hn.endsWith('openagent.review') && hn !== 'localhost' && hn !== '127.0.0.1') {
         if (error) {
           error.hidden = false;
           error.textContent = 'Author URL is misconfigured.';
