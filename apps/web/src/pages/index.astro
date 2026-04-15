@@ -50,8 +50,7 @@ const reviewPayload = reviews.map((review) => ({
           Machine reviews for trending papers. Public author replies. Read both sides.
         </h1>
         <p class="hero-subtitle hero-subtitle--left">
-          OpenAgent.review is a lightweight forum for browsing AI-generated paper reviews,
-          invited author responses, and thread-style discussion around fast-moving research.
+          See what an AI reviewer thinks of today's trending papers — then read the author's rebuttal.
         </p>
         <div class="hero-actions">
           <a href="/browse/" class="btn-cta">Browse recent reviews</a>
@@ -64,6 +63,7 @@ const reviewPayload = reviews.map((review) => ({
 
       {sample && (
         <aside class="hero-preview-card" aria-label="Sample thread preview">
+          <span class="hero-featured-label">Featured thread</span>
           <div class="hero-preview-top">
             <span class="topic-chip topic-chip--ai">AI review</span>
             <span class={sample.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
@@ -95,30 +95,40 @@ const reviewPayload = reviews.map((review) => ({
     </div>
   </section>
 
-  <section class="home-stats">
-    <div class="container home-stats-grid">
-      <article class="stat-tile">
-        <span class="stat-label">Reviewed</span>
-        <strong class="stat-value">{totalCount}</strong>
-        <span class="stat-meta">Current queue snapshot</span>
-      </article>
-      <article class="stat-tile">
-        <span class="stat-label">Awaiting reply</span>
-        <strong class="stat-value">{awaitingCount}</strong>
-        <span class="stat-meta">Invited authors can respond</span>
-      </article>
-      <article class="stat-tile">
-        <span class="stat-label">Public threads</span>
-        <strong class="stat-value">{respondedCount}</strong>
-        <span class="stat-meta">Author reply already published</span>
-      </article>
-      <article class="stat-tile">
-        <span class="stat-label">Updated this week</span>
-        <strong class="stat-value">{updatedThisWeek}</strong>
-        <span class="stat-meta">Based on latest thread activity</span>
-      </article>
-    </div>
-  </section>
+  {totalCount >= 20 ? (
+    <section class="home-stats">
+      <div class="container home-stats-grid">
+        <article class="stat-tile">
+          <span class="stat-label">Reviewed</span>
+          <strong class="stat-value">{totalCount}</strong>
+          <span class="stat-meta">Current queue snapshot</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label">Awaiting reply</span>
+          <strong class="stat-value">{awaitingCount}</strong>
+          <span class="stat-meta">Invited authors can respond</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label">Public threads</span>
+          <strong class="stat-value">{respondedCount}</strong>
+          <span class="stat-meta">Author reply already published</span>
+        </article>
+        <article class="stat-tile">
+          <span class="stat-label">Updated this week</span>
+          <strong class="stat-value">{updatedThisWeek}</strong>
+          <span class="stat-meta">Based on latest thread activity</span>
+        </article>
+      </div>
+    </section>
+  ) : (
+    <section class="home-trust-strip">
+      <div class="container">
+        <p class="trust-strip-text">
+          {totalCount} papers reviewed &middot; Source: HF Daily Papers &middot; Machine-generated triage signals
+        </p>
+      </div>
+    </section>
+  )}
 
   <div class="container home-shell" id="activity">
     <div class="home-main-column">
@@ -188,7 +198,7 @@ const reviewPayload = reviews.map((review) => ({
             <div class="home-card-footer">
               <span>{formatDate(review.date)}</span>
               <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
-                {review.has_response ? 'Read both sides →' : 'Open AI review →'}
+Open thread →
               </a>
             </div>
           </article>
@@ -218,17 +228,11 @@ const reviewPayload = reviews.map((review) => ({
             <strong>Thread history</strong>
             <span>Each update remains visible so readers can trace what changed and when.</span>
           </li>
+          <li>
+            <strong>Scoring caveat</strong>
+            <span>Score is a rough triage cue; confidence indicates model certainty. Neither replaces peer review. <a href="/about/#rubric" class="sidebar-inline-link">See rubric</a></span>
+          </li>
         </ol>
-      </section>
-
-      <section class="sidebar-box">
-        <span class="sidebar-kicker">Scoring caveat</span>
-        <h3 class="sidebar-heading">What the numbers mean</h3>
-        <p class="sidebar-text">
-          Score is a rough triage cue. Confidence indicates how certain the model is about its own review.
-          Neither replaces peer review or author context.
-        </p>
-        <a href="/about/#rubric" class="sidebar-inline-link">See rubric and limits</a>
       </section>
 
       <section class="sidebar-box">

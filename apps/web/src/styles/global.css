@@ -6,8 +6,8 @@
 
 :root {
   /* ---- color ---- */
-  --color-primary:        #8C1515;
-  --color-primary-hover:  #6B0F0F;
+  --color-primary:        #9B1B1B;
+  --color-primary-hover:  #7A1414;
 
   --color-ink:            #1A1A1A;
   --color-ink-2:          #4A4A4A;
@@ -22,8 +22,8 @@
 
   --color-info:           #1565C0;
 
-  --color-teal:           #0D7377;
-  --color-teal-hover:     #0A5C5F;
+  --color-teal:           var(--color-primary);
+  --color-teal-hover:     var(--color-primary-hover);
   --color-amber:          #B8860B;
   --color-amber-bg:       #FFF8E7;
   --color-amber-border:   #E8C174;
@@ -831,7 +831,7 @@ ul.review-field-value li {
 }
 
 .reviewer-avatar--author {
-  background: #0D7377;
+  background: var(--color-primary);
 }
 
 .response-block-body {
@@ -854,9 +854,9 @@ ul.review-field-value li {
 
 /* Author reply tag on list pages */
 .tag-response {
-  border-color: #A7D8D8;
-  color: #0D7377;
-  background: #E8F6F6;
+  border-color: #FECACA;
+  color: var(--color-primary);
+  background: #FEF2F2;
   font-weight: 600;
 }
 
@@ -1069,6 +1069,69 @@ ul.review-field-value li {
 }
 
 /* =========================================================================
+   About trust cards
+   ========================================================================= */
+
+.about-trust-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 28px;
+}
+
+.about-callout {
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: 0 10px 32px rgba(20, 24, 33, 0.04);
+}
+
+.about-callout-heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  margin-bottom: var(--space-3);
+}
+
+.about-callout-list {
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+  line-height: 1.6;
+}
+
+.about-callout-list li {
+  margin-bottom: var(--space-2);
+}
+
+.about-callout-list li:last-child {
+  margin-bottom: 0;
+}
+
+.about-provenance-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.about-provenance-grid div {
+  display: grid;
+  gap: 4px;
+}
+
+.about-provenance-grid dt {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-3);
+}
+
+.about-provenance-grid dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+
+/* =========================================================================
    Navbar author-link button
    ========================================================================= */
 
@@ -1176,9 +1239,9 @@ ul.review-field-value li {
   border-color: var(--color-ink-4);
 }
 .filter-tab.active {
-  background: var(--color-ink);
+  background: var(--color-primary);
   color: var(--color-paper);
-  border-color: var(--color-ink);
+  border-color: var(--color-primary);
 }
 
 /* =========================================================================
@@ -2422,6 +2485,12 @@ body.body--forum {
   color: var(--color-ink-2);
 }
 
+.topic-chip--discussion {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1D4ED8;
+}
+
 .hero-preview-title,
 .home-card-title,
 .browse-card-title,
@@ -2431,7 +2500,7 @@ body.body--forum {
   line-height: 1.2;
 }
 
-.hero-preview-title { font-size: 28px; }
+.hero-preview-title { font-size: 32px; }
 .home-card-title, .browse-card-title { font-size: 26px; display: block; margin: 12px 0 10px; }
 .thread-header-title { font-size: 38px; margin: 8px 0; }
 
@@ -2502,6 +2571,26 @@ body.body--forum {
   flex-wrap: wrap;
   font-size: var(--text-sm);
   color: var(--color-ink-3);
+}
+
+.home-trust-strip {
+  padding: 14px 0;
+}
+
+.trust-strip-text {
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.hero-featured-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+  margin-bottom: -4px;
 }
 
 .home-stats {
@@ -2611,9 +2700,9 @@ body.body--forum {
 .filter-tabs--soft .filter-tab.active,
 .browse-status-tab.active,
 .thread-tab.active {
-  background: var(--color-ink);
+  background: var(--color-primary);
   color: #fff;
-  border-color: var(--color-ink);
+  border-color: var(--color-primary);
 }
 
 .filter-tabs--soft .filter-tab.active span,
@@ -2770,6 +2859,18 @@ body.body--forum {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   gap: 16px;
+  padding: 18px;
+}
+
+.browse-list {
+  gap: 10px;
+}
+
+.browse-card-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .browse-card-aside {
@@ -2876,7 +2977,7 @@ body.body--forum {
   min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  background: var(--color-ink);
+  background: var(--color-primary);
   color: #fff !important;
 }
 
@@ -2912,7 +3013,14 @@ body.body--forum {
 }
 
 .thread-summary-card {
-  padding: 18px;
+  padding: 14px;
+  box-shadow: none;
+}
+
+.thread-jump-btn {
+  margin-top: 6px;
+  font-size: 12px;
+  min-height: 32px;
 }
 
 .thread-summary-title {
@@ -2941,7 +3049,7 @@ body.body--forum {
 .thread-history-item span {
   margin: 0;
   color: var(--color-ink-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
 }
 
 .thread-history-item {
@@ -3098,6 +3206,10 @@ body.body--forum {
 }
 
 @media (max-width: 720px) {
+  .about-trust-cards {
+    grid-template-columns: 1fr;
+  }
+
   .container,
   .body--forum .or-topbar-inner--simple,
   .body--forum .or-subbar-inner,

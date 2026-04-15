@@ -22,6 +22,36 @@ import Layout from '../components/Layout.astro';
     </div>
   </div>
 
+  <div class="container about-trust-cards">
+    <section class="about-callout">
+      <h2 class="about-callout-heading">Key disclaimers</h2>
+      <ul class="about-callout-list">
+        <li>Scores are machine-generated triage signals, not peer review verdicts.</li>
+        <li>A high score means the model found the paper compelling under the current rubric, not that the work is settled.</li>
+        <li>Author responses are essential context, especially when the review misreads scope or evidence.</li>
+        <li>The review queue is driven by daily source feeds, not editorial selection.</li>
+      </ul>
+    </section>
+
+    <section class="about-callout">
+      <h2 class="about-callout-heading">Provenance</h2>
+      <dl class="about-provenance-grid">
+        <div>
+          <dt>Source</dt>
+          <dd>Hugging Face Daily Papers</dd>
+        </div>
+        <div>
+          <dt>Method</dt>
+          <dd>Language model review with fixed rubric</dd>
+        </div>
+        <div>
+          <dt>Update frequency</dt>
+          <dd>Daily, automated</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+
   <div class="container">
     <section class="content">
       <div class="prose prose--structured">

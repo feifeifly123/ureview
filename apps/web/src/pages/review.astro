@@ -132,6 +132,13 @@ import Layout from '../components/Layout.astro';
             el('span', { class: statusClass }, status),
             review.hf_rank != null ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`) : null,
           ]),
+          threadData?.thread?.length
+            ? el('button', {
+                class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                type: 'button',
+                'data-jump-to-response': 'true',
+              }, 'Jump to author response \u2193')
+            : null,
           el('h1', { class: 'thread-header-title' }, review.title),
           el('p', { class: 'thread-header-subtitle' }, 'Machine review, author rebuttal, and thread history in one place.'),
           el('div', { class: 'thread-header-meta' }, [
@@ -361,6 +368,12 @@ import Layout from '../components/Layout.astro';
     mount(container, grid);
     applyThreadControls(toolbar, threadEl, review.id);
     attachCopyLink(container);
+
+    const jumpBtn = container.querySelector<HTMLButtonElement>('[data-jump-to-response]');
+    jumpBtn?.addEventListener('click', () => {
+      const target = container.querySelector<HTMLElement>('[data-note-group="author-response"]');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   async function main() {

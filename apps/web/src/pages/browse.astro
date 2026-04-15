@@ -107,6 +107,7 @@ const browsePayload = reviews.map((review) => ({
                   {review.has_response ? 'Author responded' : 'Needs response'}
                 </span>
                 {review.hf_rank != null && <span class="topic-chip topic-chip--ghost">HF #{review.hf_rank}</span>}
+                {review.has_response && review.response_count > 1 && <span class="topic-chip topic-chip--discussion">Active discussion</span>}
               </div>
               <div class="browse-card-updated">Last activity {formatDateTime(review.last_activity_at ?? review.updated_at ?? review.date)}</div>
             </div>
@@ -117,7 +118,7 @@ const browsePayload = reviews.map((review) => ({
             <div class="browse-card-footer">
               <span>Reviewed {formatDate(review.date)}</span>
               <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
-                {review.has_response ? 'Open public thread →' : 'Open review →'}
+Open thread →
               </a>
             </div>
           </div>
@@ -129,7 +130,7 @@ const browsePayload = reviews.map((review) => ({
                 <dd>{formatScore(review.score)}/10</dd>
               </div>
               <div>
-                <dt>Confidence</dt>
+                <dt>Conf.</dt>
                 <dd>{review.confidence ?? 0}/5</dd>
               </div>
               <div>
