@@ -6,30 +6,31 @@
 
 :root {
   /* ---- color ---- */
-  --color-primary:        #9B1B1B;
-  --color-primary-hover:  #7A1414;
+  --color-primary:        #1D4ED8;
+  --color-primary-hover:  #1E40AF;
+  --color-primary-soft:   #EFF6FF;
 
-  --color-ink:            #1A1A1A;
-  --color-ink-2:          #4A4A4A;
-  --color-ink-3:          #8A8A8A;
-  --color-ink-4:          #B8B5AE;
+  --color-ink:            #0F172A;
+  --color-ink-2:          #475569;
+  --color-ink-3:          #64748B;
+  --color-ink-4:          #94A3B8;
 
-  --color-paper:          #FDFDFC;
-  --color-canvas:         #F4F3EF;
-  --color-canvas-2:       #F9F8F4;
-  --color-rule:           #E8E6E1;
-  --color-rule-strong:    #D9D6CF;
+  --color-paper:          #FFFFFF;
+  --color-canvas:         #F8FAFC;
+  --color-canvas-2:       #F1F5F9;
+  --color-rule:           #E2E8F0;
+  --color-rule-strong:    #CBD5E1;
 
-  --color-info:           #1565C0;
+  --color-info:           #1D4ED8;
 
   --color-teal:           var(--color-primary);
   --color-teal-hover:     var(--color-primary-hover);
-  --color-amber:          #B8860B;
-  --color-amber-bg:       #FFF8E7;
-  --color-amber-border:   #E8C174;
-  --color-green:          #2E7D32;
-  --color-green-bg:       #E8F6E8;
-  --color-green-border:   #A7D8A7;
+  --color-amber:          #B45309;
+  --color-amber-bg:       #FFF7ED;
+  --color-amber-border:   #FED7AA;
+  --color-green:          #15803D;
+  --color-green-bg:       #ECFDF3;
+  --color-green-border:   #A7F3D0;
 
   /* ---- type ---- */
   --font-serif: 'Source Serif 4', 'Charter', 'Georgia', Cambria, 'Times New Roman', serif;
@@ -854,9 +855,9 @@ ul.review-field-value li {
 
 /* Author reply tag on list pages */
 .tag-response {
-  border-color: #FECACA;
+  border-color: #BFDBFE;
   color: var(--color-primary);
-  background: #FEF2F2;
+  background: var(--color-primary-soft);
   font-weight: 600;
 }
 
@@ -1239,9 +1240,9 @@ ul.review-field-value li {
   border-color: var(--color-ink-4);
 }
 .filter-tab.active {
-  background: var(--color-primary);
-  color: var(--color-paper);
-  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: transparent;
 }
 
 /* =========================================================================
@@ -2013,25 +2014,25 @@ body.body--forum {
 .or-badge--agent_review {
   background: #EEF2FF;
   border-color: #C7D2FE;
-  color: #5B21B6;
+  color: #4338CA;
 }
 
 .or-badge--rebuttal {
-  background: #FCE7F3;
-  border-color: #F9A8D4;
-  color: #BE185D;
+  background: var(--color-green-bg);
+  border-color: var(--color-green-border);
+  color: var(--color-green);
 }
 
 .or-badge--acknowledgement {
-  background: #DCFCE7;
-  border-color: #86EFAC;
-  color: #15803D;
+  background: var(--color-primary-soft);
+  border-color: #BFDBFE;
+  color: var(--color-primary);
 }
 
 .or-badge--reply_comment {
-  background: #E0F2FE;
-  border-color: #7DD3FC;
-  color: #0369A1;
+  background: var(--color-canvas-2);
+  border-color: var(--color-rule);
+  color: var(--color-ink-2);
 }
 
 .or-meta-text {
@@ -2210,26 +2211,6 @@ body.body--forum {
    ========================================================================= */
 
 :root {
-  --color-primary: #3158D3;
-  --color-primary-hover: #2748B5;
-  --color-ink: #141821;
-  --color-ink-2: #374151;
-  --color-ink-3: #6B7280;
-  --color-ink-4: #A8AFBA;
-  --color-paper: #FFFFFF;
-  --color-canvas: #FAFAF8;
-  --color-canvas-2: #F4F5F7;
-  --color-rule: #E3E6EA;
-  --color-rule-strong: #D7DBE0;
-  --color-info: #3158D3;
-  --color-teal: #141821;
-  --color-teal-hover: #0F131B;
-  --color-amber: #A15C00;
-  --color-amber-bg: #FFF1D6;
-  --color-amber-border: #F3D28E;
-  --color-green: #2F8F5B;
-  --color-green-bg: #EAF7EE;
-  --color-green-border: #B8E0C6;
   --radius: 10px;
   --radius-lg: 18px;
   --container: 1120px;
@@ -2285,13 +2266,13 @@ body.body--forum {
 }
 
 .btn-author-link {
-  background: var(--color-ink);
+  background: var(--color-primary);
   border-radius: 999px;
   padding: 10px 16px;
 }
 
 .btn-author-link:hover {
-  background: var(--color-teal-hover);
+  background: var(--color-primary-hover);
 }
 
 .site-footer {
@@ -2402,11 +2383,11 @@ body.body--forum {
   min-height: 48px;
   padding: 0 18px;
   border-radius: 999px;
-  background: var(--color-ink);
+  background: var(--color-primary);
 }
 
 .btn-cta:hover {
-  background: var(--color-teal-hover);
+  background: var(--color-primary-hover);
 }
 
 .hero-preview-card,
@@ -2462,9 +2443,9 @@ body.body--forum {
 }
 
 .topic-chip--ai {
-  background: #EAF1FF;
-  border-color: #C8D6FF;
-  color: #3158D3;
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #4338CA;
 }
 
 .topic-chip--author {
@@ -2486,9 +2467,9 @@ body.body--forum {
 }
 
 .topic-chip--discussion {
-  background: #EFF6FF;
+  background: var(--color-primary-soft);
   border-color: #BFDBFE;
-  color: #1D4ED8;
+  color: var(--color-primary);
 }
 
 .hero-preview-title,
@@ -2700,14 +2681,15 @@ body.body--forum {
 .filter-tabs--soft .filter-tab.active,
 .browse-status-tab.active,
 .thread-tab.active {
-  background: var(--color-primary);
-  color: #fff;
-  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: transparent;
 }
 
 .filter-tabs--soft .filter-tab.active span,
 .browse-status-tab.active span {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-primary);
+  opacity: 0.7;
 }
 
 .home-card-list,
