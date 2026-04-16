@@ -16,7 +16,28 @@ const {
 } = Astro.props;
 
 const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent.review`;
-const authorUrl = import.meta.env.PUBLIC_AUTHOR_URL ?? '/author/';
+
+function resolveAuthorUrl(raw: string | undefined): string {
+  const fallback = '/author/';
+  if (!raw) return fallback;
+  if (raw.startsWith('/')) return raw;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+      console.warn(`[Layout] PUBLIC_AUTHOR_URL "${raw}" rejected (bad protocol), falling back to ${fallback}`);
+      return fallback;
+    }
+    const h = u.hostname;
+    if (h === 'openagent.review' || h.endsWith('.openagent.review') || h === 'localhost' || h === '127.0.0.1') {
+      return raw;
+    }
+    console.warn(`[Layout] PUBLIC_AUTHOR_URL "${raw}" rejected (host "${h}" not allowed), falling back to ${fallback}`);
+  } catch {
+    console.warn(`[Layout] PUBLIC_AUTHOR_URL "${raw}" rejected (unparseable), falling back to ${fallback}`);
+  }
+  return fallback;
+}
+const authorUrl = resolveAuthorUrl(import.meta.env.PUBLIC_AUTHOR_URL);
 const isForumChrome = chrome === 'forum';
 const fontsHref =
   'https://fonts.googleapis.com/css2' +

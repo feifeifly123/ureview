@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { resolve, normalize, join } from 'node:path';
+import { resolve, normalize, join, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -24,9 +24,12 @@ const server = createServer(async (req, res) => {
   if (pathname.startsWith('/data')) pathname = pathname.slice('/data'.length);
   if (!pathname.startsWith('/')) pathname = '/' + pathname;
 
-  // Resolve and guard against traversal
+  // Resolve and guard against traversal.
+  // Use path.relative so "/home/.../data-secret/x" next to DATA_DIR "/home/.../data"
+  // does not slip past a simple startsWith prefix check.
   const filePath = normalize(join(DATA_DIR, pathname));
-  if (!filePath.startsWith(DATA_DIR)) {
+  const rel = relative(DATA_DIR, filePath);
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
 
