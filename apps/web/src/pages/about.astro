@@ -53,7 +53,7 @@ import Layout from '../components/Layout.astro';
   </div>
 
   <div class="container">
-    <section class="content">
+    <section class="content prose-shell">
       <div class="prose prose--structured">
         <h2 id="what-this-is">What this is</h2>
         <p>
@@ -109,6 +109,17 @@ import Layout from '../components/Layout.astro';
           with a static shell, hand-written CSS, and a small amount of client-side enhancement.
         </p>
       </div>
+      <aside class="prose-toc" aria-label="On this page">
+        <span class="prose-toc-label">On this page</span>
+        <ol>
+          <li><a href="#what-this-is">What this is</a></li>
+          <li><a href="#how-it-works">How the data flows</a></li>
+          <li><a href="#rubric">Rubric and limits</a></li>
+          <li><a href="#author-policy">Author response policy</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#colophon">Colophon</a></li>
+        </ol>
+      </aside>
     </section>
   </div>
 </Layout>

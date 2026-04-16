@@ -127,38 +127,40 @@ import Layout from '../components/Layout.astro';
       ]),
       el('div', { class: 'thread-header-top' }, [
         el('div', { class: 'thread-header-copy' }, [
-          el('div', { class: 'thread-header-chips' }, [
-            el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
-            el('span', { class: statusClass }, status),
-            review.hf_rank != null ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`) : null,
-          ]),
-          el('div', { class: 'thread-jump-links' }, [
-            el('button', {
-              class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-              type: 'button',
-              'data-jump-to': 'ai-review',
-            }, 'AI review \u2193'),
-            threadData?.thread?.length
-              ? el('button', {
-                  class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                  type: 'button',
-                  'data-jump-to': 'author-response',
-                }, 'Author response \u2193')
-              : null,
-            threadData?.thread?.length
-              ? el('button', {
-                  class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                  type: 'button',
-                  'data-jump-to': 'latest',
-                }, 'Latest update \u2193')
-              : null,
-          ]),
           el('h1', { class: 'thread-header-title' }, review.title),
           el('p', { class: 'thread-header-subtitle' }, 'Machine review, author rebuttal, and thread history in one place.'),
           el('div', { class: 'thread-header-meta' }, [
             el('span', {}, `Reviewed ${formatDate(review.date)}`),
             el('span', { class: 'thread-header-meta-sep' }, '·'),
             el('span', {}, `Updated ${formatDateTime(latestActivity(review, threadData))}`),
+          ]),
+          el('div', { class: 'thread-header-filters' }, [
+            el('div', { class: 'thread-header-chips' }, [
+              el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
+              el('span', { class: statusClass }, status),
+              review.hf_rank != null ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`) : null,
+            ]),
+            el('div', { class: 'thread-jump-links' }, [
+              el('button', {
+                class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                type: 'button',
+                'data-jump-to': 'ai-review',
+              }, 'AI review \u2193'),
+              threadData?.thread?.length
+                ? el('button', {
+                    class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                    type: 'button',
+                    'data-jump-to': 'author-response',
+                  }, 'Author response \u2193')
+                : null,
+              threadData?.thread?.length
+                ? el('button', {
+                    class: 'btn-secondary btn-secondary--compact thread-jump-btn',
+                    type: 'button',
+                    'data-jump-to': 'latest',
+                  }, 'Latest update \u2193')
+                : null,
+            ]),
           ]),
         ]),
         el('div', { class: 'thread-header-actions' }, [
