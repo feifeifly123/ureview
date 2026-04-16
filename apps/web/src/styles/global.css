@@ -1512,7 +1512,13 @@ ul.review-field-value li {
   .navbar-brand { font-size: 14px; gap: 6px; }
   .navbar-brand .brand-mark { width: 20px; height: 20px; font-size: 12px; }
   .navbar-nav { gap: 0; }
-  .navbar-nav a { padding: 6px 8px; font-size: 13px; }
+  .navbar-nav a {
+    padding: 11px 10px;
+    font-size: 13px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
 
   .page-header { padding: var(--space-5) 0 var(--space-4); }
   .page-header h1 { font-size: var(--text-2xl); }
@@ -1540,12 +1546,77 @@ ul.review-field-value li {
   .hero-heading { font-size: var(--text-2xl); }
   .hero-subtitle { font-size: var(--text-sm); }
   .filter-tabs { padding: var(--space-4) 0 var(--space-2); }
-  .btn-author-link { font-size: 12px; padding: 6px 12px; }
+  .btn-author-link {
+    font-size: 12px;
+    padding: 8px 14px;
+    min-height: 40px;
+  }
   .paper-card { padding: var(--space-4); }
 
   .browse-status-tabs { gap: 6px; }
-  .browse-status-tab { padding: 6px 10px; font-size: 12px; }
+  .browse-status-tabs .browse-status-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-height: 44px;
+  }
   .browse-status-tab span { font-size: 11px; padding: 1px 6px; }
+  #browse-copy-link.btn-secondary--compact { min-height: 44px; }
+
+  .home-card-footer a,
+  .browse-card-footer a,
+  .hero-preview-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 8px 0;
+  }
+
+  .thread-header-copy {
+    display: flex;
+    flex-direction: column;
+  }
+  .thread-header-title { order: 1; font-size: 24px; line-height: 1.25; margin: 0 0 8px; }
+  .thread-header-subtitle { order: 2; margin: 0 0 8px; font-size: 14px; }
+  .thread-header-meta { order: 3; margin: 0 0 12px; }
+  .thread-header-chips { order: 4; gap: 6px; margin: 0 0 10px; }
+  .thread-jump-links { order: 5; gap: 6px; margin-top: 4px; }
+  .thread-jump-links > * { padding: 8px 10px; font-size: 12px; min-height: 36px; }
+
+  .browse-toolbar-bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .browse-results-count { font-size: 12px; }
+  .browse-clear-filters { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  /* Hide the brand wordmark; keep the "O" icon.
+     Double-class selector beats the 640px block's font-size:14px
+     even after the bundler merges media queries. */
+  .navbar-brand,
+  .body--forum .or-topbar-brand.or-topbar-brand {
+    font-size: 0;
+  }
+  .navbar-brand .brand-mark,
+  .body--forum .or-topbar-brand .brand-mark {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .navbar-nav a,
+  .or-topbar-links a {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+  .btn-author-link,
+  .or-topbar-link-cta {
+    padding: 0 10px;
+    font-size: 11px;
+  }
 }
 
 /* =========================================================================
@@ -2175,9 +2246,18 @@ body.body--forum {
   }
 
   .or-topbar-links {
-    gap: 14px;
+    gap: 10px;
     font-size: 12px;
   }
+
+  .or-topbar-inner--simple {
+    min-height: 52px;
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+  .body--forum .or-topbar-brand { font-size: 14px; gap: 6px; }
+  .body--forum .or-topbar-brand .brand-mark { width: 20px; height: 20px; font-size: 12px; }
+  .or-topbar-link-cta { min-height: 36px; padding: 0 12px; font-size: 12px; }
 
   .or-forum-title {
     font-size: 26px;
