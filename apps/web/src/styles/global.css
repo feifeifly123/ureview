@@ -3378,3 +3378,53 @@ body.body--forum {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================================
+   Desktop UX pass — line-length caps, h1 sizing, body rhythm, focus ring
+   All rules gated on min-width 960px so mobile (≤640px) is untouched.
+   ========================================================================= */
+
+@media (min-width: 960px) {
+  /* Fix 1 — cap long card summary paragraphs for readability (ideal 45-75ch) */
+  .hero-preview-summary,
+  .home-card-summary,
+  .browse-card-summary {
+    max-width: 72ch;
+  }
+
+  /* Fix 2 — cap full-width meta/trust strip band */
+  .trust-strip-text {
+    max-width: 72ch;
+    margin-inline: auto;
+  }
+
+  /* Fix 3 — h1 should not stretch to full container width */
+  .page-header h1 {
+    max-width: 24ch;
+  }
+
+  /* Fix 4 — bump body base font-size on desktop for reading comfort */
+  :root {
+    --text-base: 15px;
+  }
+}
+
+/* Fix 5 — let the browser balance hero headline line breaks instead of
+   greedy-wrapping. text-wrap: balance is a modern property that produces
+   visually even line lengths without any grid tuning. */
+.hero-heading {
+  text-wrap: balance;
+}
+
+/* Fix 6 — visible keyboard focus ring on all interactive surfaces.
+   Uses :focus-visible so mouse users don't see the outline. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
