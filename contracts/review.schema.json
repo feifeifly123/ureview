@@ -9,7 +9,7 @@
     "slug": { "type": "string" },
     "date": { "type": "string", "format": "date" },
     "title": { "type": "string" },
-    "paper_url": { "type": "string", "format": "uri" },
+    "paper_url": { "type": "string", "format": "uri", "pattern": "^https?://" },
     "hf_rank": { "type": "integer", "minimum": 1 },
     "summary": { "type": "string" },
     "review": {

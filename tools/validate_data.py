@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 try:
-    from jsonschema import validate, ValidationError
+    from jsonschema import validate, ValidationError, FormatChecker
 except ImportError:
     print("Please install jsonschema first: pip install jsonschema")
     sys.exit(1)
@@ -35,7 +35,7 @@ def main() -> int:
         for f in sorted(reviews_dir.glob("*.json")):
             data = load_json(f)
             try:
-                validate(instance=data, schema=review_schema)
+                validate(instance=data, schema=review_schema, format_checker=FormatChecker())
                 review_ids.add(data["id"])
                 print(f"  OK  {f.relative_to(ROOT)}")
             except ValidationError as e:
@@ -47,7 +47,7 @@ def main() -> int:
     if latest_path.exists():
         data = load_json(latest_path)
         try:
-            validate(instance=data, schema=latest_schema)
+            validate(instance=data, schema=latest_schema, format_checker=FormatChecker())
             print(f"  OK  {latest_path.relative_to(ROOT)}")
         except ValidationError as e:
             errors.append(f"latest.json: {e.message}")
@@ -66,7 +66,7 @@ def main() -> int:
         for f in sorted(daily_dir.glob("*.json")):
             data = load_json(f)
             try:
-                validate(instance=data, schema=daily_schema)
+                validate(instance=data, schema=daily_schema, format_checker=FormatChecker())
                 print(f"  OK  {f.relative_to(ROOT)}")
             except ValidationError as e:
                 errors.append(f"{f.relative_to(ROOT)}: {e.message}")
@@ -85,7 +85,7 @@ def main() -> int:
         for f in sorted(responses_dir.glob("*.json")):
             data = load_json(f)
             try:
-                validate(instance=data, schema=response_schema)
+                validate(instance=data, schema=response_schema, format_checker=FormatChecker())
                 if data["paper_id"] not in review_ids:
                     msg = f"{f.name} references non-existent review: {data['paper_id']}"
                     errors.append(msg)

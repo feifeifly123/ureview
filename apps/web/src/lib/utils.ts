@@ -48,6 +48,15 @@ export function shiftDate(iso: string, days: number): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Return the URL only if it uses http(s); otherwise return '#'. */
+export function safeHref(url: string): string {
+  try {
+    const p = new URL(url);
+    if (p.protocol === 'https:' || p.protocol === 'http:') return url;
+  } catch {}
+  return '#';
+}
+
 /** "2026-04-09" → "Posted 3 days ago" */
 export function relativeTime(iso: string): string {
   const then = new Date(iso + 'T00:00:00');

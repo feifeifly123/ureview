@@ -10,8 +10,10 @@ const PORT = parseInt(process.env.PORT || '7001', 10);
 const MIME = { '.json': 'application/json' };
 
 const server = createServer(async (req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS — restrict to localhost origins
+  const origin = req.headers.origin || '';
+  const allowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : '');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }

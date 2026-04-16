@@ -616,7 +616,7 @@ function formPage(paperId: string, token: string): Response {
 
   function saveDraft() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
         author_name: nameInput.value,
         what_right: whatRight.value,
         needs_correction: needsCorrection.value,
@@ -628,7 +628,7 @@ function formPage(paperId: string, token: string): Response {
 
   function restoreDraft() {
     try {
-      const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
       if (!draft) return;
       if (draft.author_name) nameInput.value = draft.author_name;
       if (draft.what_right) whatRight.value = draft.what_right;
@@ -678,7 +678,7 @@ function formPage(paperId: string, token: string): Response {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
 
-      try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch (_) {}
       form.style.display = 'none';
       draftNotice.style.display = 'none';
       successMsg.textContent = 'Your response has been published. It will appear in the public thread shortly.';
@@ -767,6 +767,11 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
   if (result.valid === false) return json({ error: result.reason }, 403);
 
   const { pid } = result.payload;
+  // Guard: reject if a response already exists.
+  // Note: head→put is not atomic (TOCTOU), but R2 conditional put (onlyIf)
+  // has known bugs with wildcard etags (cloudflare/workerd#2572).
+  // Practical risk is near-zero: invite links are distributed manually and
+  // concurrent submissions to the same paper are extremely unlikely.
   const existing = await env.BUCKET.head(responseKey(pid));
   if (existing) {
     return json({ error: 'A response has already been submitted for this paper' }, 409);

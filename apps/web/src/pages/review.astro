@@ -21,7 +21,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { threadBlock, buildReviewBody, buildParagraphs, stateView } from '../lib/render';
-  import { formatDate, formatDateTime, formatScore } from '../lib/utils';
+  import { formatDate, formatDateTime, formatScore, safeHref } from '../lib/utils';
   import type { Review, ThreadData, ThreadEntry } from '../lib/types';
 
   function latestActivity(review: Review, threadData: ThreadData | null): string {
@@ -88,7 +88,7 @@ import Layout from '../components/Layout.astro';
           el('div', { class: 'thread-detail-row' }, [
             el('dt', {}, 'Paper'),
             el('dd', {}, [
-              el('a', { href: review.paper_url, target: '_blank', rel: 'noopener' }, 'Open source paper'),
+              el('a', { href: safeHref(review.paper_url), target: '_blank', rel: 'noopener' }, 'Open source paper'),
             ]),
           ]),
           el('div', { class: 'thread-detail-row' }, [
@@ -162,7 +162,7 @@ import Layout from '../components/Layout.astro';
           ]),
         ]),
         el('div', { class: 'thread-header-actions' }, [
-          el('a', { class: 'btn-secondary btn-secondary--compact', href: review.paper_url, target: '_blank', rel: 'noopener' }, 'Open paper'),
+          el('a', { class: 'btn-secondary btn-secondary--compact', href: safeHref(review.paper_url), target: '_blank', rel: 'noopener' }, 'Open paper'),
           el('button', { class: 'btn-secondary btn-secondary--compact', type: 'button', 'data-copy-link': 'true' }, 'Copy link'),
         ]),
       ]),

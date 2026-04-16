@@ -31,7 +31,6 @@ def b64url_encode(data: bytes) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate author invite magic link")
     parser.add_argument("--paper-id", required=True, help="Paper ID (e.g. 2026-04-09-paper-a)")
-    parser.add_argument("--email", default=None, help="Author email (for reference only, not included in token)")
     parser.add_argument("--expiry-days", type=int, default=14, help="Link expiry in days (default 14)")
     args = parser.parse_args()
 
@@ -64,8 +63,6 @@ def main() -> int:
     url = f"{base_url}/i/{token}"
 
     print(f"Paper:   {args.paper_id}")
-    if args.email:
-        print(f"Email:   {args.email} (for reference only)")
     print(f"Expires: {args.expiry_days} days")
     print(f"\nInvite URL:\n{url}")
 
