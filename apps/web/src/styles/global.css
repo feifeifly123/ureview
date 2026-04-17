@@ -3512,3 +3512,44 @@ textarea:focus-visible {
   outline-offset: 2px;
   border-radius: inherit;
 }
+
+/* =========================================================================
+   Desktop UX Round 3 — hero fold density, CTA type consistency,
+   featured metric overflow, browse meta de-emphasis
+   ========================================================================= */
+
+/* R3 Fix 1 — Hero featured card's 3rd metric cell ("Last activity: Updated
+   X days ago") carries longer copy than Score/Confidence. Scale font so it
+   fits on one line instead of wrapping to 2 lines in the 91px cell.
+   Same rescale contract used for the review-rail Status chip in Round 2. */
+.hero-preview-metrics > :nth-child(3) dd {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+/* R3 Fix 2 — Tighten hero vertical footprint on desktop so "Recent reviews"
+   peeks into the first fold on 900px-tall viewports. */
+@media (min-width: 960px) {
+  .hero--product {
+    padding: 48px 0 32px;
+  }
+  .hero-grid {
+    gap: 24px;
+  }
+}
+
+/* R3 Fix 3 — Normalize hero CTA font-sizes. Primary stays 15px (.btn-cta),
+   secondary bumps 13 → 14 so the two pills read as intentional siblings
+   rather than a type-scale accident. */
+.hero-actions .btn-secondary {
+  font-size: 14px;
+}
+
+/* R3 Fix 4 — Soften the browse page header aside. "2 reviews in the current
+   snapshot / Generated ..." is supporting metadata, not body-weight copy. */
+.page-header-aside {
+  font-size: 13px;
+  color: var(--color-ink-3);
+}
