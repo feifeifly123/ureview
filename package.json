@@ -10,6 +10,9 @@
     "build:indexes": "python3 tools/build_indexes.py",
     "publish:data:stage": "python3 tools/publish_r2.py --stage",
     "publish:data:prod": "python3 tools/publish_r2.py --prod",
+    "sync:responses:stage": "python3 tools/sync_r2_runtime.py --stage --prefix responses",
+    "sync:responses:prod": "python3 tools/sync_r2_runtime.py --prod --prefix responses",
+    "refresh:data:prod": "python3 tools/sync_r2_runtime.py --prod --prefix responses && python3 tools/build_indexes.py && python3 tools/validate_data.py && python3 tools/publish_r2.py --prod",
     "dev:author": "pnpm --filter @autoreviewer/author dev"
   },
   "devDependencies": {

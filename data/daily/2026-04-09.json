@@ -7,14 +7,19 @@
       "summary": "This paper investigates the power-law relationships between neural language model performance and model size, dataset size, and training compute.",
       "score": 7.5,
       "hf_rank": 1,
-      "has_response": true
+      "has_response": true,
+      "response_count": 3,
+      "confidence": 4,
+      "last_activity_at": "2026-04-12T15:00:00Z"
     },
     {
       "id": "2026-04-09-paper-b",
       "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
       "summary": "This paper proposes chain-of-thought prompting, which improves complex reasoning in large language models by incorporating intermediate reasoning steps into few-shot examples.",
       "score": 6.0,
-      "hf_rank": 3
+      "hf_rank": 3,
+      "confidence": 3,
+      "last_activity_at": "2026-04-09T10:15:00+08:00"
     }
   ]
 }

@@ -5,12 +5,17 @@
  * No database — tokens are HMAC-signed and stateless.
  */
 
+interface R2ObjectBody {
+  text(): Promise<string>;
+}
+
 interface R2Bucket {
   head(key: string): Promise<unknown>;
+  get(key: string): Promise<R2ObjectBody | null>;
   put(
     key: string,
     value: string,
-    options?: { httpMetadata?: { contentType?: string } }
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }
   ): Promise<void>;
 }
 
@@ -23,6 +28,42 @@ interface Env {
 interface TokenPayload {
   pid: string;
   exp: number;
+}
+
+interface LatestReviewEntry {
+  id: string;
+  date: string;
+  title: string;
+  summary: string;
+  score: number;
+  has_response?: boolean;
+  hf_rank?: number;
+  confidence?: number;
+  updated_at?: string;
+  last_activity_at?: string;
+  response_count?: number;
+}
+
+interface LatestIndex {
+  generated_at: string;
+  reviews: LatestReviewEntry[];
+}
+
+interface DailyReviewEntry {
+  id: string;
+  title: string;
+  summary: string;
+  score: number;
+  hf_rank?: number;
+  has_response?: boolean;
+  confidence?: number;
+  response_count?: number;
+  last_activity_at?: string;
+}
+
+interface DailyIndex {
+  date: string;
+  reviews: DailyReviewEntry[];
 }
 
 function b64urlDecode(s: string): Uint8Array {
@@ -95,6 +136,116 @@ const FONT_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com">
 
 function responseKey(pid: string): string {
   return `data/responses/${pid}.json`;
+}
+
+function latestKey(): string {
+  return 'data/latest.json';
+}
+
+function dailyKey(date: string): string {
+  return `data/daily/${date}.json`;
+}
+
+function safeTimestamp(iso: string): number {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : 0;
+}
+
+async function readBucketJson<T>(bucket: R2Bucket, key: string): Promise<T | null> {
+  try {
+    const obj = await bucket.get(key);
+    if (!obj) return null;
+    const text = await obj.text();
+    return JSON.parse(text) as T;
+  } catch (err) {
+    console.warn(`[patch] failed to read ${key}:`, err);
+    return null;
+  }
+}
+
+async function writeBucketJson(bucket: R2Bucket, key: string, value: unknown): Promise<void> {
+  const cacheControl = key.startsWith('data/daily/')
+    ? 'public, max-age=300, stale-while-revalidate=900'
+    : 'public, max-age=60, stale-while-revalidate=300';
+  await bucket.put(key, JSON.stringify(value, null, 2), {
+    httpMetadata: { contentType: 'application/json', cacheControl },
+  });
+}
+
+/**
+ * Patch the live latest.json so "Author responded" flips within ~60s of a
+ * submission. Best-effort: on any failure we log and return without
+ * throwing — the next local `pnpm refresh:data:prod` will reconcile.
+ */
+async function patchLatestIndexOnResponse(
+  bucket: R2Bucket,
+  pid: string,
+  submittedAt: string
+): Promise<void> {
+  const latest = await readBucketJson<LatestIndex>(bucket, latestKey());
+  if (!latest || !Array.isArray(latest.reviews)) return;
+  const entry = latest.reviews.find((item) => item.id === pid);
+  if (!entry) return;
+  entry.has_response = true;
+  entry.response_count = Math.max(1, entry.response_count ?? 0);
+  entry.last_activity_at = submittedAt;
+  latest.generated_at = submittedAt;
+  latest.reviews.sort((a, b) => {
+    const aTs = safeTimestamp(a.last_activity_at ?? a.updated_at ?? `${a.date}T00:00:00Z`);
+    const bTs = safeTimestamp(b.last_activity_at ?? b.updated_at ?? `${b.date}T00:00:00Z`);
+    return bTs - aTs;
+  });
+  try {
+    await writeBucketJson(bucket, latestKey(), latest);
+  } catch (err) {
+    console.warn('[patch] failed to write latest.json:', err);
+  }
+}
+
+/**
+ * Patch the corresponding daily/{date}.json in lock-step. Optional — if the
+ * daily file is missing or the paper id is not listed in it, skip silently.
+ */
+async function patchDailyIndexOnResponse(
+  bucket: R2Bucket,
+  pid: string,
+  date: string,
+  submittedAt: string,
+  responseCount: number
+): Promise<void> {
+  const key = dailyKey(date);
+  const daily = await readBucketJson<DailyIndex>(bucket, key);
+  if (!daily || !Array.isArray(daily.reviews)) return;
+  const entry = daily.reviews.find((item) => item.id === pid);
+  if (!entry) return;
+  entry.has_response = true;
+  entry.response_count = Math.max(responseCount, entry.response_count ?? 0);
+  entry.last_activity_at = submittedAt;
+  try {
+    await writeBucketJson(bucket, key, daily);
+  } catch (err) {
+    console.warn(`[patch] failed to write ${key}:`, err);
+  }
+}
+
+/** Orchestrator called from handleSubmit after the response is stored. */
+async function patchIndexesAfterSubmit(
+  bucket: R2Bucket,
+  pid: string,
+  submittedAt: string
+): Promise<void> {
+  try {
+    await patchLatestIndexOnResponse(bucket, pid, submittedAt);
+    // Derive the paper's date from its id (YYYY-MM-DD-slug). If the id format
+    // ever changes, the daily patch is best-effort and will just no-op.
+    const match = /^(\d{4}-\d{2}-\d{2})-/.exec(pid);
+    if (match) {
+      await patchDailyIndexOnResponse(bucket, pid, match[1], submittedAt, 1);
+    }
+  } catch (err) {
+    // Defensive: never let an index-patch error fail the submit.
+    console.warn('[patch] unexpected error in patchIndexesAfterSubmit:', err);
+  }
 }
 
 function esc(s: string): string {
@@ -777,6 +928,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     return json({ error: 'A response has already been submitted for this paper' }, 409);
   }
 
+  const submittedAt = new Date().toISOString();
   const response = {
     paper_id: pid,
     thread: [
@@ -784,7 +936,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
         type: 'rebuttal',
         author_name: authorName,
         content,
-        submitted_at: new Date().toISOString(),
+        submitted_at: submittedAt,
       },
     ],
   };
@@ -792,6 +944,11 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
   await env.BUCKET.put(responseKey(pid), JSON.stringify(response, null, 2), {
     httpMetadata: { contentType: 'application/json' },
   });
+
+  // Flip "Author responded" in the live indexes so home/browse pick it up
+  // within the latest.json cache window (~60s). Best-effort: failures are
+  // logged but never break the submit (see patchIndexesAfterSubmit above).
+  await patchIndexesAfterSubmit(env.BUCKET, pid, submittedAt);
 
   return json({ ok: true, paper_id: pid });
 }

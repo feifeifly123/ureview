@@ -1,24 +1,5 @@
 ---
 import Layout from '../components/Layout.astro';
-import { getLatestDigests, getLatestIndex } from '../lib/server-data';
-import { formatDate, formatDateTime, formatScore } from '../lib/utils';
-
-const latest = getLatestIndex();
-const reviews = getLatestDigests();
-
-const needsResponseCount = reviews.filter((review) => !review.has_response).length;
-const counts = {
-  all: reviews.length,
-  'needs-response': needsResponseCount,
-  responded: reviews.length - needsResponseCount,
-};
-
-const browsePayload = reviews.map((review) => ({
-  id: review.id,
-  score: review.score,
-  date: review.date,
-  lastActivityAt: review.last_activity_at ?? review.updated_at ?? review.date,
-}));
 ---
 
 <Layout
@@ -41,10 +22,7 @@ const browsePayload = reviews.map((review) => ({
             then jump into the thread that looks worth reading.
           </p>
         </div>
-        <div class="page-header-aside">
-          <div class="count-chip"><strong>{reviews.length}</strong> reviews in the current snapshot</div>
-          <div class="page-header-meta">Generated {formatDateTime(latest.generated_at)}</div>
-        </div>
+        <div class="page-header-aside" id="browse-header-aside" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -71,76 +49,23 @@ const browsePayload = reviews.map((review) => ({
         </button>
       </div>
 
-      <div class="browse-status-tabs" role="tablist" aria-label="Filter browse view by status">
-        <button class="browse-status-tab active" type="button" role="tab" aria-selected="true" data-status-filter="all">
-          All <span>{counts.all}</span>
-        </button>
-        <button class="browse-status-tab" type="button" role="tab" aria-selected="false" data-status-filter="needs-response">
-          Needs response <span>{counts['needs-response']}</span>
-        </button>
-        <button class="browse-status-tab" type="button" role="tab" aria-selected="false" data-status-filter="responded">
-          Author responded <span>{counts.responded}</span>
-        </button>
-      </div>
+      <div
+        class="browse-status-tabs"
+        role="tablist"
+        aria-label="Filter browse view by status"
+        id="browse-status-tabs"
+      ></div>
 
       <div class="browse-toolbar-bottom">
-        <div id="browse-results-count" class="browse-results-count">Showing {reviews.length} results</div>
+        <div id="browse-results-count" class="browse-results-count">Loading…</div>
         <button type="button" class="browse-clear-filters" id="browse-clear-filters">Clear filters</button>
       </div>
     </section>
 
     <section class="browse-list" id="browse-list" aria-live="polite">
-      {reviews.map((review) => (
-        <article
-          class="browse-card"
-          data-browse-card
-          data-review-id={review.id}
-          data-status={review.has_response ? 'responded' : 'needs-response'}
-          data-title={review.title.toLowerCase()}
-          data-summary={review.summary.toLowerCase()}
-        >
-          <div class="browse-card-main">
-            <div class="browse-card-top">
-              <div class="browse-card-chips">
-                <span class="topic-chip topic-chip--ai">AI review</span>
-                <span class={review.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
-                  {review.has_response ? 'Author responded' : 'Needs response'}
-                </span>
-                {review.hf_rank != null && <span class="topic-chip topic-chip--ghost">HF #{review.hf_rank}</span>}
-                {review.has_response && review.response_count > 1 && <span class="topic-chip topic-chip--discussion">Active discussion</span>}
-              </div>
-              <div class="browse-card-updated">Last activity {formatDateTime(review.last_activity_at ?? review.updated_at ?? review.date)}</div>
-            </div>
-
-            <a class="browse-card-title" href={`/review/?id=${encodeURIComponent(review.id)}`}>{review.title}</a>
-            <p class="browse-card-summary">{review.summary}</p>
-
-            <div class="browse-card-footer">
-              <span>Reviewed {formatDate(review.date)}</span>
-              <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
-Open thread →
-              </a>
-            </div>
-          </div>
-
-          <aside class="browse-card-aside">
-            <dl class="browse-card-metrics">
-              <div>
-                <dt>Score</dt>
-                <dd>{formatScore(review.score)}/10</dd>
-              </div>
-              <div>
-                <dt>Conf.</dt>
-                <dd>{review.confidence ?? 0}/5</dd>
-              </div>
-              <div>
-                <dt>Notes</dt>
-                <dd>{review.response_count + 1}</dd>
-              </div>
-            </dl>
-          </aside>
-        </article>
-      ))}
+      <div class="state loading">
+        <strong>Loading reviews…</strong>
+      </div>
     </section>
 
     <div class="state empty" id="browse-empty-state" hidden>
@@ -150,141 +75,255 @@ Open thread →
   </div>
 </Layout>
 
-<script define:vars={{ browsePayload }}>
-  const cards = Array.from(document.querySelectorAll('[data-browse-card]'));
-  const list = document.getElementById('browse-list');
-  const empty = document.getElementById('browse-empty-state');
-  const searchInput = document.getElementById('browse-search');
-  const sortSelect = document.getElementById('browse-sort');
-  const statusButtons = Array.from(document.querySelectorAll('[data-status-filter]'));
-  const resultsCount = document.getElementById('browse-results-count');
-  const clearFilters = document.getElementById('browse-clear-filters');
-  const copyLinkButton = document.getElementById('browse-copy-link');
-
-  const cardData = new Map(browsePayload.map((entry) => [entry.id, entry]));
-  let currentStatus = 'all';
-
-  function updateUrl() {
-    const url = new URL(window.location.href);
-    const q = searchInput?.value.trim() ?? '';
-    if (currentStatus !== 'all') url.searchParams.set('status', currentStatus);
-    else url.searchParams.delete('status');
-    if (sortSelect?.value && sortSelect.value !== 'updated') url.searchParams.set('sort', sortSelect.value);
-    else url.searchParams.delete('sort');
-    if (q) url.searchParams.set('q', q);
-    else url.searchParams.delete('q');
-    history.replaceState({}, '', url);
-  }
-
-  function sorted(cardsToSort) {
-    const sortValue = sortSelect?.value ?? 'updated';
-    return cardsToSort.slice().sort((a, b) => {
-      const aData = cardData.get(a.dataset.reviewId ?? '');
-      const bData = cardData.get(b.dataset.reviewId ?? '');
-      if (!aData || !bData) return 0;
-      if (sortValue === 'score') return bData.score - aData.score;
-      if (sortValue === 'newest') return Date.parse(bData.date) - Date.parse(aData.date);
-      return Date.parse(bData.lastActivityAt) - Date.parse(aData.lastActivityAt);
-    });
-  }
-
-  function sync() {
-    const q = searchInput?.value.trim().toLowerCase() ?? '';
-    const visible = cards.filter((card) => {
-      const matchesStatus = currentStatus === 'all' || card.dataset.status === currentStatus;
-      const searchBlob = `${card.dataset.title ?? ''} ${card.dataset.summary ?? ''}`;
-      const matchesSearch = q.length === 0 || searchBlob.includes(q);
-      return matchesStatus && matchesSearch;
-    });
-
-    const visibleSet = new Set(visible);
-    cards.forEach((card) => {
-      card.hidden = !visibleSet.has(card);
-    });
-    sorted(visible).forEach((card) => list?.appendChild(card));
-
-    if (resultsCount) {
-      resultsCount.textContent = `Showing ${visible.length} result${visible.length === 1 ? '' : 's'}`;
-    }
-    if (empty) empty.hidden = visible.length !== 0;
-    updateUrl();
-  }
-
-  function setStatus(status) {
-    currentStatus = status;
-    statusButtons.forEach((button) => {
-      const active = button.dataset.statusFilter === status;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    sync();
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  const initialStatus = params.get('status');
-  const initialSort = params.get('sort');
-  const initialQuery = params.get('q');
-  if (searchInput && initialQuery) searchInput.value = initialQuery;
-  if (sortSelect && initialSort) sortSelect.value = initialSort;
-
-  statusButtons.forEach((button) => {
-    button.addEventListener('click', () => setStatus(button.dataset.statusFilter ?? 'all'));
-  });
-  searchInput?.addEventListener('input', sync);
-  sortSelect?.addEventListener('change', sync);
-
-  clearFilters?.addEventListener('click', () => {
-    if (searchInput) searchInput.value = '';
-    if (sortSelect) sortSelect.value = 'updated';
-    setStatus('all');
-  });
-
-  copyLinkButton?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      copyLinkButton.textContent = 'Copied';
-      setTimeout(() => {
-        copyLinkButton.textContent = 'Copy current view';
-      }, 1200);
-    } catch {
-      copyLinkButton.textContent = 'Copy failed';
-      setTimeout(() => {
-        copyLinkButton.textContent = 'Copy current view';
-      }, 1200);
-    }
-  });
-
-  setStatus(initialStatus && ['all', 'needs-response', 'responded'].includes(initialStatus) ? initialStatus : 'all');
-
-  document.addEventListener('browse:refresh', sync);
-</script>
-
 <script>
   import { dataClient } from '../lib/data-client';
+  import { el, mount } from '../lib/dom';
+  import { formatDate, formatDateTime, formatScore } from '../lib/utils';
+  import { latestLastActivity } from '../lib/latest';
+  import type { LatestReviewEntry } from '../lib/types';
+
+  type StatusFilter = 'all' | 'needs-response' | 'responded';
+  type SortKey = 'updated' | 'newest' | 'score';
+
+  function statusOf(review: LatestReviewEntry): 'responded' | 'needs-response' {
+    return review.has_response ? 'responded' : 'needs-response';
+  }
+
+  function buildHeaderAside(count: number, generatedAt: string): HTMLElement[] {
+    return [
+      el('div', { class: 'count-chip' }, [el('strong', {}, String(count)), ' reviews in the current snapshot']),
+      el('div', { class: 'page-header-meta' }, `Generated ${formatDateTime(generatedAt)}`),
+    ];
+  }
+
+  function buildStatusTabs(
+    counts: { all: number; 'needs-response': number; responded: number },
+    current: StatusFilter
+  ): HTMLElement[] {
+    const items: Array<{ id: StatusFilter; label: string; count: number }> = [
+      { id: 'all', label: 'All', count: counts.all },
+      { id: 'needs-response', label: 'Needs response', count: counts['needs-response'] },
+      { id: 'responded', label: 'Author responded', count: counts.responded },
+    ];
+    return items.map((item) => {
+      const isActive = item.id === current;
+      return el(
+        'button',
+        {
+          class: isActive ? 'browse-status-tab active' : 'browse-status-tab',
+          type: 'button',
+          role: 'tab',
+          'aria-selected': isActive ? 'true' : 'false',
+          'data-status-filter': item.id,
+        },
+        [item.label, ' ', el('span', {}, String(item.count))]
+      );
+    });
+  }
+
+  function buildCard(review: LatestReviewEntry): HTMLElement {
+    const chips: HTMLElement[] = [
+      el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
+      el(
+        'span',
+        {
+          class: review.has_response
+            ? 'topic-chip topic-chip--author'
+            : 'topic-chip topic-chip--waiting',
+        },
+        review.has_response ? 'Author responded' : 'Needs response'
+      ),
+    ];
+    if (review.hf_rank != null) {
+      chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
+    }
+    if (review.has_response && (review.response_count ?? 0) > 1) {
+      chips.push(el('span', { class: 'topic-chip topic-chip--discussion' }, 'Active discussion'));
+    }
+
+    const noteCount = (review.response_count ?? 0) + 1;
+
+    return el(
+      'article',
+      {
+        class: 'browse-card',
+        'data-browse-card': 'true',
+        'data-review-id': review.id,
+        'data-status': statusOf(review),
+        'data-title': review.title.toLowerCase(),
+        'data-summary': review.summary.toLowerCase(),
+      },
+      [
+        el('div', { class: 'browse-card-main' }, [
+          el('div', { class: 'browse-card-top' }, [
+            el('div', { class: 'browse-card-chips' }, chips),
+            el(
+              'div',
+              { class: 'browse-card-updated' },
+              `Last activity ${formatDateTime(latestLastActivity(review))}`
+            ),
+          ]),
+          el(
+            'a',
+            { class: 'browse-card-title', href: `/review/?id=${encodeURIComponent(review.id)}` },
+            review.title
+          ),
+          el('p', { class: 'browse-card-summary' }, review.summary),
+          el('div', { class: 'browse-card-footer' }, [
+            el('span', {}, `Reviewed ${formatDate(review.date)}`),
+            el(
+              'a',
+              { href: `/review/?id=${encodeURIComponent(review.id)}` },
+              'Open thread \u2192'
+            ),
+          ]),
+        ]),
+        el('aside', { class: 'browse-card-aside' }, [
+          el('dl', { class: 'browse-card-metrics' }, [
+            el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(review.score)}/10`)]),
+            el('div', {}, [el('dt', {}, 'Conf.'), el('dd', {}, `${review.confidence ?? 0}/5`)]),
+            el('div', {}, [el('dt', {}, 'Notes'), el('dd', {}, String(noteCount))]),
+          ]),
+        ]),
+      ]
+    );
+  }
 
   (async () => {
+    const asideEl = document.getElementById('browse-header-aside');
+    const tabsEl = document.getElementById('browse-status-tabs');
+    const listEl = document.getElementById('browse-list');
+    const emptyEl = document.getElementById('browse-empty-state');
+    const searchInput = document.getElementById('browse-search') as HTMLInputElement | null;
+    const sortSelect = document.getElementById('browse-sort') as HTMLSelectElement | null;
+    const resultsCount = document.getElementById('browse-results-count');
+    const clearFilters = document.getElementById('browse-clear-filters');
+    const copyLinkButton = document.getElementById('browse-copy-link') as HTMLButtonElement | null;
+
+    if (!asideEl || !tabsEl || !listEl || !searchInput || !sortSelect || !resultsCount) return;
+
+    let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
-      const { reviews } = await dataClient.getLatest();
-      const fresh = new Map(reviews.map((r) => [r.id, r.has_response === true]));
+      data = await dataClient.getLatest();
+    } catch (err) {
+      mount(listEl, el('div', { class: 'state error' }, [
+        el('strong', {}, 'Failed to load reviews'),
+        el('span', {}, err instanceof Error ? err.message : 'Please try again.'),
+      ]));
+      return;
+    }
 
-      document.querySelectorAll<HTMLElement>('[data-browse-card]').forEach((card) => {
-        const id = card.dataset.reviewId;
-        if (!id || !fresh.has(id)) return;
-        const hasResponse = fresh.get(id)!;
-        const newStatus = hasResponse ? 'responded' : 'needs-response';
-        if (card.dataset.status === newStatus) return;
+    const reviews = data.reviews;
+    const cards = new Map<string, HTMLElement>();
+    reviews.forEach((review) => cards.set(review.id, buildCard(review)));
 
-        card.dataset.status = newStatus;
-        const chips = card.querySelectorAll('.topic-chip');
-        const statusChip = chips[1];
-        if (statusChip) {
-          statusChip.className = hasResponse
-            ? 'topic-chip topic-chip--author'
-            : 'topic-chip topic-chip--waiting';
-          statusChip.textContent = hasResponse ? 'Author responded' : 'Needs response';
-        }
+    const counts = {
+      all: reviews.length,
+      'needs-response': reviews.filter((r) => !r.has_response).length,
+      responded: reviews.filter((r) => r.has_response).length,
+    };
+
+    mount(asideEl, ...buildHeaderAside(reviews.length, data.generated_at));
+
+    let currentStatus: StatusFilter = 'all';
+
+    function renderTabs() {
+      mount(tabsEl, ...buildStatusTabs(counts, currentStatus));
+      tabsEl.querySelectorAll<HTMLButtonElement>('[data-status-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const next = (btn.dataset.statusFilter ?? 'all') as StatusFilter;
+          if (next === currentStatus) return;
+          currentStatus = next;
+          renderTabs();
+          sync();
+        });
       });
-      document.dispatchEvent(new Event('browse:refresh'));
-    } catch { /* SSG content remains visible as fallback */ }
+    }
+
+    function updateUrl(q: string) {
+      const url = new URL(window.location.href);
+      if (currentStatus !== 'all') url.searchParams.set('status', currentStatus);
+      else url.searchParams.delete('status');
+      if (sortSelect?.value && sortSelect.value !== 'updated') url.searchParams.set('sort', sortSelect.value);
+      else url.searchParams.delete('sort');
+      if (q) url.searchParams.set('q', q);
+      else url.searchParams.delete('q');
+      history.replaceState({}, '', url);
+    }
+
+    function sortedReviews(source: LatestReviewEntry[]): LatestReviewEntry[] {
+      const sortKey = (sortSelect?.value as SortKey) ?? 'updated';
+      return source.slice().sort((a, b) => {
+        if (sortKey === 'score') return b.score - a.score;
+        if (sortKey === 'newest') return Date.parse(b.date) - Date.parse(a.date);
+        return Date.parse(latestLastActivity(b)) - Date.parse(latestLastActivity(a));
+      });
+    }
+
+    function sync() {
+      const q = searchInput?.value.trim().toLowerCase() ?? '';
+      const filtered = reviews.filter((review) => {
+        const matchesStatus = currentStatus === 'all' || statusOf(review) === currentStatus;
+        const blob = `${review.title.toLowerCase()} ${review.summary.toLowerCase()}`;
+        const matchesSearch = q.length === 0 || blob.includes(q);
+        return matchesStatus && matchesSearch;
+      });
+
+      const orderedNodes = sortedReviews(filtered)
+        .map((r) => cards.get(r.id))
+        .filter((n): n is HTMLElement => n != null);
+
+      if (orderedNodes.length === 0) {
+        mount(listEl);
+        if (emptyEl) emptyEl.hidden = false;
+      } else {
+        if (emptyEl) emptyEl.hidden = true;
+        mount(listEl, ...orderedNodes);
+      }
+
+      resultsCount.textContent = `Showing ${filtered.length} result${filtered.length === 1 ? '' : 's'}`;
+      updateUrl(q);
+    }
+
+    // Wire up controls
+    const params = new URLSearchParams(window.location.search);
+    const initialStatus = params.get('status');
+    const initialSort = params.get('sort');
+    const initialQuery = params.get('q');
+    if (initialQuery) searchInput.value = initialQuery;
+    if (initialSort && ['updated', 'newest', 'score'].includes(initialSort)) {
+      sortSelect.value = initialSort;
+    }
+    if (initialStatus === 'needs-response' || initialStatus === 'responded') {
+      currentStatus = initialStatus;
+    }
+
+    searchInput.addEventListener('input', sync);
+    sortSelect.addEventListener('change', sync);
+    clearFilters?.addEventListener('click', () => {
+      searchInput.value = '';
+      sortSelect.value = 'updated';
+      currentStatus = 'all';
+      renderTabs();
+      sync();
+    });
+
+    copyLinkButton?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        copyLinkButton.textContent = 'Copied';
+        setTimeout(() => {
+          copyLinkButton.textContent = 'Copy current view';
+        }, 1200);
+      } catch {
+        copyLinkButton.textContent = 'Copy failed';
+        setTimeout(() => {
+          copyLinkButton.textContent = 'Copy current view';
+        }, 1200);
+      }
+    });
+
+    renderTabs();
+    sync();
   })();
 </script>

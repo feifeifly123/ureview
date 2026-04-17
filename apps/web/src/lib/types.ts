@@ -30,6 +30,11 @@ export interface LatestReviewEntry {
   summary: string;
   score: number;
   has_response?: boolean;
+  hf_rank?: number;
+  confidence?: number;
+  updated_at?: string;
+  last_activity_at?: string;
+  response_count?: number;
 }
 
 export interface DailyIndex {
@@ -44,6 +49,9 @@ export interface DailyReviewEntry {
   score: number;
   hf_rank?: number;
   has_response?: boolean;
+  confidence?: number;
+  response_count?: number;
+  last_activity_at?: string;
 }
 
 export interface AuthorResponse {

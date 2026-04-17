@@ -17,7 +17,12 @@
           "title": { "type": "string" },
           "summary": { "type": "string" },
           "score": { "type": "number" },
-          "has_response": { "type": "boolean" }
+          "has_response": { "type": "boolean" },
+          "hf_rank": { "type": "integer", "minimum": 1 },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "last_activity_at": { "type": "string", "format": "date-time" },
+          "response_count": { "type": "integer", "minimum": 0 }
         },
         "additionalProperties": false
       }

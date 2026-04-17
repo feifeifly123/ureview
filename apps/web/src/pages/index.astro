@@ -1,40 +1,5 @@
 ---
 import Layout from '../components/Layout.astro';
-import { getLatestDigests, getLatestIndex, getRespondedDigests } from '../lib/server-data';
-import { formatDate, formatScore } from '../lib/utils';
-
-const latest = getLatestIndex();
-const reviews = getLatestDigests();
-const responded = getRespondedDigests();
-const sample = responded[0] ?? reviews[0];
-const generatedAt = latest.generated_at;
-
-const totalCount = reviews.length;
-const awaitingCount = reviews.filter((review) => !review.has_response).length;
-const respondedCount = totalCount - awaitingCount;
-const updatedThisWeek = reviews.filter((review) => {
-  const ts = Date.parse(review.last_activity_at ?? review.updated_at ?? review.date);
-  return Date.parse(generatedAt) - ts <= 7 * 24 * 60 * 60 * 1000;
-}).length;
-
-function activityLabel(iso?: string): string {
-  if (!iso) return 'Updated recently';
-  const diff = Date.parse(generatedAt) - Date.parse(iso);
-  const hours = Math.max(0, Math.floor(diff / (60 * 60 * 1000)));
-  if (hours < 1) return 'Updated recently';
-  if (hours < 24) return `Updated ${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'Updated 1 day ago';
-  return `Updated ${days} days ago`;
-}
-
-const weekMs = 7 * 24 * 60 * 60 * 1000;
-const reviewPayload = reviews.map((review) => ({
-  id: review.id,
-  status: review.has_response ? 'responded' : 'needs-response',
-  lastActivityAt: review.last_activity_at ?? review.updated_at ?? review.date,
-  recentlyUpdated: (Date.parse(generatedAt) - Date.parse(review.last_activity_at ?? review.updated_at ?? review.date)) <= weekMs,
-}));
 ---
 
 <Layout
@@ -60,75 +25,11 @@ const reviewPayload = reviews.map((review) => ({
           Scores are machine-generated triage signals, not peer review verdicts.
         </p>
       </div>
-
-      {sample && (
-        <aside class="hero-preview-card" aria-label="Sample thread preview">
-          <span class="hero-featured-label">Featured thread</span>
-          <div class="hero-preview-top">
-            <span class="topic-chip topic-chip--ai">AI review</span>
-            <span class={sample.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
-              {sample.has_response ? 'Author responded' : 'Needs response'}
-            </span>
-          </div>
-          <h2 class="hero-preview-title">{sample.title}</h2>
-          <p class="hero-preview-summary">{sample.summary}</p>
-          <dl class="hero-preview-metrics">
-            <div>
-              <dt>Score</dt>
-              <dd>{formatScore(sample.score)}/10</dd>
-            </div>
-            <div>
-              <dt>Confidence</dt>
-              <dd>{sample.confidence ?? 0}/5</dd>
-            </div>
-            <div>
-              <dt>Last activity</dt>
-              <dd>{activityLabel(sample.last_activity_at ?? sample.updated_at)}</dd>
-            </div>
-          </dl>
-          <div class="hero-preview-footer">
-            <span>{sample.hf_rank != null ? `HF Daily #${sample.hf_rank}` : 'Trending paper'}</span>
-            <a href={`/review/?id=${encodeURIComponent(sample.id)}`}>Open thread →</a>
-          </div>
-        </aside>
-      )}
+      <div id="home-hero-preview-slot" aria-live="polite"></div>
     </div>
   </section>
 
-  {totalCount >= 20 ? (
-    <section class="home-stats">
-      <div class="container home-stats-grid">
-        <article class="stat-tile">
-          <span class="stat-label">Reviewed</span>
-          <strong class="stat-value">{totalCount}</strong>
-          <span class="stat-meta">Current queue snapshot</span>
-        </article>
-        <article class="stat-tile">
-          <span class="stat-label">Awaiting reply</span>
-          <strong class="stat-value">{awaitingCount}</strong>
-          <span class="stat-meta">Invited authors can respond</span>
-        </article>
-        <article class="stat-tile">
-          <span class="stat-label">Public threads</span>
-          <strong class="stat-value">{respondedCount}</strong>
-          <span class="stat-meta">Author reply already published</span>
-        </article>
-        <article class="stat-tile">
-          <span class="stat-label">Updated this week</span>
-          <strong class="stat-value">{updatedThisWeek}</strong>
-          <span class="stat-meta">Based on latest thread activity</span>
-        </article>
-      </div>
-    </section>
-  ) : (
-    <section class="home-trust-strip">
-      <div class="container">
-        <p class="trust-strip-text">
-          {totalCount} papers reviewed &middot; Source: HF Daily Papers &middot; Machine-generated triage signals
-        </p>
-      </div>
-    </section>
-  )}
+  <section id="home-counters" aria-live="polite"></section>
 
   <div class="container home-shell" id="activity">
     <div class="home-main-column">
@@ -143,66 +44,17 @@ const reviewPayload = reviews.map((review) => ({
         <a href="/browse/" class="section-link">Open full browse view</a>
       </div>
 
-      <div class="filter-tabs filter-tabs--soft" role="tablist" aria-label="Filter recent reviews">
-        <button class="filter-tab active" role="tab" aria-selected="true" data-filter="all">
-          All <span>{totalCount}</span>
-        </button>
-        <button class="filter-tab" role="tab" aria-selected="false" data-filter="needs-response">
-          Needs response <span>{awaitingCount}</span>
-        </button>
-        <button class="filter-tab" role="tab" aria-selected="false" data-filter="responded">
-          Author responded <span>{respondedCount}</span>
-        </button>
-        <button class="filter-tab" role="tab" aria-selected="false" data-filter="recent">
-          Recently updated <span>{updatedThisWeek}</span>
-        </button>
-      </div>
+      <div
+        class="filter-tabs filter-tabs--soft"
+        role="tablist"
+        aria-label="Filter recent reviews"
+        id="home-filter-tabs"
+      ></div>
 
       <div class="home-card-list" id="home-card-list">
-        {reviews.map((review) => (
-          <article
-            class="home-card"
-            data-home-card
-            data-review-id={review.id}
-            data-status={review.has_response ? 'responded' : 'needs-response'}
-            data-last-activity={review.last_activity_at ?? review.updated_at ?? review.date}
-          >
-            <div class="home-card-top">
-              <div class="home-card-chips">
-                <span class="topic-chip topic-chip--ai">AI review</span>
-                <span class={review.has_response ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting'}>
-                  {review.has_response ? 'Author responded' : 'Needs response'}
-                </span>
-                {review.hf_rank != null && <span class="topic-chip topic-chip--ghost">HF #{review.hf_rank}</span>}
-              </div>
-              <span class="home-card-updated">{activityLabel(review.last_activity_at ?? review.updated_at)}</span>
-            </div>
-            <a class="home-card-title" href={`/review/?id=${encodeURIComponent(review.id)}`}>
-              {review.title}
-            </a>
-            <p class="home-card-summary">{review.summary}</p>
-            <dl class="home-card-metrics">
-              <div>
-                <dt>Score</dt>
-                <dd>{formatScore(review.score)}/10</dd>
-              </div>
-              <div>
-                <dt>Confidence</dt>
-                <dd>{review.confidence ?? 0}/5</dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd>{review.has_response ? 'Public thread' : 'Awaiting reply'}</dd>
-              </div>
-            </dl>
-            <div class="home-card-footer">
-              <span>{formatDate(review.date)}</span>
-              <a href={`/review/?id=${encodeURIComponent(review.id)}`}>
-Open thread →
-              </a>
-            </div>
-          </article>
-        ))}
+        <div class="state loading">
+          <strong>Loading reviews…</strong>
+        </div>
       </div>
 
       <div class="state empty" id="home-empty-state" hidden>
@@ -247,100 +99,308 @@ Open thread →
       <section class="sidebar-box">
         <span class="sidebar-kicker">Recent author replies</span>
         <h3 class="sidebar-heading">Latest published responses</h3>
-        <div class="response-compact-list">
-          {responded.length > 0 ? (
-            responded.map((review) => (
-              <a class="response-compact response-compact--rich" href={`/review/?id=${encodeURIComponent(review.id)}`}>
-                <div>
-                  <span class="response-compact-title">{review.title}</span>
-                  <span class="response-compact-meta">{activityLabel(review.last_activity_at ?? review.updated_at)}</span>
-                </div>
-                <span class="response-compact-score">{formatScore(review.score)}</span>
-              </a>
-            ))
-          ) : (
-            <p class="sidebar-text">No author responses yet.</p>
-          )}
+        <div class="response-compact-list" id="home-recent-replies">
+          <p class="sidebar-text">Loading…</p>
         </div>
       </section>
     </aside>
   </div>
 </Layout>
 
-<script define:vars={{ reviewPayload }}>
-  const cards = Array.from(document.querySelectorAll('[data-home-card]'));
-  const tabs = Array.from(document.querySelectorAll('.filter-tab'));
-  const list = document.getElementById('home-card-list');
-  const empty = document.getElementById('home-empty-state');
-  const payloadById = new Map(reviewPayload.map((entry) => [entry.id, entry]));
-
-  function orderedCards(filter) {
-    const visible = cards.filter((card) => {
-      if (filter === 'all') return true;
-      if (filter === 'recent') {
-        const data = payloadById.get(card.dataset.reviewId ?? '');
-        return data?.recentlyUpdated === true;
-      }
-      return card.dataset.status === filter;
-    });
-
-    if (filter !== 'recent') return visible;
-
-    return visible.slice().sort((a, b) => {
-      const aData = payloadById.get(a.dataset.reviewId ?? '');
-      const bData = payloadById.get(b.dataset.reviewId ?? '');
-      return Date.parse(bData?.lastActivityAt ?? '0') - Date.parse(aData?.lastActivityAt ?? '0');
-    });
-  }
-
-  function applyFilter(filter) {
-    const visible = orderedCards(filter);
-    const visibleSet = new Set(visible);
-    cards.forEach((card) => {
-      card.hidden = !visibleSet.has(card);
-    });
-    visible.forEach((card) => list?.appendChild(card));
-    if (empty) empty.hidden = visible.length !== 0;
-  }
-
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.forEach((item) => {
-        item.classList.remove('active');
-        item.setAttribute('aria-selected', 'false');
-      });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      applyFilter(tab.dataset.filter ?? 'all');
-    });
-  });
-</script>
-
 <script>
   import { dataClient } from '../lib/data-client';
+  import { el, mount } from '../lib/dom';
+  import { formatDate, formatScore } from '../lib/utils';
+  import { activityLabel, latestCounts, latestLastActivity, isRecentlyUpdated } from '../lib/latest';
+  import type { LatestReviewEntry } from '../lib/types';
+
+  const STATUS_FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'needs-response', label: 'Needs response' },
+    { id: 'responded', label: 'Author responded' },
+    { id: 'recent', label: 'Recently updated' },
+  ] as const;
+
+  function statusOf(review: LatestReviewEntry): 'responded' | 'needs-response' {
+    return review.has_response ? 'responded' : 'needs-response';
+  }
+
+  function buildHeroPreview(sample: LatestReviewEntry): HTMLElement {
+    return el('aside', { class: 'hero-preview-card', 'aria-label': 'Sample thread preview' }, [
+      el('span', { class: 'hero-featured-label' }, 'Featured thread'),
+      el('div', { class: 'hero-preview-top' }, [
+        el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
+        el(
+          'span',
+          {
+            class: sample.has_response
+              ? 'topic-chip topic-chip--author'
+              : 'topic-chip topic-chip--waiting',
+          },
+          sample.has_response ? 'Author responded' : 'Needs response'
+        ),
+      ]),
+      el('h2', { class: 'hero-preview-title' }, sample.title),
+      el('p', { class: 'hero-preview-summary' }, sample.summary),
+      el('dl', { class: 'hero-preview-metrics' }, [
+        el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(sample.score)}/10`)]),
+        el('div', {}, [
+          el('dt', {}, 'Confidence'),
+          el('dd', {}, `${sample.confidence ?? 0}/5`),
+        ]),
+        el('div', {}, [
+          el('dt', {}, 'Last activity'),
+          el('dd', {}, activityLabel(new Date().toISOString(), latestLastActivity(sample))),
+        ]),
+      ]),
+      el('div', { class: 'hero-preview-footer' }, [
+        el('span', {}, sample.hf_rank != null ? `HF Daily #${sample.hf_rank}` : 'Trending paper'),
+        el(
+          'a',
+          { href: `/review/?id=${encodeURIComponent(sample.id)}` },
+          'Open thread \u2192'
+        ),
+      ]),
+    ]);
+  }
+
+  function buildCounters(
+    counts: ReturnType<typeof latestCounts>,
+    threshold: number
+  ): HTMLElement {
+    if (counts.totalCount < threshold) {
+      return el('div', { class: 'container' }, [
+        el(
+          'p',
+          { class: 'trust-strip-text' },
+          `${counts.totalCount} papers reviewed \u00b7 Source: HF Daily Papers \u00b7 Machine-generated triage signals`
+        ),
+      ]);
+    }
+    return el('div', { class: 'container home-stats-grid' }, [
+      el('article', { class: 'stat-tile' }, [
+        el('span', { class: 'stat-label' }, 'Reviewed'),
+        el('strong', { class: 'stat-value' }, String(counts.totalCount)),
+        el('span', { class: 'stat-meta' }, 'Current queue snapshot'),
+      ]),
+      el('article', { class: 'stat-tile' }, [
+        el('span', { class: 'stat-label' }, 'Awaiting reply'),
+        el('strong', { class: 'stat-value' }, String(counts.awaitingCount)),
+        el('span', { class: 'stat-meta' }, 'Invited authors can respond'),
+      ]),
+      el('article', { class: 'stat-tile' }, [
+        el('span', { class: 'stat-label' }, 'Public threads'),
+        el('strong', { class: 'stat-value' }, String(counts.respondedCount)),
+        el('span', { class: 'stat-meta' }, 'Author reply already published'),
+      ]),
+      el('article', { class: 'stat-tile' }, [
+        el('span', { class: 'stat-label' }, 'Updated this week'),
+        el('strong', { class: 'stat-value' }, String(counts.updatedThisWeek)),
+        el('span', { class: 'stat-meta' }, 'Based on latest thread activity'),
+      ]),
+    ]);
+  }
+
+  function buildTabs(
+    counts: ReturnType<typeof latestCounts>,
+    current: string
+  ): HTMLElement[] {
+    const countFor = (id: string) => {
+      if (id === 'all') return counts.totalCount;
+      if (id === 'needs-response') return counts.awaitingCount;
+      if (id === 'responded') return counts.respondedCount;
+      return counts.updatedThisWeek;
+    };
+    return STATUS_FILTERS.map((filter) => {
+      const isActive = filter.id === current;
+      return el(
+        'button',
+        {
+          class: isActive ? 'filter-tab active' : 'filter-tab',
+          role: 'tab',
+          'aria-selected': isActive ? 'true' : 'false',
+          'data-filter': filter.id,
+          type: 'button',
+        },
+        [filter.label, ' ', el('span', {}, String(countFor(filter.id)))]
+      );
+    });
+  }
+
+  function buildCard(
+    review: LatestReviewEntry,
+    generatedAt: string
+  ): HTMLElement {
+    return el(
+      'article',
+      {
+        class: 'home-card',
+        'data-home-card': 'true',
+        'data-review-id': review.id,
+        'data-status': statusOf(review),
+        'data-last-activity': latestLastActivity(review),
+      },
+      [
+        el('div', { class: 'home-card-top' }, [
+          el('div', { class: 'home-card-chips' }, [
+            el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
+            el(
+              'span',
+              {
+                class: review.has_response
+                  ? 'topic-chip topic-chip--author'
+                  : 'topic-chip topic-chip--waiting',
+              },
+              review.has_response ? 'Author responded' : 'Needs response'
+            ),
+            review.hf_rank != null
+              ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`)
+              : null,
+          ]),
+          el(
+            'span',
+            { class: 'home-card-updated' },
+            activityLabel(generatedAt, latestLastActivity(review))
+          ),
+        ]),
+        el(
+          'a',
+          { class: 'home-card-title', href: `/review/?id=${encodeURIComponent(review.id)}` },
+          review.title
+        ),
+        el('p', { class: 'home-card-summary' }, review.summary),
+        el('dl', { class: 'home-card-metrics' }, [
+          el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(review.score)}/10`)]),
+          el('div', {}, [el('dt', {}, 'Confidence'), el('dd', {}, `${review.confidence ?? 0}/5`)]),
+          el('div', {}, [
+            el('dt', {}, 'Status'),
+            el('dd', {}, review.has_response ? 'Public thread' : 'Awaiting reply'),
+          ]),
+        ]),
+        el('div', { class: 'home-card-footer' }, [
+          el('span', {}, formatDate(review.date)),
+          el(
+            'a',
+            { href: `/review/?id=${encodeURIComponent(review.id)}` },
+            'Open thread \u2192'
+          ),
+        ]),
+      ]
+    );
+  }
+
+  function buildRecentReplies(
+    responded: LatestReviewEntry[],
+    generatedAt: string
+  ): HTMLElement[] {
+    if (responded.length === 0) {
+      return [el('p', { class: 'sidebar-text' }, 'No author responses yet.')];
+    }
+    return responded.slice(0, 4).map((review) =>
+      el(
+        'a',
+        {
+          class: 'response-compact response-compact--rich',
+          href: `/review/?id=${encodeURIComponent(review.id)}`,
+        },
+        [
+          el('div', {}, [
+            el('span', { class: 'response-compact-title' }, review.title),
+            el(
+              'span',
+              { class: 'response-compact-meta' },
+              activityLabel(generatedAt, latestLastActivity(review))
+            ),
+          ]),
+          el('span', { class: 'response-compact-score' }, formatScore(review.score)),
+        ]
+      )
+    );
+  }
 
   (async () => {
+    const listEl = document.getElementById('home-card-list');
+    const emptyEl = document.getElementById('home-empty-state');
+    const tabsEl = document.getElementById('home-filter-tabs');
+    const countersEl = document.getElementById('home-counters');
+    const heroSlot = document.getElementById('home-hero-preview-slot');
+    const repliesEl = document.getElementById('home-recent-replies');
+    if (!listEl || !tabsEl || !countersEl || !heroSlot || !repliesEl) return;
+
+    let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
-      const { reviews } = await dataClient.getLatest();
-      const fresh = new Map(reviews.map((r) => [r.id, r.has_response === true]));
+      data = await dataClient.getLatest();
+    } catch (err) {
+      mount(listEl, el('div', { class: 'state error' }, [
+        el('strong', {}, 'Failed to load reviews'),
+        el('span', {}, err instanceof Error ? err.message : 'Please try again.'),
+      ]));
+      return;
+    }
 
-      document.querySelectorAll<HTMLElement>('[data-home-card]').forEach((card) => {
-        const id = card.dataset.reviewId;
-        if (!id || !fresh.has(id)) return;
-        const hasResponse = fresh.get(id)!;
-        const newStatus = hasResponse ? 'responded' : 'needs-response';
-        if (card.dataset.status === newStatus) return;
+    const generatedAt = data.generated_at;
+    const reviews = data.reviews;
+    const counts = latestCounts(reviews, generatedAt);
+    const responded = reviews.filter((r) => r.has_response);
+    const sample = responded[0] ?? reviews[0];
 
-        card.dataset.status = newStatus;
-        const chips = card.querySelectorAll('.topic-chip');
-        const statusChip = chips[1];
-        if (statusChip) {
-          statusChip.className = hasResponse
-            ? 'topic-chip topic-chip--author'
-            : 'topic-chip topic-chip--waiting';
-          statusChip.textContent = hasResponse ? 'Author responded' : 'Needs response';
-        }
+    // Hero preview
+    if (sample) mount(heroSlot, buildHeroPreview(sample));
+
+    // Counters band (stat-tiles when ≥20, trust-strip otherwise)
+    countersEl.className = counts.totalCount >= 20 ? 'home-stats' : 'home-trust-strip';
+    mount(countersEl, buildCounters(counts, 20));
+
+    // Filter tabs
+    let currentFilter = 'all';
+    const cards = reviews.map((review) => buildCard(review, generatedAt));
+    const cardEntries = reviews.map((review, idx) => ({ review, card: cards[idx] }));
+
+    function renderTabs() {
+      mount(tabsEl, ...buildTabs(counts, currentFilter));
+      tabsEl.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const next = btn.dataset.filter ?? 'all';
+          if (next === currentFilter) return;
+          currentFilter = next;
+          renderTabs();
+          renderCards();
+        });
       });
-    } catch { /* SSG content remains visible as fallback */ }
+    }
+
+    function renderCards() {
+      const visible = cardEntries.filter(({ review }) => {
+        if (currentFilter === 'all') return true;
+        if (currentFilter === 'recent') return isRecentlyUpdated(review, generatedAt);
+        return statusOf(review) === currentFilter;
+      });
+
+      if (currentFilter === 'recent') {
+        visible.sort(
+          (a, b) =>
+            Date.parse(latestLastActivity(b.review)) - Date.parse(latestLastActivity(a.review))
+        );
+      }
+
+      if (visible.length === 0) {
+        mount(listEl);
+        if (emptyEl) emptyEl.hidden = false;
+        return;
+      }
+      if (emptyEl) emptyEl.hidden = true;
+      mount(listEl, ...visible.map((entry) => entry.card));
+    }
+
+    renderTabs();
+    renderCards();
+
+    // Recent author replies sidebar
+    const recentResponses = responded
+      .slice()
+      .sort(
+        (a, b) => Date.parse(latestLastActivity(b)) - Date.parse(latestLastActivity(a))
+      );
+    mount(repliesEl, ...buildRecentReplies(recentResponses, generatedAt));
   })();
 </script>
