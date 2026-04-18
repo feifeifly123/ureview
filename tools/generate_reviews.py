@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Generate AI reviews for fetched papers. (v1 stub)"""
+"""Emit per-paper review JSONs from the day's HF trending fetch. (stub)
+
+Shape matches contracts/review.schema.json. The `abstract` field passes
+arXiv text through verbatim. The `ai_review` field is a single LLM
+opinion — for now a placeholder, to be wired to a real model later.
+"""
 
 import json
 import re
@@ -37,24 +42,19 @@ def main() -> int:
         slug = slugify(paper["title"])
         review_id = f"{today}-{slug}"
 
-        # TODO: Replace with real LLM API call
+        # TODO: replace placeholder ai_review with a real Claude API call.
         review = {
             "id": review_id,
             "slug": slug,
             "date": today,
             "title": paper["title"],
             "paper_url": paper["url"],
-            "hf_rank": paper.get("rank"),
-            "summary": f"[Stub] {paper['abstract'][:100]}",
-            "review": {
-                "score": 5.0,
-                "confidence": 2,
-                "strengths": ["[Stub] Placeholder for real review"],
-                "weaknesses": ["[Stub] Placeholder for real review"],
-                "final_comment": "[Stub] This is a placeholder review. Connect to an LLM to generate real reviews.",
-            },
+            "abstract": paper["abstract"],
+            "ai_review": "[Stub] Connect this pipeline to an LLM to generate the review opinion.",
             "updated_at": now,
         }
+        if paper.get("rank") is not None:
+            review["hf_rank"] = paper["rank"]
 
         out_path = REVIEWS_DIR / f"{review_id}.json"
         with open(out_path, "w", encoding="utf-8") as f:

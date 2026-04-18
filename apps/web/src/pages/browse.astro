@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Browse reviews"
-  description="Browse the recent OpenAgent.review queue with filters for response status, search, and recency."
+  description="Browse recent OpenAgent.review papers — search titles and abstracts, sort by date or trending rank."
   activeNav="browse"
 >
   <div class="page-header page-header--browse">
@@ -18,8 +18,7 @@ import Layout from '../components/Layout.astro';
         <div>
           <h1>Browse recent reviews</h1>
           <p class="subtitle">
-            Scan the queue like an index page: filter by author response status, search titles and summaries,
-            then jump into the thread that looks worth reading.
+            Search by title or abstract, sort by date or trending rank, then jump into the thread.
           </p>
         </div>
         <div class="page-header-aside" id="browse-header-aside" aria-live="polite"></div>
@@ -32,15 +31,14 @@ import Layout from '../components/Layout.astro';
       <div class="browse-toolbar-top">
         <label class="browse-search">
           <span class="sr-only">Search review queue</span>
-          <input id="browse-search" type="search" placeholder="Search title or summary" />
+          <input id="browse-search" type="search" placeholder="Search title or abstract" />
         </label>
 
         <label class="browse-sort-label">
           <span>Sort</span>
           <select id="browse-sort">
-            <option value="updated">Most active</option>
             <option value="newest">Newest</option>
-            <option value="score">Highest score</option>
+            <option value="hf">HF rank</option>
           </select>
         </label>
 
@@ -48,13 +46,6 @@ import Layout from '../components/Layout.astro';
           Copy current view
         </button>
       </div>
-
-      <div
-        class="browse-status-tabs"
-        role="tablist"
-        aria-label="Filter browse view by status"
-        id="browse-status-tabs"
-      ></div>
 
       <div class="browse-toolbar-bottom">
         <div id="browse-results-count" class="browse-results-count">Loading…</div>
@@ -70,7 +61,7 @@ import Layout from '../components/Layout.astro';
 
     <div class="state empty" id="browse-empty-state" hidden>
       <strong>No reviews match this view</strong>
-      <span>Clear the filters or try a broader search.</span>
+      <span>Clear the search or try a different query.</span>
     </div>
   </div>
 </Layout>
@@ -78,70 +69,26 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { formatDate, formatDateTime, formatScore } from '../lib/utils';
-  import { latestLastActivity } from '../lib/latest';
+  import { formatDate, formatDateTime } from '../lib/utils';
   import type { LatestReviewEntry } from '../lib/types';
 
-  type StatusFilter = 'all' | 'needs-response' | 'responded';
-  type SortKey = 'updated' | 'newest' | 'score';
-
-  function statusOf(review: LatestReviewEntry): 'responded' | 'needs-response' {
-    return review.has_response ? 'responded' : 'needs-response';
-  }
+  type SortKey = 'newest' | 'hf';
 
   function buildHeaderAside(count: number, generatedAt: string): HTMLElement[] {
     return [
-      el('div', { class: 'count-chip' }, [el('strong', {}, String(count)), ' reviews in the current snapshot']),
+      el('div', { class: 'count-chip' }, [
+        el('strong', {}, String(count)),
+        ` review${count === 1 ? '' : 's'} in the current snapshot`,
+      ]),
       el('div', { class: 'page-header-meta' }, `Generated ${formatDateTime(generatedAt)}`),
     ];
   }
 
-  function buildStatusTabs(
-    counts: { all: number; 'needs-response': number; responded: number },
-    current: StatusFilter
-  ): HTMLElement[] {
-    const items: Array<{ id: StatusFilter; label: string; count: number }> = [
-      { id: 'all', label: 'All', count: counts.all },
-      { id: 'needs-response', label: 'Needs response', count: counts['needs-response'] },
-      { id: 'responded', label: 'Author responded', count: counts.responded },
-    ];
-    return items.map((item) => {
-      const isActive = item.id === current;
-      return el(
-        'button',
-        {
-          class: isActive ? 'browse-status-tab active' : 'browse-status-tab',
-          type: 'button',
-          role: 'tab',
-          'aria-selected': isActive ? 'true' : 'false',
-          'data-status-filter': item.id,
-        },
-        [item.label, ' ', el('span', {}, String(item.count))]
-      );
-    });
-  }
-
   function buildCard(review: LatestReviewEntry): HTMLElement {
-    const chips: HTMLElement[] = [
-      el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
-      el(
-        'span',
-        {
-          class: review.has_response
-            ? 'topic-chip topic-chip--author'
-            : 'topic-chip topic-chip--waiting',
-        },
-        review.has_response ? 'Author responded' : 'Needs response'
-      ),
-    ];
+    const chips: HTMLElement[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
     if (review.hf_rank != null) {
       chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
     }
-    if (review.has_response && (review.response_count ?? 0) > 1) {
-      chips.push(el('span', { class: 'topic-chip topic-chip--discussion' }, 'Active discussion'));
-    }
-
-    const noteCount = (review.response_count ?? 0) + 1;
 
     return el(
       'article',
@@ -149,40 +96,28 @@ import Layout from '../components/Layout.astro';
         class: 'browse-card',
         'data-browse-card': 'true',
         'data-review-id': review.id,
-        'data-status': statusOf(review),
         'data-title': review.title.toLowerCase(),
-        'data-summary': review.summary.toLowerCase(),
+        'data-summary': review.abstract.toLowerCase(),
       },
       [
         el('div', { class: 'browse-card-main' }, [
           el('div', { class: 'browse-card-top' }, [
             el('div', { class: 'browse-card-chips' }, chips),
-            el(
-              'div',
-              { class: 'browse-card-updated' },
-              `Last activity ${formatDateTime(latestLastActivity(review))}`
-            ),
+            el('div', { class: 'browse-card-updated' }, `Reviewed ${formatDate(review.date)}`),
           ]),
           el(
             'a',
             { class: 'browse-card-title', href: `/review/?id=${encodeURIComponent(review.id)}` },
             review.title
           ),
-          el('p', { class: 'browse-card-summary' }, review.summary),
+          el('p', { class: 'browse-card-summary' }, review.abstract),
           el('div', { class: 'browse-card-footer' }, [
-            el('span', {}, `Reviewed ${formatDate(review.date)}`),
+            el('span', {}, 'From arXiv'),
             el(
               'a',
               { href: `/review/?id=${encodeURIComponent(review.id)}` },
               'Open thread \u2192'
             ),
-          ]),
-        ]),
-        el('aside', { class: 'browse-card-aside' }, [
-          el('dl', { class: 'browse-card-metrics' }, [
-            el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(review.score)}/10`)]),
-            el('div', {}, [el('dt', {}, 'Conf.'), el('dd', {}, `${review.confidence ?? 0}/5`)]),
-            el('div', {}, [el('dt', {}, 'Notes'), el('dd', {}, String(noteCount))]),
           ]),
         ]),
       ]
@@ -191,7 +126,6 @@ import Layout from '../components/Layout.astro';
 
   (async () => {
     const asideEl = document.getElementById('browse-header-aside');
-    const tabsEl = document.getElementById('browse-status-tabs');
     const listEl = document.getElementById('browse-list');
     const emptyEl = document.getElementById('browse-empty-state');
     const searchInput = document.getElementById('browse-search') as HTMLInputElement | null;
@@ -200,7 +134,7 @@ import Layout from '../components/Layout.astro';
     const clearFilters = document.getElementById('browse-clear-filters');
     const copyLinkButton = document.getElementById('browse-copy-link') as HTMLButtonElement | null;
 
-    if (!asideEl || !tabsEl || !listEl || !searchInput || !sortSelect || !resultsCount) return;
+    if (!asideEl || !listEl || !searchInput || !sortSelect || !resultsCount) return;
 
     let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
@@ -217,34 +151,11 @@ import Layout from '../components/Layout.astro';
     const cards = new Map<string, HTMLElement>();
     reviews.forEach((review) => cards.set(review.id, buildCard(review)));
 
-    const counts = {
-      all: reviews.length,
-      'needs-response': reviews.filter((r) => !r.has_response).length,
-      responded: reviews.filter((r) => r.has_response).length,
-    };
-
     mount(asideEl, ...buildHeaderAside(reviews.length, data.generated_at));
-
-    let currentStatus: StatusFilter = 'all';
-
-    function renderTabs() {
-      mount(tabsEl, ...buildStatusTabs(counts, currentStatus));
-      tabsEl.querySelectorAll<HTMLButtonElement>('[data-status-filter]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const next = (btn.dataset.statusFilter ?? 'all') as StatusFilter;
-          if (next === currentStatus) return;
-          currentStatus = next;
-          renderTabs();
-          sync();
-        });
-      });
-    }
 
     function updateUrl(q: string) {
       const url = new URL(window.location.href);
-      if (currentStatus !== 'all') url.searchParams.set('status', currentStatus);
-      else url.searchParams.delete('status');
-      if (sortSelect?.value && sortSelect.value !== 'updated') url.searchParams.set('sort', sortSelect.value);
+      if (sortSelect?.value && sortSelect.value !== 'newest') url.searchParams.set('sort', sortSelect.value);
       else url.searchParams.delete('sort');
       if (q) url.searchParams.set('q', q);
       else url.searchParams.delete('q');
@@ -252,21 +163,18 @@ import Layout from '../components/Layout.astro';
     }
 
     function sortedReviews(source: LatestReviewEntry[]): LatestReviewEntry[] {
-      const sortKey = (sortSelect?.value as SortKey) ?? 'updated';
+      const sortKey = (sortSelect?.value as SortKey) ?? 'newest';
       return source.slice().sort((a, b) => {
-        if (sortKey === 'score') return b.score - a.score;
-        if (sortKey === 'newest') return Date.parse(b.date) - Date.parse(a.date);
-        return Date.parse(latestLastActivity(b)) - Date.parse(latestLastActivity(a));
+        if (sortKey === 'hf') return (a.hf_rank ?? 10 ** 9) - (b.hf_rank ?? 10 ** 9);
+        return Date.parse(b.date) - Date.parse(a.date);
       });
     }
 
     function sync() {
       const q = searchInput?.value.trim().toLowerCase() ?? '';
       const filtered = reviews.filter((review) => {
-        const matchesStatus = currentStatus === 'all' || statusOf(review) === currentStatus;
-        const blob = `${review.title.toLowerCase()} ${review.summary.toLowerCase()}`;
-        const matchesSearch = q.length === 0 || blob.includes(q);
-        return matchesStatus && matchesSearch;
+        const blob = `${review.title.toLowerCase()} ${review.abstract.toLowerCase()}`;
+        return q.length === 0 || blob.includes(q);
       });
 
       const orderedNodes = sortedReviews(filtered)
@@ -285,26 +193,19 @@ import Layout from '../components/Layout.astro';
       updateUrl(q);
     }
 
-    // Wire up controls
     const params = new URLSearchParams(window.location.search);
-    const initialStatus = params.get('status');
     const initialSort = params.get('sort');
     const initialQuery = params.get('q');
     if (initialQuery) searchInput.value = initialQuery;
-    if (initialSort && ['updated', 'newest', 'score'].includes(initialSort)) {
+    if (initialSort && ['newest', 'hf'].includes(initialSort)) {
       sortSelect.value = initialSort;
-    }
-    if (initialStatus === 'needs-response' || initialStatus === 'responded') {
-      currentStatus = initialStatus;
     }
 
     searchInput.addEventListener('input', sync);
     sortSelect.addEventListener('change', sync);
     clearFilters?.addEventListener('click', () => {
       searchInput.value = '';
-      sortSelect.value = 'updated';
-      currentStatus = 'all';
-      renderTabs();
+      sortSelect.value = 'newest';
       sync();
     });
 
@@ -323,7 +224,6 @@ import Layout from '../components/Layout.astro';
       }
     });
 
-    renderTabs();
     sync();
   })();
 </script>

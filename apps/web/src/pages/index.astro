@@ -4,25 +4,24 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="OpenAgent.review"
-  description="Machine reviews for trending papers, public author replies, and lightweight thread pages."
+  description="AI reviews of trending arXiv papers — one LLM opinion per paper, alongside the original abstract."
   activeNav="home"
 >
   <section class="hero hero--product">
     <div class="container hero-grid">
       <div class="hero-copy">
-        <span class="eyebrow">Machine review forum</span>
+        <span class="eyebrow">Machine review feed</span>
         <h1 class="hero-heading hero-heading--left">
-          Machine reviews for trending papers. Read both sides.
+          AI reviews for trending papers.
         </h1>
         <p class="hero-subtitle hero-subtitle--left">
-          See what an AI reviewer thinks of today's trending papers — then read the author's rebuttal.
+          One LLM opinion per paper, shown next to the original arXiv abstract. Nothing scored, nothing ranked.
         </p>
         <div class="hero-actions">
           <a href="/browse/" class="btn-cta">Browse recent reviews</a>
-          <a href="/author/" class="btn-secondary">For authors</a>
         </div>
         <p class="hero-note hero-note--inline">
-          Scores are machine-generated triage signals, not peer review verdicts.
+          The review is a single-pass language-model opinion, not peer review.
         </p>
       </div>
       <div id="home-hero-preview-slot" aria-live="polite"></div>
@@ -38,18 +37,11 @@ import Layout from '../components/Layout.astro';
           <span class="section-eyebrow">Index</span>
           <h2 class="section-heading section-heading--tight">Recent reviews</h2>
           <p class="section-copy">
-            Start with the queue, then open a thread to compare the machine review with the author response.
+            Each card links into a thread page that shows the paper's abstract alongside the AI review.
           </p>
         </div>
         <a href="/browse/" class="section-link">Open full browse view</a>
       </div>
-
-      <div
-        class="filter-tabs filter-tabs--soft"
-        role="tablist"
-        aria-label="Filter recent reviews"
-        id="home-filter-tabs"
-      ></div>
 
       <div class="home-card-list" id="home-card-list">
         <div class="state loading">
@@ -58,50 +50,29 @@ import Layout from '../components/Layout.astro';
       </div>
 
       <div class="state empty" id="home-empty-state" hidden>
-        <strong>No reviews match this filter</strong>
-        <span>Try a different slice of the queue.</span>
+        <strong>No reviews to show.</strong>
+        <span>Fresh papers land daily from the HF trending feed.</span>
       </div>
     </div>
 
     <aside class="home-sidebar">
       <section class="sidebar-box sidebar-box--guide" id="how-it-works">
         <span class="sidebar-kicker">How to read this site</span>
-        <h3 class="sidebar-heading">Read the review as a starting point, not a verdict.</h3>
+        <h3 class="sidebar-heading">A review, alongside the source.</h3>
         <ol class="sidebar-steps sidebar-steps--calm">
           <li>
-            <strong>Machine review</strong>
-            <span>The first note summarizes strengths, weaknesses, score, and confidence.</span>
+            <strong>Abstract</strong>
+            <span>The paper's own abstract, taken from arXiv verbatim.</span>
           </li>
           <li>
-            <strong>Author response</strong>
-            <span>Invited authors can publish a private rebuttal as a public note in the thread.</span>
+            <strong>AI review</strong>
+            <span>A single language-model opinion about the paper — no scores, no ranking.</span>
           </li>
           <li>
-            <strong>Thread history</strong>
-            <span>Each update remains visible so readers can trace what changed and when.</span>
-          </li>
-          <li>
-            <strong>Scoring caveat</strong>
-            <span>Score is a rough triage cue; confidence indicates model certainty. Neither replaces peer review. <a href="/about/#rubric" class="sidebar-inline-link">See rubric</a></span>
+            <strong>Source link</strong>
+            <span>Every thread links back to the arXiv page so you can check the paper yourself.</span>
           </li>
         </ol>
-      </section>
-
-      <section class="sidebar-box">
-        <span class="sidebar-kicker">For authors</span>
-        <h3 class="sidebar-heading">Respond through a private link</h3>
-        <p class="sidebar-text">
-          If you received an invite, you can draft a structured response, preview it, and publish it into the public thread.
-        </p>
-        <a href="/author/" class="sidebar-inline-link">Open the author portal</a>
-      </section>
-
-      <section class="sidebar-box">
-        <span class="sidebar-kicker">Recent author replies</span>
-        <h3 class="sidebar-heading">Latest published responses</h3>
-        <div class="response-compact-list" id="home-recent-replies">
-          <p class="sidebar-text">Loading…</p>
-        </div>
       </section>
     </aside>
   </div>
@@ -110,51 +81,22 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { formatDate, formatScore } from '../lib/utils';
-  import { activityLabel, shortActivityLabel, latestCounts, latestLastActivity, isRecentlyUpdated } from '../lib/latest';
+  import { formatDate } from '../lib/utils';
   import type { LatestReviewEntry } from '../lib/types';
-
-  const STATUS_FILTERS = [
-    { id: 'all', label: 'All' },
-    { id: 'needs-response', label: 'Needs response' },
-    { id: 'responded', label: 'Author responded' },
-    { id: 'recent', label: 'Recently updated' },
-  ] as const;
-
-  function statusOf(review: LatestReviewEntry): 'responded' | 'needs-response' {
-    return review.has_response ? 'responded' : 'needs-response';
-  }
 
   function buildHeroPreview(sample: LatestReviewEntry): HTMLElement {
     return el('aside', { class: 'hero-preview-card', 'aria-label': 'Sample thread preview' }, [
       el('span', { class: 'hero-featured-label' }, 'Featured thread'),
       el('div', { class: 'hero-preview-top' }, [
         el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
-        el(
-          'span',
-          {
-            class: sample.has_response
-              ? 'topic-chip topic-chip--author'
-              : 'topic-chip topic-chip--waiting',
-          },
-          sample.has_response ? 'Author responded' : 'Needs response'
-        ),
+        sample.hf_rank != null
+          ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${sample.hf_rank}`)
+          : null,
       ]),
       el('h2', { class: 'hero-preview-title' }, sample.title),
-      el('p', { class: 'hero-preview-summary' }, sample.summary),
-      el('dl', { class: 'hero-preview-metrics' }, [
-        el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(sample.score)}/10`)]),
-        el('div', {}, [
-          el('dt', {}, 'Confidence'),
-          el('dd', {}, `${sample.confidence ?? 0}/5`),
-        ]),
-        el('div', {}, [
-          el('dt', {}, 'Last activity'),
-          el('dd', {}, shortActivityLabel(new Date().toISOString(), latestLastActivity(sample))),
-        ]),
-      ]),
+      el('p', { class: 'hero-preview-summary' }, sample.abstract),
       el('div', { class: 'hero-preview-footer' }, [
-        el('span', {}, sample.hf_rank != null ? `HF Daily #${sample.hf_rank}` : 'Trending paper'),
+        el('span', {}, formatDate(sample.date)),
         el(
           'a',
           { href: `/review/?id=${encodeURIComponent(sample.id)}` },
@@ -164,121 +106,42 @@ import Layout from '../components/Layout.astro';
     ]);
   }
 
-  function buildCounters(
-    counts: ReturnType<typeof latestCounts>,
-    threshold: number
-  ): HTMLElement {
-    if (counts.totalCount < threshold) {
-      return el('div', { class: 'container' }, [
-        el(
-          'p',
-          { class: 'trust-strip-text' },
-          `${counts.totalCount} papers reviewed \u00b7 Source: HF Daily Papers \u00b7 Machine-generated triage signals`
-        ),
-      ]);
-    }
-    return el('div', { class: 'container home-stats-grid' }, [
-      el('article', { class: 'stat-tile' }, [
-        el('span', { class: 'stat-label' }, 'Reviewed'),
-        el('strong', { class: 'stat-value' }, String(counts.totalCount)),
-        el('span', { class: 'stat-meta' }, 'Current queue snapshot'),
-      ]),
-      el('article', { class: 'stat-tile' }, [
-        el('span', { class: 'stat-label' }, 'Awaiting reply'),
-        el('strong', { class: 'stat-value' }, String(counts.awaitingCount)),
-        el('span', { class: 'stat-meta' }, 'Invited authors can respond'),
-      ]),
-      el('article', { class: 'stat-tile' }, [
-        el('span', { class: 'stat-label' }, 'Public threads'),
-        el('strong', { class: 'stat-value' }, String(counts.respondedCount)),
-        el('span', { class: 'stat-meta' }, 'Author reply already published'),
-      ]),
-      el('article', { class: 'stat-tile' }, [
-        el('span', { class: 'stat-label' }, 'Updated this week'),
-        el('strong', { class: 'stat-value' }, String(counts.updatedThisWeek)),
-        el('span', { class: 'stat-meta' }, 'Based on latest thread activity'),
-      ]),
+  function buildTrustStrip(totalCount: number): HTMLElement {
+    return el('div', { class: 'container' }, [
+      el(
+        'p',
+        { class: 'trust-strip-text' },
+        `${totalCount} paper${totalCount === 1 ? '' : 's'} reviewed \u00b7 Source: HF Daily Papers \u00b7 AI-generated opinions`
+      ),
     ]);
   }
 
-  function buildTabs(
-    counts: ReturnType<typeof latestCounts>,
-    current: string
-  ): HTMLElement[] {
-    const countFor = (id: string) => {
-      if (id === 'all') return counts.totalCount;
-      if (id === 'needs-response') return counts.awaitingCount;
-      if (id === 'responded') return counts.respondedCount;
-      return counts.updatedThisWeek;
-    };
-    return STATUS_FILTERS.map((filter) => {
-      const isActive = filter.id === current;
-      return el(
-        'button',
-        {
-          class: isActive ? 'filter-tab active' : 'filter-tab',
-          role: 'tab',
-          'aria-selected': isActive ? 'true' : 'false',
-          'data-filter': filter.id,
-          type: 'button',
-        },
-        [filter.label, ' ', el('span', {}, String(countFor(filter.id)))]
-      );
-    });
-  }
-
-  function buildCard(
-    review: LatestReviewEntry,
-    generatedAt: string
-  ): HTMLElement {
+  function buildCard(review: LatestReviewEntry): HTMLElement {
     return el(
       'article',
       {
         class: 'home-card',
         'data-home-card': 'true',
         'data-review-id': review.id,
-        'data-status': statusOf(review),
-        'data-last-activity': latestLastActivity(review),
       },
       [
         el('div', { class: 'home-card-top' }, [
           el('div', { class: 'home-card-chips' }, [
             el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
-            el(
-              'span',
-              {
-                class: review.has_response
-                  ? 'topic-chip topic-chip--author'
-                  : 'topic-chip topic-chip--waiting',
-              },
-              review.has_response ? 'Author responded' : 'Needs response'
-            ),
             review.hf_rank != null
               ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`)
               : null,
           ]),
-          el(
-            'span',
-            { class: 'home-card-updated' },
-            activityLabel(generatedAt, latestLastActivity(review))
-          ),
+          el('span', { class: 'home-card-updated' }, formatDate(review.date)),
         ]),
         el(
           'a',
           { class: 'home-card-title', href: `/review/?id=${encodeURIComponent(review.id)}` },
           review.title
         ),
-        el('p', { class: 'home-card-summary' }, review.summary),
-        el('dl', { class: 'home-card-metrics' }, [
-          el('div', {}, [el('dt', {}, 'Score'), el('dd', {}, `${formatScore(review.score)}/10`)]),
-          el('div', {}, [el('dt', {}, 'Confidence'), el('dd', {}, `${review.confidence ?? 0}/5`)]),
-          el('div', {}, [
-            el('dt', {}, 'Status'),
-            el('dd', {}, review.has_response ? 'Public thread' : 'Awaiting reply'),
-          ]),
-        ]),
+        el('p', { class: 'home-card-summary' }, review.abstract),
         el('div', { class: 'home-card-footer' }, [
-          el('span', {}, formatDate(review.date)),
+          el('span', {}, 'From arXiv'),
           el(
             'a',
             { href: `/review/?id=${encodeURIComponent(review.id)}` },
@@ -289,43 +152,12 @@ import Layout from '../components/Layout.astro';
     );
   }
 
-  function buildRecentReplies(
-    responded: LatestReviewEntry[],
-    generatedAt: string
-  ): HTMLElement[] {
-    if (responded.length === 0) {
-      return [el('p', { class: 'sidebar-text' }, 'No author responses yet.')];
-    }
-    return responded.slice(0, 4).map((review) =>
-      el(
-        'a',
-        {
-          class: 'response-compact response-compact--rich',
-          href: `/review/?id=${encodeURIComponent(review.id)}`,
-        },
-        [
-          el('div', {}, [
-            el('span', { class: 'response-compact-title' }, review.title),
-            el(
-              'span',
-              { class: 'response-compact-meta' },
-              activityLabel(generatedAt, latestLastActivity(review))
-            ),
-          ]),
-          el('span', { class: 'response-compact-score' }, formatScore(review.score)),
-        ]
-      )
-    );
-  }
-
   (async () => {
     const listEl = document.getElementById('home-card-list');
     const emptyEl = document.getElementById('home-empty-state');
-    const tabsEl = document.getElementById('home-filter-tabs');
     const countersEl = document.getElementById('home-counters');
     const heroSlot = document.getElementById('home-hero-preview-slot');
-    const repliesEl = document.getElementById('home-recent-replies');
-    if (!listEl || !tabsEl || !countersEl || !heroSlot || !repliesEl) return;
+    if (!listEl || !countersEl || !heroSlot) return;
 
     let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
@@ -338,69 +170,20 @@ import Layout from '../components/Layout.astro';
       return;
     }
 
-    const generatedAt = data.generated_at;
     const reviews = data.reviews;
-    const counts = latestCounts(reviews, generatedAt);
-    const responded = reviews.filter((r) => r.has_response);
-    const sample = responded[0] ?? reviews[0];
+    const sample = reviews[0];
 
-    // Hero preview
     if (sample) mount(heroSlot, buildHeroPreview(sample));
 
-    // Counters band (stat-tiles when ≥20, trust-strip otherwise)
-    countersEl.className = counts.totalCount >= 20 ? 'home-stats' : 'home-trust-strip';
-    mount(countersEl, buildCounters(counts, 20));
+    countersEl.className = 'home-trust-strip';
+    mount(countersEl, buildTrustStrip(reviews.length));
 
-    // Filter tabs
-    let currentFilter = 'all';
-    const cards = reviews.map((review) => buildCard(review, generatedAt));
-    const cardEntries = reviews.map((review, idx) => ({ review, card: cards[idx] }));
-
-    function renderTabs() {
-      mount(tabsEl, ...buildTabs(counts, currentFilter));
-      tabsEl.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const next = btn.dataset.filter ?? 'all';
-          if (next === currentFilter) return;
-          currentFilter = next;
-          renderTabs();
-          renderCards();
-        });
-      });
+    if (reviews.length === 0) {
+      mount(listEl);
+      if (emptyEl) emptyEl.hidden = false;
+      return;
     }
-
-    function renderCards() {
-      const visible = cardEntries.filter(({ review }) => {
-        if (currentFilter === 'all') return true;
-        if (currentFilter === 'recent') return isRecentlyUpdated(review, generatedAt);
-        return statusOf(review) === currentFilter;
-      });
-
-      if (currentFilter === 'recent') {
-        visible.sort(
-          (a, b) =>
-            Date.parse(latestLastActivity(b.review)) - Date.parse(latestLastActivity(a.review))
-        );
-      }
-
-      if (visible.length === 0) {
-        mount(listEl);
-        if (emptyEl) emptyEl.hidden = false;
-        return;
-      }
-      if (emptyEl) emptyEl.hidden = true;
-      mount(listEl, ...visible.map((entry) => entry.card));
-    }
-
-    renderTabs();
-    renderCards();
-
-    // Recent author replies sidebar
-    const recentResponses = responded
-      .slice()
-      .sort(
-        (a, b) => Date.parse(latestLastActivity(b)) - Date.parse(latestLastActivity(a))
-      );
-    mount(repliesEl, ...buildRecentReplies(recentResponses, generatedAt));
+    if (emptyEl) emptyEl.hidden = true;
+    mount(listEl, ...reviews.map((review) => buildCard(review)));
   })();
 </script>

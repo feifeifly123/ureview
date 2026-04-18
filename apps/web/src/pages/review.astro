@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Review"
-  description="Machine review thread for a research paper."
+  description="AI review note for a research paper."
   chrome="forum"
   hideFooter={true}
 >
@@ -20,110 +20,22 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { threadBlock, buildReviewBody, buildParagraphs, stateView } from '../lib/render';
-  import { formatDate, formatDateTime, formatScore, safeHref } from '../lib/utils';
-  import type { Review, ThreadData, ThreadEntry } from '../lib/types';
+  import { formatDate, safeHref } from '../lib/utils';
+  import type { Review } from '../lib/types';
 
-  function latestActivity(review: Review, threadData: ThreadData | null): string {
-    let latest = review.updated_at;
-    if (threadData?.thread?.length) {
-      for (const entry of threadData.thread) {
-        if (Date.parse(entry.submitted_at) > Date.parse(latest)) latest = entry.submitted_at;
-      }
+  function paragraphs(text: string): HTMLElement[] {
+    return text
+      .split(/\n\s*\n/)
+      .map((block) => block.trim())
+      .filter((block) => block.length > 0)
+      .map((block) => el('p', {}, block));
+  }
+
+  function buildHeader(review: Review): HTMLElement {
+    const chips: HTMLElement[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
+    if (review.hf_rank != null) {
+      chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
     }
-    return latest;
-  }
-
-  function buildMetric(label: string, value: string, tone: 'default' | 'author' | 'waiting' = 'default') {
-    return el('div', { class: `thread-metric ${tone !== 'default' ? `thread-metric--${tone}` : ''}` }, [
-      el('dt', { class: 'thread-metric-label' }, label),
-      el('dd', { class: 'thread-metric-value' }, value),
-    ]);
-  }
-
-  function buildSummaryRail(review: Review, threadData: ThreadData | null): HTMLElement {
-    const status = threadData?.thread?.length ? 'Responded' : 'Awaiting';
-    const lastActivity = latestActivity(review, threadData);
-    const responseCount = threadData?.thread?.length ?? 0;
-
-    const historyItems: HTMLElement[] = [
-      el('li', { class: 'thread-history-item' }, [
-        el('strong', {}, 'AI review published'),
-        el('span', {}, formatDateTime(review.updated_at)),
-      ]),
-    ];
-
-    [...(threadData?.thread ?? [])]
-      .sort((a, b) => a.submitted_at.localeCompare(b.submitted_at))
-      .forEach((entry) => {
-      const label =
-        entry.type === 'rebuttal'
-          ? 'Author response published'
-          : entry.type === 'acknowledgement'
-            ? 'Agent follow-up posted'
-            : 'Comment added';
-        historyItems.push(
-          el('li', { class: 'thread-history-item' }, [
-            el('strong', {}, label),
-            el('span', {}, formatDateTime(entry.submitted_at)),
-          ])
-        );
-      });
-
-    return el('aside', { class: 'thread-summary-rail' }, [
-      el('section', { class: 'thread-summary-card' }, [
-        el('span', { class: 'sidebar-kicker' }, 'Thread summary'),
-        el('h2', { class: 'thread-summary-title' }, 'Quick facts'),
-        el('dl', { class: 'thread-metric-grid' }, [
-          buildMetric('Score', `${formatScore(review.review.score)}/10`),
-          buildMetric('Confidence', `${review.review.confidence}/5`),
-          buildMetric('Status', status, threadData?.thread?.length ? 'author' : 'waiting'),
-          buildMetric('Notes', String(responseCount + 1)),
-        ]),
-      ]),
-      el('section', { class: 'thread-summary-card' }, [
-        el('span', { class: 'sidebar-kicker' }, 'Traceability'),
-        el('h2', { class: 'thread-summary-title' }, 'Thread details'),
-        el('dl', { class: 'thread-detail-list' }, [
-          el('div', { class: 'thread-detail-row' }, [
-            el('dt', {}, 'Paper'),
-            el('dd', {}, [
-              el('a', { href: safeHref(review.paper_url), target: '_blank', rel: 'noopener' }, 'Open source paper'),
-            ]),
-          ]),
-          el('div', { class: 'thread-detail-row' }, [
-            el('dt', {}, 'Published'),
-            el('dd', {}, formatDate(review.date)),
-          ]),
-          el('div', { class: 'thread-detail-row' }, [
-            el('dt', {}, 'Last activity'),
-            el('dd', {}, formatDateTime(lastActivity)),
-          ]),
-          el('div', { class: 'thread-detail-row' }, [
-            el('dt', {}, 'Rubric'),
-            el('dd', {}, [
-              el(
-                'ul',
-                { class: 'thread-detail-chips' },
-                ['Score', 'Confidence', 'Strengths', 'Weaknesses', 'Final assessment'].map((label) =>
-                  el('li', { class: 'thread-detail-chip' }, label)
-                )
-              ),
-            ]),
-          ]),
-        ]),
-      ]),
-      el('section', { class: 'thread-summary-card' }, [
-        el('span', { class: 'sidebar-kicker' }, 'Revision history'),
-        el('h2', { class: 'thread-summary-title' }, 'Visible thread events'),
-        el('ol', { class: 'thread-history-list' }, historyItems),
-      ]),
-    ]);
-  }
-
-  function buildHeader(review: Review, threadData: ThreadData | null): HTMLElement {
-    const status = threadData?.thread?.length ? 'Author responded' : 'Awaiting invited response';
-    const statusClass = threadData?.thread?.length ? 'topic-chip topic-chip--author' : 'topic-chip topic-chip--waiting';
 
     return el('section', { class: 'thread-header fade-in' }, [
       el('nav', { class: 'breadcrumb breadcrumb--thread', 'aria-label': 'Breadcrumb' }, [
@@ -136,237 +48,50 @@ import Layout from '../components/Layout.astro';
       el('div', { class: 'thread-header-top' }, [
         el('div', { class: 'thread-header-copy' }, [
           el('h1', { class: 'thread-header-title' }, review.title),
-          el('p', { class: 'thread-header-subtitle' }, 'Machine review, author rebuttal, and thread history in one place.'),
+          el('p', { class: 'thread-header-subtitle' }, 'A single language-model review note, alongside the paper\u2019s abstract.'),
           el('div', { class: 'thread-header-meta' }, [
             el('span', {}, `Reviewed ${formatDate(review.date)}`),
-            el('span', { class: 'thread-header-meta-sep' }, '·'),
-            el('span', {}, `Updated ${formatDateTime(latestActivity(review, threadData))}`),
           ]),
           el('div', { class: 'thread-header-filters' }, [
-            el('div', { class: 'thread-header-chips' }, [
-              el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review'),
-              el('span', { class: statusClass }, status),
-              review.hf_rank != null ? el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`) : null,
-            ]),
-            el('div', { class: 'thread-jump-links' }, [
-              el('button', {
-                class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                type: 'button',
-                'data-jump-to': 'ai-review',
-              }, 'AI review \u2193'),
-              threadData?.thread?.length
-                ? el('button', {
-                    class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                    type: 'button',
-                    'data-jump-to': 'author-response',
-                  }, 'Author response \u2193')
-                : null,
-              threadData?.thread?.length
-                ? el('button', {
-                    class: 'btn-secondary btn-secondary--compact thread-jump-btn',
-                    type: 'button',
-                    'data-jump-to': 'latest',
-                  }, 'Latest update \u2193')
-                : null,
-            ]),
+            el('div', { class: 'thread-header-chips' }, chips),
           ]),
         ]),
         el('div', { class: 'thread-header-actions' }, [
-          el('a', { class: 'btn-secondary btn-secondary--compact', href: safeHref(review.paper_url), target: '_blank', rel: 'noopener' }, 'Open paper'),
-          el('button', { class: 'btn-secondary btn-secondary--compact', type: 'button', 'data-copy-link': 'true' }, 'Copy link'),
-        ]),
-      ]),
-      el('div', { class: 'thread-highlight-grid' }, [
-        el('div', { class: 'thread-highlight-card' }, [
-          el('span', { class: 'thread-highlight-label' }, 'Final assessment'),
-          el('p', {}, review.review.final_comment),
-        ]),
-        el('div', { class: 'thread-highlight-card' }, [
-          el('span', { class: 'thread-highlight-label' }, 'Paper summary'),
-          el('p', {}, review.summary),
-        ]),
-      ]),
-      threadData?.thread?.length
-        ? el('div', { class: 'thread-disagreement-card' }, [
-            el('span', { class: 'thread-highlight-label' }, 'At a glance'),
-            el('dl', { class: 'thread-disagreement-grid' }, [
-              el('div', {}, [
-                el('dt', {}, 'AI assessment'),
-                el('dd', {}, review.review.final_comment),
-              ]),
-              el('div', {}, [
-                el('dt', {}, 'Key concern'),
-                el('dd', {}, review.review.weaknesses[0] ?? 'None noted'),
-              ]),
-              el('div', {}, [
-                el('dt', {}, 'Author response'),
-                el('dd', {}, (threadData.thread[0]?.content ?? '').split('\n\n')[0]),
-              ]),
-            ]),
-          ])
-        : null,
-    ]);
-  }
-
-  function buildToolbar(counts: Record<string, number>): HTMLElement {
-    const tab = (value: string, label: string) =>
-      el('button', { class: 'thread-tab', type: 'button', 'data-thread-filter': value }, `${label} ${counts[value] ?? 0}`);
-
-    return el('section', { class: 'thread-toolbar-card fade-in' }, [
-      el('div', { class: 'thread-toolbar-top' }, [
-        el('div', { class: 'thread-filter-tabs', role: 'tablist', 'aria-label': 'Filter thread notes' }, [
-          tab('all', 'All'),
-          tab('ai-review', 'AI review'),
-          tab('author-response', 'Author reply'),
-          tab('comments', 'Comments'),
-        ]),
-        el('div', { class: 'thread-toolbar-controls' }, [
-          el('input', {
-            class: 'thread-toolbar-search',
-            type: 'search',
-            placeholder: 'Search within thread',
-            'data-thread-search': 'true',
-          }),
           el(
-            'select',
-            { class: 'thread-toolbar-sort', 'data-thread-sort': 'true' },
-            [
-              el('option', { value: 'oldest' }, 'Oldest first'),
-              el('option', { value: 'newest' }, 'Newest first'),
-            ]
+            'a',
+            {
+              class: 'btn-secondary btn-secondary--compact',
+              href: safeHref(review.paper_url),
+              target: '_blank',
+              rel: 'noopener',
+            },
+            'Open paper'
+          ),
+          el(
+            'button',
+            {
+              class: 'btn-secondary btn-secondary--compact',
+              type: 'button',
+              'data-copy-link': 'true',
+            },
+            'Copy link'
           ),
         ]),
       ]),
-      el('div', { class: 'thread-toolbar-bottom' }, [
-        el('div', { class: 'browse-results-count', id: 'thread-visible-count' }, `${counts.all ?? 0} items shown`),
-        el('div', { class: 'thread-toolbar-note' }, 'Shareable filter state is reflected in the URL.'),
+    ]);
+  }
+
+  function buildContent(review: Review): HTMLElement {
+    return el('div', { class: 'thread-content-stack' }, [
+      el('section', { class: 'thread-content-card' }, [
+        el('span', { class: 'thread-highlight-label' }, 'Abstract \u2014 from arXiv'),
+        ...paragraphs(review.abstract),
+      ]),
+      el('section', { class: 'thread-content-card thread-content-card--review' }, [
+        el('span', { class: 'thread-highlight-label' }, 'AI review'),
+        ...paragraphs(review.ai_review),
       ]),
     ]);
-  }
-
-  function noteTitle(entry: ThreadEntry): string {
-    if (entry.type === 'rebuttal') return 'Author response';
-    if (entry.type === 'acknowledgement') return 'Agent follow-up';
-    return 'Comment';
-  }
-
-  function noteGroup(entry: ThreadEntry): 'ai-review' | 'author-response' | 'comments' {
-    if (entry.type === 'rebuttal') return 'author-response';
-    if (entry.type === 'acknowledgement') return 'ai-review';
-    return 'comments';
-  }
-
-  function buildThreadNodes(review: Review, threadData: ThreadData | null): HTMLElement[] {
-    const nodes: HTMLElement[] = [];
-
-    const reviewNote = threadBlock({
-      type: 'agent_review',
-      actor: 'agent',
-      title: 'AI review',
-      byLine: 'by OpenAgent.review',
-      date: review.updated_at,
-      body: buildReviewBody(review.review),
-      searchText: [review.title, review.summary, review.review.final_comment, ...review.review.strengths, ...review.review.weaknesses].join(' '),
-    });
-    reviewNote.dataset.noteGroup = 'ai-review';
-    nodes.push(reviewNote);
-
-    let parentLabel = 'AI review';
-    const threadEntries = [...(threadData?.thread ?? [])].sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
-    for (const entry of threadEntries) {
-      const actor = entry.type === 'acknowledgement' ? 'agent' : 'authors';
-      const title = noteTitle(entry);
-      const node = threadBlock({
-        type: entry.type,
-        actor,
-        title,
-        byLine: actor === 'agent' ? 'by OpenAgent.review' : `by ${entry.author_name ?? 'Author'}`,
-        date: entry.submitted_at,
-        replyTo: parentLabel,
-        body: buildParagraphs(entry.content, entry.type),
-        searchText: `${title} ${entry.author_name ?? ''} ${entry.content}`,
-      });
-      node.dataset.noteGroup = noteGroup(entry);
-      nodes.push(node);
-      parentLabel = title;
-    }
-
-    return nodes;
-  }
-
-  function buildCallout(threadData: ThreadData | null): HTMLElement | null {
-    if (threadData?.thread?.length) return null;
-    return el('div', { class: 'thread-awaiting-callout' }, [
-      el('strong', {}, 'Awaiting invited author response'),
-      el('p', {}, 'The AI review is public now. If an invited author replies later, the response will appear here as a new note rather than replacing the original review.'),
-    ]);
-  }
-
-  function applyThreadControls(toolbar: HTMLElement, threadEl: HTMLElement, reviewId: string) {
-    const buttons = Array.from(toolbar.querySelectorAll<HTMLElement>('[data-thread-filter]'));
-    const searchInput = toolbar.querySelector<HTMLInputElement>('[data-thread-search]');
-    const sortSelect = toolbar.querySelector<HTMLSelectElement>('[data-thread-sort]');
-    const countEl = toolbar.querySelector<HTMLElement>('#thread-visible-count');
-    const notes = Array.from(threadEl.querySelectorAll<HTMLElement>('.or-note-shell'));
-
-    const params = new URLSearchParams(window.location.search);
-    let currentFilter = params.get('view') ?? 'all';
-    if (!['all', 'ai-review', 'author-response', 'comments'].includes(currentFilter)) currentFilter = 'all';
-    if (searchInput && params.get('q')) searchInput.value = params.get('q') ?? '';
-    if (sortSelect && params.get('sort') === 'newest') sortSelect.value = 'newest';
-
-    function syncUrl() {
-      const url = new URL(window.location.href);
-      url.searchParams.set('id', reviewId);
-      if (currentFilter !== 'all') url.searchParams.set('view', currentFilter);
-      else url.searchParams.delete('view');
-      if ((sortSelect?.value ?? 'oldest') !== 'oldest') url.searchParams.set('sort', sortSelect?.value ?? 'oldest');
-      else url.searchParams.delete('sort');
-      if (searchInput?.value.trim()) url.searchParams.set('q', searchInput.value.trim());
-      else url.searchParams.delete('q');
-      history.replaceState({}, '', url);
-    }
-
-    function sync() {
-      const query = searchInput?.value.trim().toLowerCase() ?? '';
-      const ordered = notes.slice().sort((a, b) => {
-        const aTs = Number(a.dataset.noteTs ?? '0');
-        const bTs = Number(b.dataset.noteTs ?? '0');
-        return (sortSelect?.value ?? 'oldest') === 'newest' ? bTs - aTs : aTs - bTs;
-      });
-
-      ordered.forEach((note) => threadEl.appendChild(note));
-
-      let visibleCount = 0;
-      ordered.forEach((note) => {
-        const group = note.dataset.noteGroup ?? 'comments';
-        const matchesFilter = currentFilter === 'all' || group === currentFilter;
-        const searchBlob = note.dataset.noteSearch ?? '';
-        const matchesQuery = query.length === 0 || searchBlob.includes(query);
-        const visible = matchesFilter && matchesQuery;
-        note.hidden = !visible;
-        if (visible) visibleCount += 1;
-      });
-
-      buttons.forEach((button) => {
-        const active = button.dataset.threadFilter === currentFilter;
-        button.classList.toggle('active', active);
-        button.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-
-      if (countEl) countEl.textContent = `${visibleCount} item${visibleCount === 1 ? '' : 's'} shown`;
-      syncUrl();
-    }
-
-    buttons.forEach((button) => {
-      button.addEventListener('click', () => {
-        currentFilter = button.dataset.threadFilter ?? 'all';
-        sync();
-      });
-    });
-    searchInput?.addEventListener('input', sync);
-    sortSelect?.addEventListener('change', sync);
-    sync();
   }
 
   function attachCopyLink(container: HTMLElement) {
@@ -383,43 +108,20 @@ import Layout from '../components/Layout.astro';
     });
   }
 
-  function renderPage(container: HTMLElement, review: Review, threadData: ThreadData | null) {
-    const nodes = buildThreadNodes(review, threadData);
-    const counts = {
-      all: nodes.length,
-      'ai-review': nodes.filter((n) => n.dataset.noteGroup === 'ai-review').length,
-      'author-response': nodes.filter((n) => n.dataset.noteGroup === 'author-response').length,
-      comments: nodes.filter((n) => n.dataset.noteGroup === 'comments').length,
-    };
-
-    const threadEl = el('div', { class: 'or-thread thread-note-stack' }, nodes);
-    const toolbar = buildToolbar(counts);
-    const callout = buildCallout(threadData);
-
-    const mainColumn = el('div', { class: 'thread-main-column' }, [
-      buildHeader(review, threadData),
-      toolbar,
-      callout,
-      threadEl,
+  function renderPage(container: HTMLElement, review: Review) {
+    const page = el('div', { class: 'thread-main-column' }, [
+      buildHeader(review),
+      buildContent(review),
     ]);
-
-    const grid = el('div', { class: 'thread-page-grid' }, [
-      buildSummaryRail(review, threadData),
-      mainColumn,
-    ]);
-
-    mount(container, grid);
-    applyThreadControls(toolbar, threadEl, review.id);
+    mount(container, page);
     attachCopyLink(container);
+  }
 
-    container.querySelectorAll<HTMLButtonElement>('[data-jump-to]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.jumpTo === 'latest'
-          ? [...container.querySelectorAll<HTMLElement>('.or-note-shell')].pop()
-          : container.querySelector<HTMLElement>(`[data-note-group="${btn.dataset.jumpTo}"]`);
-        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
+  function errorState(title: string, detail: string): HTMLElement {
+    return el('div', { class: 'state error' }, [
+      el('strong', {}, title),
+      el('span', {}, detail),
+    ]);
   }
 
   async function main() {
@@ -428,33 +130,20 @@ import Layout from '../components/Layout.astro';
     if (!container) return;
 
     if (!id) {
-      mount(container, stateView('error', 'Missing review ID', 'No ?id= parameter supplied.'));
+      mount(container, errorState('Missing review ID', 'No ?id= parameter supplied.'));
       return;
     }
 
-    // Phase 1: fetch review and render immediately (no thread yet)
     let review: Review;
     try {
       review = await dataClient.getReview(id);
     } catch (e) {
-      mount(container, stateView('error', 'Failed to load review', e instanceof Error ? e.message : String(e)));
+      mount(container, errorState('Failed to load review', e instanceof Error ? e.message : String(e)));
       return;
     }
 
-    document.title = `${review.title} — OpenAgent.review`;
-    renderPage(container, review, null);
-
-    // Phase 2: fetch thread in background, re-render if present
-    let threadData: ThreadData | null;
-    try {
-      threadData = await dataClient.getThread(id);
-    } catch {
-      return; // Thread fetch failed silently — review already visible
-    }
-
-    if (threadData && threadData.thread.length > 0) {
-      renderPage(container, review, threadData);
-    }
+    document.title = `${review.title} \u2014 OpenAgent.review`;
+    renderPage(container, review);
   }
 
   main();

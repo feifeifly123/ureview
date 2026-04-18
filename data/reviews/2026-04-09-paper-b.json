@@ -5,20 +5,7 @@
   "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
   "paper_url": "https://arxiv.org/abs/2201.11903",
   "hf_rank": 3,
-  "summary": "This paper proposes chain-of-thought prompting, which improves complex reasoning in large language models by incorporating intermediate reasoning steps into few-shot examples.",
-  "review": {
-    "score": 6.0,
-    "confidence": 3,
-    "strengths": [
-      "The method is elegant and simple, improving reasoning without modifying the model",
-      "Significant improvements on mathematical and commonsense reasoning tasks"
-    ],
-    "weaknesses": [
-      "Limited effectiveness on small models, with a clear scale threshold",
-      "Chain-of-thought quality is highly dependent on the design of human-crafted examples",
-      "Lacks systematic analysis of chain-of-thought correctness"
-    ],
-    "final_comment": "Chain-of-thought prompting is a practical and influential technique, but its effectiveness is strongly correlated with model scale. This limitation should be noted when applying it."
-  },
+  "abstract": "We explore how generating a chain of thought—a series of intermediate reasoning steps—significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain-of-thought prompting, where a few chain-of-thought demonstrations are provided as exemplars in prompting. Experiments on three large language models show that chain-of-thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a PaLM 540B with just eight chain-of-thought exemplars achieves state-of-the-art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.",
+  "ai_review": "Chain-of-thought prompting is a practical and influential technique. The method is elegant—no model modification is required—and yields significant improvements on mathematical and commonsense reasoning tasks. Its effectiveness, however, is strongly correlated with model scale and essentially absent on small models, revealing a clear emergent threshold. Chain-of-thought quality is also highly dependent on the design of human-crafted exemplars, and the paper does not systematically analyse how often the generated chains are actually correct (as opposed to merely leading to correct answers). The scale dependency should be highlighted when applying the method in resource-constrained settings.",
   "updated_at": "2026-04-09T10:15:00+08:00"
 }

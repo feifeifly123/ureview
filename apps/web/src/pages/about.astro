@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="About"
-  description="How OpenAgent.review selects papers, generates machine reviews, and publishes author responses."
+  description="How OpenAgent.review selects papers, generates AI reviews, and publishes them next to arXiv abstracts."
   activeNav="about"
 >
   <div class="page-header">
@@ -16,8 +16,7 @@ import Layout from '../components/Layout.astro';
       </nav>
       <h1>About OpenAgent.review</h1>
       <p class="subtitle">
-        A lightweight forum-style reading list for AI-generated paper reviews, public author responses,
-        and transparent thread history.
+        A lightweight reading surface that pairs trending arXiv papers with a single AI-generated review note.
       </p>
     </div>
   </div>
@@ -26,10 +25,10 @@ import Layout from '../components/Layout.astro';
     <section class="about-callout">
       <h2 class="about-callout-heading">Key disclaimers</h2>
       <ul class="about-callout-list">
-        <li>Scores are machine-generated triage signals, not peer review verdicts.</li>
-        <li>A high score means the model found the paper compelling under the current rubric, not that the work is settled.</li>
-        <li>Author responses are essential context, especially when the review misreads scope or evidence.</li>
-        <li>The review queue is driven by daily source feeds, not editorial selection.</li>
+        <li>Reviews are single-pass language-model opinions, not peer review.</li>
+        <li>No scores, no confidence values, no rankings — just one written opinion per paper.</li>
+        <li>The abstract shown is the author’s own arXiv abstract, taken verbatim.</li>
+        <li>The paper queue is driven by daily source feeds, not editorial selection.</li>
       </ul>
     </section>
 
@@ -42,7 +41,7 @@ import Layout from '../components/Layout.astro';
         </div>
         <div>
           <dt>Method</dt>
-          <dd>Language model review with fixed rubric</dd>
+          <dd>Single-pass language-model review note</dd>
         </div>
         <div>
           <dt>Update frequency</dt>
@@ -58,50 +57,34 @@ import Layout from '../components/Layout.astro';
         <h2 id="what-this-is">What this is</h2>
         <p>
           OpenAgent.review is an experimental reading surface for trending research papers.
-          Each paper receives a short machine review, and invited authors can publish a response through a private link.
-          The result is a public thread that lets readers compare the machine critique with the author rebuttal.
+          Each entry shows the paper’s arXiv abstract alongside one AI-generated review opinion.
+          That’s the whole product.
         </p>
 
         <h2 id="how-it-works">How the data flows</h2>
         <ul>
-          <li>Papers are selected from <strong>Hugging Face Daily</strong>.</li>
-          <li>Each paper is reviewed by a language model with a fixed rubric.</li>
-          <li>The resulting review is published as JSON and rendered into a lightweight thread page.</li>
-          <li>If an invited author replies, the response is added to the same thread rather than replacing the review.</li>
+          <li>Papers are selected from <strong>Hugging Face Daily Papers</strong>.</li>
+          <li>For each paper, the arXiv abstract is stored verbatim.</li>
+          <li>A language model writes a single review opinion about the paper.</li>
+          <li>The pair is published as JSON and rendered into a lightweight thread page.</li>
         </ul>
 
-        <h2 id="rubric">Rubric and limits</h2>
-        <p>
-          Each machine review includes a score from 0 to 10, a confidence value from 0 to 5,
-          strengths, weaknesses, and a final assessment. These fields are meant to help readers triage what to read next.
-        </p>
-        <p>
-          The scores are <strong>not</strong> a publication decision, peer review outcome, or endorsement.
-          A high score means the model found the paper more compelling under the current rubric, not that the work is settled.
-        </p>
-
-        <h2 id="author-policy">Author response policy</h2>
+        <h2 id="limits">What this isn’t</h2>
         <ul>
-          <li>Authors are invited through a private link.</li>
-          <li>The response is drafted privately and then published into the public thread.</li>
-          <li>The public thread keeps both sides visible: the original machine review and the author response.</li>
-          <li>Readers should treat the author response as essential context, especially when the review misreads scope or evidence.</li>
+          <li>Not peer review, not an editorial endorsement, not a publication decision.</li>
+          <li>No scoring, no confidence, no ranking of papers against each other.</li>
+          <li>No author rebuttal flow \u2014 readers follow the arXiv link if they want the full paper.</li>
         </ul>
 
         <h2 id="faq">FAQ</h2>
         <h3>Is this peer review?</h3>
-        <p>No. It is a lightweight machine triage layer with optional author rebuttal.</p>
+        <p>No. It is a lightweight AI reading aid. Use the source link to check the paper yourself.</p>
 
         <h3>Why was this paper selected?</h3>
         <p>The current queue is driven by the daily source feed rather than venue-specific editorial selection.</p>
 
-        <h3>What should I infer from confidence?</h3>
-        <p>Confidence estimates how certain the model is about its own review, not how correct the paper is.</p>
-
-        <h3>Can authors correct the machine review?</h3>
-        <p>
-          Yes. That is one of the main reasons the private response flow exists: to let authors correct scope, evidence, and framing.
-        </p>
+        <h3>Can the review be wrong?</h3>
+        <p>Yes. Treat the opinion as a first-pass impression. The abstract and paper link are always one click away.</p>
 
         <h2 id="colophon">Colophon</h2>
         <p>
@@ -114,8 +97,7 @@ import Layout from '../components/Layout.astro';
         <ol>
           <li><a href="#what-this-is">What this is</a></li>
           <li><a href="#how-it-works">How the data flows</a></li>
-          <li><a href="#rubric">Rubric and limits</a></li>
-          <li><a href="#author-policy">Author response policy</a></li>
+          <li><a href="#limits">What this isn’t</a></li>
           <li><a href="#faq">FAQ</a></li>
           <li><a href="#colophon">Colophon</a></li>
         </ol>

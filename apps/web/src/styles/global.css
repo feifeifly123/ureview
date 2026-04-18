@@ -1189,24 +1189,6 @@ ul.review-field-value li {
    Navbar author-link button
    ========================================================================= */
 
-.btn-author-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px var(--space-4);
-  background: var(--color-teal);
-  color: #fff;
-  border-radius: var(--radius);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  transition: background var(--transition);
-  white-space: nowrap;
-  text-decoration: none;
-}
-.btn-author-link:hover {
-  background: var(--color-teal-hover);
-  color: #fff;
-}
-
 /* =========================================================================
    Hero section
    ========================================================================= */
@@ -1296,13 +1278,6 @@ ul.review-field-value li {
   background: var(--color-primary-soft);
   color: var(--color-primary);
   border-color: transparent;
-}
-
-@media (min-width: 960px) {
-  #home-filter-tabs .filter-tab {
-    min-width: 120px;
-    justify-content: center;
-  }
 }
 
 /* =========================================================================
@@ -2420,16 +2395,6 @@ body.body--forum {
   background: var(--color-canvas-2);
 }
 
-.btn-author-link {
-  background: var(--color-primary);
-  border-radius: 999px;
-  padding: 10px 16px;
-}
-
-.btn-author-link:hover {
-  background: var(--color-primary-hover);
-}
-
 .site-footer {
   background: transparent;
   border-top: 1px solid var(--color-rule);
@@ -3341,6 +3306,35 @@ body.body--forum {
   padding: 16px;
   background: var(--color-canvas-2);
   border-radius: 16px;
+}
+
+.thread-content-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.thread-content-card {
+  padding: 20px 22px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+}
+
+.thread-content-card p {
+  margin: 0 0 12px 0;
+  color: var(--color-ink);
+  line-height: 1.7;
+}
+
+.thread-content-card p:last-child {
+  margin-bottom: 0;
+}
+
+.thread-content-card--review {
+  background: var(--color-primary-soft);
+  border-color: transparent;
 }
 
 .thread-toolbar-card {

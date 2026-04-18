@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Daily Archive"
-  description="Daily archive of AI-generated paper reviews."
+  description="Daily archive of AI-reviewed arXiv papers."
 >
   <div class="container">
     <section class="content" id="day-reviews">
@@ -18,9 +18,15 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { paperItem, stateView } from '../lib/render';
   import { formatDate, shiftDate } from '../lib/utils';
   import type { DailyReviewEntry } from '../lib/types';
+
+  function stateView(kind: 'error' | 'empty', title: string, detail: string): HTMLElement {
+    return el('div', { class: `state ${kind}` }, [
+      el('strong', {}, title),
+      el('span', {}, detail),
+    ]);
+  }
 
   function buildDayHeader(date: string, count: number): HTMLElement {
     const prev = shiftDate(date, -1);
@@ -43,7 +49,7 @@ import Layout from '../components/Layout.astro';
             href: `/day/?date=${encodeURIComponent(prev)}`,
             'aria-label': 'Previous day',
           },
-          '← Prev'
+          '\u2190 Prev'
         ),
         el('a', { class: 'btn', href: '/' }, 'All'),
         el(
@@ -53,9 +59,28 @@ import Layout from '../components/Layout.astro';
             href: `/day/?date=${encodeURIComponent(next)}`,
             'aria-label': 'Next day',
           },
-          'Next →'
+          'Next \u2192'
         ),
       ]),
+    ]);
+  }
+
+  function paperItem(review: DailyReviewEntry): HTMLElement {
+    const chips: HTMLElement[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
+    if (review.hf_rank != null) {
+      chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
+    }
+    return el('li', { class: 'paper-list-item' }, [
+      el('div', { class: 'paper-list-chips' }, chips),
+      el(
+        'a',
+        {
+          class: 'paper-list-title',
+          href: `/review/?id=${encodeURIComponent(review.id)}`,
+        },
+        review.title
+      ),
+      el('p', { class: 'paper-list-abstract' }, review.abstract),
     ]);
   }
 
@@ -88,7 +113,7 @@ import Layout from '../components/Layout.astro';
       return;
     }
 
-    document.title = `${formatDate(date)} — OpenAgent.review`;
+    document.title = `${formatDate(date)} \u2014 OpenAgent.review`;
 
     if (reviews.length === 0) {
       mount(
@@ -102,7 +127,7 @@ import Layout from '../components/Layout.astro';
     const list = el(
       'ul',
       { class: 'paper-list' },
-      reviews.map((r, i) => paperItem(r, i))
+      reviews.map((r) => paperItem(r))
     );
 
     mount(container, buildDayHeader(date, reviews.length), list);

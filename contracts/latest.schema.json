@@ -10,19 +10,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "date", "title", "summary", "score"],
+        "required": ["id", "date", "title", "abstract"],
         "properties": {
           "id": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "title": { "type": "string" },
-          "summary": { "type": "string" },
-          "score": { "type": "number" },
-          "has_response": { "type": "boolean" },
+          "abstract": { "type": "string" },
           "hf_rank": { "type": "integer", "minimum": 1 },
-          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
-          "updated_at": { "type": "string", "format": "date-time" },
-          "last_activity_at": { "type": "string", "format": "date-time" },
-          "response_count": { "type": "integer", "minimum": 0 }
+          "updated_at": { "type": "string", "format": "date-time" }
         },
         "additionalProperties": false
       }
