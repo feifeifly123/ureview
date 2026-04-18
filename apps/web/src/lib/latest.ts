@@ -19,6 +19,17 @@ export function activityLabel(generatedAt: string, iso?: string): string {
   return `Updated ${days} days ago`;
 }
 
+// Short form for narrow metric cells (drops the "Updated " prefix so it fits on one line).
+export function shortActivityLabel(generatedAt: string, iso?: string): string {
+  const target = iso ?? generatedAt;
+  const diff = Math.max(0, Date.parse(generatedAt) - Date.parse(target));
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  if (hours < 1) return 'Just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+
 export function isRecentlyUpdated(review: LatestReviewEntry, generatedAt: string): boolean {
   return Date.parse(generatedAt) - Date.parse(latestLastActivity(review)) <= WEEK_MS;
 }

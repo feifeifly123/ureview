@@ -111,7 +111,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDate, formatScore } from '../lib/utils';
-  import { activityLabel, latestCounts, latestLastActivity, isRecentlyUpdated } from '../lib/latest';
+  import { activityLabel, shortActivityLabel, latestCounts, latestLastActivity, isRecentlyUpdated } from '../lib/latest';
   import type { LatestReviewEntry } from '../lib/types';
 
   const STATUS_FILTERS = [
@@ -150,7 +150,7 @@ import Layout from '../components/Layout.astro';
         ]),
         el('div', {}, [
           el('dt', {}, 'Last activity'),
-          el('dd', {}, activityLabel(new Date().toISOString(), latestLastActivity(sample))),
+          el('dd', {}, shortActivityLabel(new Date().toISOString(), latestLastActivity(sample))),
         ]),
       ]),
       el('div', { class: 'hero-preview-footer' }, [

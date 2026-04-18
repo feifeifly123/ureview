@@ -42,7 +42,7 @@ import Layout from '../components/Layout.astro';
   }
 
   function buildSummaryRail(review: Review, threadData: ThreadData | null): HTMLElement {
-    const status = threadData?.thread?.length ? 'Author responded' : 'Awaiting response';
+    const status = threadData?.thread?.length ? 'Responded' : 'Awaiting';
     const lastActivity = latestActivity(review, threadData);
     const responseCount = threadData?.thread?.length ?? 0;
 
@@ -101,7 +101,15 @@ import Layout from '../components/Layout.astro';
           ]),
           el('div', { class: 'thread-detail-row' }, [
             el('dt', {}, 'Rubric'),
-            el('dd', {}, 'Score, confidence, strengths, weaknesses, final assessment'),
+            el('dd', {}, [
+              el(
+                'ul',
+                { class: 'thread-detail-chips' },
+                ['Score', 'Confidence', 'Strengths', 'Weaknesses', 'Final assessment'].map((label) =>
+                  el('li', { class: 'thread-detail-chip' }, label)
+                )
+              ),
+            ]),
           ]),
         ]),
       ]),
