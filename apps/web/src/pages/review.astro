@@ -38,17 +38,9 @@ import Layout from '../components/Layout.astro';
     }
 
     return el('section', { class: 'thread-header fade-in' }, [
-      el('nav', { class: 'breadcrumb breadcrumb--thread', 'aria-label': 'Breadcrumb' }, [
-        el('a', { href: '/' }, 'Home'),
-        el('span', { class: 'sep' }, '/'),
-        el('a', { href: '/browse/' }, 'Browse'),
-        el('span', { class: 'sep' }, '/'),
-        el('span', {}, review.id),
-      ]),
       el('div', { class: 'thread-header-top' }, [
         el('div', { class: 'thread-header-copy' }, [
           el('h1', { class: 'thread-header-title' }, review.title),
-          el('p', { class: 'thread-header-subtitle' }, 'A single language-model review note, alongside the paper\u2019s abstract.'),
           el('div', { class: 'thread-header-meta' }, [
             el('span', {}, `Reviewed ${formatDate(review.date)}`),
           ]),

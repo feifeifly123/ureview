@@ -59,7 +59,7 @@ import Layout from '../components/Layout.astro';
       <section class="sidebar-box sidebar-box--guide" id="how-it-works">
         <span class="sidebar-kicker">How to read this site</span>
         <h3 class="sidebar-heading">A review, alongside the source.</h3>
-        <ol class="sidebar-steps sidebar-steps--calm">
+        <ul class="sidebar-steps sidebar-steps--calm sidebar-steps--flat">
           <li>
             <strong>Abstract</strong>
             <span>The paper's own abstract, taken from arXiv verbatim.</span>
@@ -72,7 +72,7 @@ import Layout from '../components/Layout.astro';
             <strong>Source link</strong>
             <span>Every thread links back to the arXiv page so you can check the paper yourself.</span>
           </li>
-        </ol>
+        </ul>
       </section>
     </aside>
   </div>
@@ -141,7 +141,6 @@ import Layout from '../components/Layout.astro';
         ),
         el('p', { class: 'home-card-summary' }, review.abstract),
         el('div', { class: 'home-card-footer' }, [
-          el('span', {}, 'From arXiv'),
           el(
             'a',
             { href: `/review/?id=${encodeURIComponent(review.id)}` },

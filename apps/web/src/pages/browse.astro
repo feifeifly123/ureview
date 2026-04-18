@@ -112,7 +112,6 @@ import Layout from '../components/Layout.astro';
           ),
           el('p', { class: 'browse-card-summary' }, review.abstract),
           el('div', { class: 'browse-card-footer' }, [
-            el('span', {}, 'From arXiv'),
             el(
               'a',
               { href: `/review/?id=${encodeURIComponent(review.id)}` },
