@@ -1,21 +1,54 @@
 {
-  "generated_at": "2026-04-18T12:27:05.586363+00:00",
+  "generated_at": "2026-04-19T13:57:57.738306+00:00",
   "reviews": [
     {
       "id": "2026-04-09-paper-b",
-      "date": "2026-04-09",
       "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
       "abstract": "We explore how generating a chain of thought—a series of intermediate reasoning steps—significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain-of-thought prompting, where a few chain-of-thought demonstrations are provided as exemplars in prompting. Experiments on three large language models show that chain-of-thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a PaLM 540B with just eight chain-of-thought exemplars achieves state-of-the-art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.",
+      "date": "2026-04-09",
       "hf_rank": 3,
-      "updated_at": "2026-04-09T10:15:00+08:00"
+      "arxiv_categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "updated_at": "2026-04-09T10:15:00+08:00",
+      "why_read": "Clean empirical demonstration that a trivial prompt change flips a binary switch on reasoning at scale.",
+      "why_doubt": "Chain correctness isn't checked; exemplar-choice variance is not quantified; the scale threshold is observed, not explained.",
+      "verdict_leaning": "positive",
+      "overall_recommendation": 5,
+      "confidence": 3,
+      "ratings": {
+        "soundness": 3,
+        "presentation": 4,
+        "significance": 4,
+        "originality": 3
+      },
+      "key_questions_count": 3
     },
     {
       "id": "2026-04-09-paper-a",
-      "date": "2026-04-09",
       "title": "Scaling Laws for Neural Language Models",
       "abstract": "We study empirical scaling laws for language model performance on the cross-entropy loss. The loss scales as a power-law with model size, dataset size, and the amount of compute used for training, with some trends spanning more than seven orders of magnitude. Other architectural details such as network width or depth have minimal effects within a wide range. Simple equations govern the dependence of overfitting on model/dataset size and the dependence of training speed on model size. These relationships allow us to determine the optimal allocation of a fixed compute budget. Larger models are significantly more sample-efficient, such that optimally compute-efficient training involves training very large models on a relatively modest amount of data and stopping significantly before convergence.",
+      "date": "2026-04-09",
       "hf_rank": 1,
-      "updated_at": "2026-04-09T09:20:00+08:00"
+      "arxiv_categories": [
+        "cs.LG",
+        "cs.CL",
+        "stat.ML"
+      ],
+      "updated_at": "2026-04-09T09:20:00+08:00",
+      "why_read": "Gives a clean, reusable mental model for how language-model loss scales with size, data, and compute — and turns it into a concrete budget-allocation recipe.",
+      "why_doubt": "Scope is Transformer + English web text; the 'architecture doesn't matter' claim is empirical, not mechanistic.",
+      "verdict_leaning": "positive",
+      "overall_recommendation": 5,
+      "confidence": 4,
+      "ratings": {
+        "soundness": 4,
+        "presentation": 4,
+        "significance": 4,
+        "originality": 3
+      },
+      "key_questions_count": 3
     }
   ]
 }

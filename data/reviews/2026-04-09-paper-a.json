@@ -1,11 +1,36 @@
 {
   "id": "2026-04-09-paper-a",
-  "slug": "paper-a",
+  "slug": "scaling-laws-for-neural-language-models",
   "date": "2026-04-09",
   "title": "Scaling Laws for Neural Language Models",
   "paper_url": "https://arxiv.org/abs/2001.08361",
   "hf_rank": 1,
+  "arxiv_categories": ["cs.LG", "cs.CL", "stat.ML"],
   "abstract": "We study empirical scaling laws for language model performance on the cross-entropy loss. The loss scales as a power-law with model size, dataset size, and the amount of compute used for training, with some trends spanning more than seven orders of magnitude. Other architectural details such as network width or depth have minimal effects within a wide range. Simple equations govern the dependence of overfitting on model/dataset size and the dependence of training speed on model size. These relationships allow us to determine the optimal allocation of a fixed compute budget. Larger models are significantly more sample-efficient, such that optimally compute-efficient training involves training very large models on a relatively modest amount of data and stopping significantly before convergence.",
-  "ai_review": "This is an important empirical study that provides valuable guidance for training large-scale language models. The experimental design covers multiple orders of magnitude in model scale, and the discovered power-law relationships have strong predictive power for resource allocation. The analysis focuses on the Transformer architecture and does not compare with alternative architectures; the influence of training-data diversity on the observed scaling behavior is also only briefly treated. Future work should extend to more architectures and more varied data regimes, but the core findings already offer a clear heuristic for compute-optimal training.",
+  "ai_review": {
+    "summary": "The paper provides a systematic empirical study of how Transformer language-model loss scales with model size $N$, dataset size $D$, and compute $C$. Across more than seven orders of magnitude the authors fit simple power-law forms such as $L(N) \\approx (N_c / N)^{\\alpha_N}$, and show that once any one of $N$, $D$, or $C$ is held fixed below the compute-optimal frontier it becomes the bottleneck. The practical conclusion is that, given a fixed compute budget, training very large models on relatively modest data and stopping well short of convergence is compute-optimal.",
+    "strengths_weaknesses": "Soundness: the fitted scaling exponents are supported by a wide sweep of model sizes, and the paper is careful to separate data-bottleneck and compute-bottleneck regimes. The claims of cross-entropy power laws are strongly supported by the figures, with a clean additive composition $L(N, D) \\approx L(N) + L(D)$ that is rare to see hold this tightly. Presentation: the structure walks the reader from single-variable fits through composed laws to the compute-optimal frontier, and the figures are self-contained. Significance: the compute-optimal-training prescription has reshaped large-model practice and remains the canonical reference for budget allocation. Originality: the power-law framing itself borrows from earlier statistical-learning results, but the systematic sweep and the composition of per-variable laws is novel. Weaknesses: the sweep is Transformer-only, and the discussion of why architecture details 'don't matter' is mostly empirical rather than mechanistic; the treatment of data quality and diversity is thin; results are on English web text only, which limits the generality of the extrapolated frontier.",
+    "ratings": {
+      "soundness":    { "score": 4, "note": "Power-law fits hold cleanly over >7 orders of magnitude with consistent separation of bottleneck regimes." },
+      "presentation": { "score": 4, "note": "Figures and per-variable decomposition make the argument easy to follow end to end." },
+      "significance": { "score": 4, "note": "Compute-optimal recipe has become the canonical reference for large-model budget allocation." },
+      "originality":  { "score": 3, "note": "The power-law lens is not new; the systematic sweep and composed laws are." }
+    },
+    "key_questions": [
+      { "question": "How well do the reported scaling exponents transfer to non-Transformer architectures (e.g. state-space models, mixture-of-experts, recurrent variants)?", "tag": "could clarify significance" },
+      { "question": "How sensitive is the compute-optimal frontier to training-data diversity and quality, as opposed to raw token count $D$?", "tag": "could raise soundness" },
+      { "question": "Do the composed laws $L(N, D)$ continue to hold once $N$ enters regimes where interconnect or memory bandwidth, rather than FLOPs, become the binding constraint?", "tag": "could reduce confidence gap" }
+    ],
+    "limitations": "The authors acknowledge that the study is limited to Transformer language models trained on English web text. Downstream-task performance is not directly evaluated; all conclusions are framed in terms of upstream cross-entropy. Extrapolations past the measured range should be treated as hypotheses.",
+    "overall_recommendation": 5,
+    "confidence": 4,
+    "ethics_flag": false,
+    "ethics_concerns": null
+  },
+  "review_highlights": {
+    "why_read": "Gives a clean, reusable mental model for how language-model loss scales with size, data, and compute — and turns it into a concrete budget-allocation recipe.",
+    "why_doubt": "Scope is Transformer + English web text; the 'architecture doesn't matter' claim is empirical, not mechanistic.",
+    "verdict_leaning": "positive"
+  },
   "updated_at": "2026-04-09T09:20:00+08:00"
 }

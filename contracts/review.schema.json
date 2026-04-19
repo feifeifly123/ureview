@@ -3,7 +3,7 @@
   "$id": "review.schema.json",
   "title": "PaperReview",
   "type": "object",
-  "required": ["id", "slug", "date", "title", "paper_url", "abstract", "ai_review", "updated_at"],
+  "required": ["id", "slug", "date", "title", "paper_url", "abstract", "ai_review", "review_highlights", "updated_at"],
   "properties": {
     "id": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}-.+" },
     "slug": { "type": "string" },
@@ -11,9 +11,79 @@
     "title": { "type": "string" },
     "paper_url": { "type": "string", "format": "uri", "pattern": "^https?://" },
     "hf_rank": { "type": "integer", "minimum": 1 },
+    "arxiv_categories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "abstract": { "type": "string" },
-    "ai_review": { "type": "string" },
+    "ai_review": {
+      "type": "object",
+      "required": [
+        "summary",
+        "strengths_weaknesses",
+        "ratings",
+        "key_questions",
+        "limitations",
+        "overall_recommendation",
+        "confidence",
+        "ethics_flag"
+      ],
+      "properties": {
+        "summary": { "type": "string" },
+        "strengths_weaknesses": { "type": "string" },
+        "ratings": {
+          "type": "object",
+          "required": ["soundness", "presentation", "significance", "originality"],
+          "properties": {
+            "soundness": { "$ref": "#/$defs/rating" },
+            "presentation": { "$ref": "#/$defs/rating" },
+            "significance": { "$ref": "#/$defs/rating" },
+            "originality": { "$ref": "#/$defs/rating" }
+          },
+          "additionalProperties": false
+        },
+        "key_questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["question"],
+            "properties": {
+              "question": { "type": "string" },
+              "tag": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "limitations": { "type": "string" },
+        "overall_recommendation": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "ethics_flag": { "type": "boolean" },
+        "ethics_concerns": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "review_highlights": {
+      "type": "object",
+      "required": ["why_read", "why_doubt", "verdict_leaning"],
+      "properties": {
+        "why_read": { "type": "string" },
+        "why_doubt": { "type": "string" },
+        "verdict_leaning": { "type": "string", "enum": ["positive", "mixed", "critical"] }
+      },
+      "additionalProperties": false
+    },
     "updated_at": { "type": "string", "format": "date-time" }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "rating": {
+      "type": "object",
+      "required": ["score", "note"],
+      "properties": {
+        "score": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
 }

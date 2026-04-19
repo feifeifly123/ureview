@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Emit per-paper review JSONs from the day's HF trending fetch. (stub)
+"""Emit per-paper structured review JSONs from the day's HF trending fetch.
 
-Shape matches contracts/review.schema.json. The `abstract` field passes
-arXiv text through verbatim. The `ai_review` field is a single LLM
-opinion — for now a placeholder, to be wired to a real model later.
+Shape matches contracts/review.schema.json (ai_review as a structured
+object with Summary, Strengths & Weaknesses, four dimension ratings, Key
+Questions, Limitations, Overall Recommendation, Confidence, Ethics).
+Current implementation is a stub — real LLM wiring happens later.
 """
 
 import json
@@ -21,6 +22,35 @@ def slugify(title: str) -> str:
     s = title.lower().strip()
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-")[:60]
+
+
+def stub_ai_review() -> dict:
+    return {
+        "summary": "[Stub] One-paragraph summary of the paper's contributions. LaTeX like $E=mc^2$ is supported.",
+        "strengths_weaknesses": "[Stub] Prose covering soundness, presentation, significance, and originality. Replace this with the real LLM output.",
+        "ratings": {
+            "soundness":    {"score": 3, "note": "[Stub] short justification"},
+            "presentation": {"score": 3, "note": "[Stub] short justification"},
+            "significance": {"score": 3, "note": "[Stub] short justification"},
+            "originality":  {"score": 3, "note": "[Stub] short justification"},
+        },
+        "key_questions": [
+            {"question": "[Stub] key question 1 — what would change the verdict?", "tag": "could raise soundness"},
+        ],
+        "limitations": "[Stub] Acknowledged limitations and caveats.",
+        "overall_recommendation": 3,
+        "confidence": 2,
+        "ethics_flag": False,
+        "ethics_concerns": None,
+    }
+
+
+def stub_highlights() -> dict:
+    return {
+        "why_read": "[Stub] One-line reason a reader might click in.",
+        "why_doubt": "[Stub] One-line reason to stay skeptical.",
+        "verdict_leaning": "mixed",
+    }
 
 
 def main() -> int:
@@ -42,7 +72,6 @@ def main() -> int:
         slug = slugify(paper["title"])
         review_id = f"{today}-{slug}"
 
-        # TODO: replace placeholder ai_review with a real Claude API call.
         review = {
             "id": review_id,
             "slug": slug,
@@ -50,11 +79,14 @@ def main() -> int:
             "title": paper["title"],
             "paper_url": paper["url"],
             "abstract": paper["abstract"],
-            "ai_review": "[Stub] Connect this pipeline to an LLM to generate the review opinion.",
+            "ai_review": stub_ai_review(),
+            "review_highlights": stub_highlights(),
             "updated_at": now,
         }
         if paper.get("rank") is not None:
             review["hf_rank"] = paper["rank"]
+        if paper.get("categories"):
+            review["arxiv_categories"] = paper["categories"]
 
         out_path = REVIEWS_DIR / f"{review_id}.json"
         with open(out_path, "w", encoding="utf-8") as f:

@@ -69,7 +69,8 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { formatDate, formatDateTime } from '../lib/utils';
+  import { formatDateTime } from '../lib/utils';
+  import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
 
   type SortKey = 'newest' | 'hf';
@@ -85,42 +86,12 @@ import Layout from '../components/Layout.astro';
   }
 
   function buildCard(review: LatestReviewEntry): HTMLElement {
-    const chips: HTMLElement[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
-    if (review.hf_rank != null) {
-      chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
-    }
-
-    return el(
-      'article',
-      {
-        class: 'browse-card',
-        'data-browse-card': 'true',
-        'data-review-id': review.id,
-        'data-title': review.title.toLowerCase(),
-        'data-summary': review.abstract.toLowerCase(),
-      },
-      [
-        el('div', { class: 'browse-card-main' }, [
-          el('div', { class: 'browse-card-top' }, [
-            el('div', { class: 'browse-card-chips' }, chips),
-            el('div', { class: 'browse-card-updated' }, `Reviewed ${formatDate(review.date)}`),
-          ]),
-          el(
-            'a',
-            { class: 'browse-card-title', href: `/review/?id=${encodeURIComponent(review.id)}` },
-            review.title
-          ),
-          el('p', { class: 'browse-card-summary' }, review.abstract),
-          el('div', { class: 'browse-card-footer' }, [
-            el(
-              'a',
-              { href: `/review/?id=${encodeURIComponent(review.id)}` },
-              'Open thread \u2192'
-            ),
-          ]),
-        ]),
-      ]
-    );
+    const card = buildFeedCard(review);
+    // Browse keeps per-card data-* attrs for the in-page search.
+    card.setAttribute('data-browse-card', 'true');
+    card.setAttribute('data-title', review.title.toLowerCase());
+    card.setAttribute('data-summary', review.abstract.toLowerCase());
+    return card;
   }
 
   (async () => {

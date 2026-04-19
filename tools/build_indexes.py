@@ -2,9 +2,9 @@
 """Rebuild latest.json and daily/*.json indexes from data/reviews/*.json.
 
 latest.json is sorted by review.updated_at desc, then hf_rank asc. Daily
-indexes preserve hf_rank order within a day. Each entry carries only the
-arXiv passthrough needed to render home/browse cards without fetching
-the full review JSON.
+indexes preserve hf_rank order within a day. Each entry carries enough
+structured-review fields to render a rich feed card without fetching
+the per-paper JSON.
 """
 
 import json
@@ -41,28 +41,64 @@ def sort_key(review: dict[str, Any]) -> tuple[datetime, int]:
     return (parse_iso(updated), -review.get("hf_rank", 10**9))
 
 
-def build_latest_entry(review: dict[str, Any]) -> dict[str, Any]:
+def flat_ratings(review: dict[str, Any]) -> dict[str, int]:
+    """Extract just the numeric scores from ai_review.ratings.
+
+    The full review JSON stores { score, note } per dimension; indexes
+    only need the score.
+    """
+    ai = review.get("ai_review", {}) or {}
+    raw = ai.get("ratings", {}) or {}
+    out: dict[str, int] = {}
+    for dim in ("soundness", "presentation", "significance", "originality"):
+        if dim in raw and isinstance(raw[dim], dict) and "score" in raw[dim]:
+            out[dim] = int(raw[dim]["score"])
+    return out
+
+
+def build_feed_entry(review: dict[str, Any], include_date: bool = True) -> dict[str, Any]:
+    """Shared builder for latest + daily entries. include_date controls
+    whether the `date` field is copied (daily/*.json groups by date so
+    entries don't repeat it)."""
+    ai = review.get("ai_review", {}) or {}
+    highlights = review.get("review_highlights", {}) or {}
+
     entry: dict[str, Any] = {
         "id": review["id"],
-        "date": review["date"],
         "title": review["title"],
         "abstract": review["abstract"],
     }
+    if include_date:
+        entry["date"] = review["date"]
     if "hf_rank" in review:
         entry["hf_rank"] = review["hf_rank"]
-    if review.get("updated_at"):
+    if "arxiv_categories" in review and review["arxiv_categories"]:
+        entry["arxiv_categories"] = review["arxiv_categories"]
+    if include_date and review.get("updated_at"):
         entry["updated_at"] = review["updated_at"]
-    return entry
 
+    if highlights.get("why_read"):
+        entry["why_read"] = highlights["why_read"]
+    if highlights.get("why_doubt"):
+        entry["why_doubt"] = highlights["why_doubt"]
+    if highlights.get("verdict_leaning"):
+        entry["verdict_leaning"] = highlights["verdict_leaning"]
 
-def build_daily_entry(review: dict[str, Any]) -> dict[str, Any]:
-    entry: dict[str, Any] = {
-        "id": review["id"],
-        "title": review["title"],
-        "abstract": review["abstract"],
-    }
-    if "hf_rank" in review:
-        entry["hf_rank"] = review["hf_rank"]
+    if "overall_recommendation" in ai:
+        entry["overall_recommendation"] = ai["overall_recommendation"]
+    if "confidence" in ai:
+        entry["confidence"] = ai["confidence"]
+
+    ratings = flat_ratings(review)
+    if ratings:
+        entry["ratings"] = ratings
+
+    questions = ai.get("key_questions") or []
+    entry["key_questions_count"] = len(questions)
+
+    if ai.get("ethics_flag"):
+        entry["ethics_flag"] = True
+
     return entry
 
 
@@ -88,14 +124,14 @@ def main() -> int:
         items_sorted = sorted(items, key=lambda r: r.get("hf_rank", 10**9))
         daily = {
             "date": date,
-            "reviews": [build_daily_entry(r) for r in items_sorted],
+            "reviews": [build_feed_entry(r, include_date=False) for r in items_sorted],
         }
         write_json(DAILY_DIR / f"{date}.json", daily)
 
     reviews.sort(key=sort_key, reverse=True)
     latest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "reviews": [build_latest_entry(r) for r in reviews[:50]],
+        "reviews": [build_feed_entry(r, include_date=True) for r in reviews[:50]],
     }
     write_json(DATA / "latest.json", latest)
 

@@ -17,7 +17,28 @@
           "title": { "type": "string" },
           "abstract": { "type": "string" },
           "hf_rank": { "type": "integer", "minimum": 1 },
-          "updated_at": { "type": "string", "format": "date-time" }
+          "arxiv_categories": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "why_read": { "type": "string" },
+          "why_doubt": { "type": "string" },
+          "verdict_leaning": { "type": "string", "enum": ["positive", "mixed", "critical"] },
+          "overall_recommendation": { "type": "integer", "minimum": 1, "maximum": 6 },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ratings": {
+            "type": "object",
+            "properties": {
+              "soundness": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "presentation": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "significance": { "type": "integer", "minimum": 1, "maximum": 4 },
+              "originality": { "type": "integer", "minimum": 1, "maximum": 4 }
+            },
+            "additionalProperties": false
+          },
+          "key_questions_count": { "type": "integer", "minimum": 0 },
+          "ethics_flag": { "type": "boolean" }
         },
         "additionalProperties": false
       }

@@ -19,6 +19,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDate, shiftDate } from '../lib/utils';
+  import { buildFeedCard } from '../lib/feed-card';
   import type { DailyReviewEntry } from '../lib/types';
 
   function stateView(kind: 'error' | 'empty', title: string, detail: string): HTMLElement {
@@ -66,22 +67,12 @@ import Layout from '../components/Layout.astro';
   }
 
   function paperItem(review: DailyReviewEntry): HTMLElement {
-    const chips: HTMLElement[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
-    if (review.hf_rank != null) {
-      chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${review.hf_rank}`));
-    }
-    return el('li', { class: 'paper-list-item' }, [
-      el('div', { class: 'paper-list-chips' }, chips),
-      el(
-        'a',
-        {
-          class: 'paper-list-title',
-          href: `/review/?id=${encodeURIComponent(review.id)}`,
-        },
-        review.title
-      ),
-      el('p', { class: 'paper-list-abstract' }, review.abstract),
-    ]);
+    // Daily archive reuses the feed card; wrap in an <li> so the
+    // surrounding <ul> markup stays correct for screen readers.
+    const li = document.createElement('li');
+    li.className = 'paper-list-item';
+    li.appendChild(buildFeedCard(review));
+    return li;
   }
 
   async function main() {
