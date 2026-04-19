@@ -1644,13 +1644,9 @@ ul.review-field-value li {
 }
 
 @media (max-width: 480px) {
-  /* Hide the brand wordmark; keep the "O" icon.
-     Double-class selector beats the 640px block's font-size:14px
-     even after the bundler merges media queries. */
-  .navbar-brand,
-  .body--forum .or-topbar-brand.or-topbar-brand {
-    font-size: 0;
-  }
+  /* Keep the brand wordmark visible — scope cut removed the "For authors"
+     CTA so the navbar has room. Ensure the "O" glyph inside the mark is
+     sized regardless of the parent font-size value. */
   .navbar-brand .brand-mark,
   .body--forum .or-topbar-brand .brand-mark {
     font-size: 14px;
@@ -3591,4 +3587,67 @@ textarea:focus-visible {
 .page-header-aside {
   font-size: 13px;
   color: var(--color-ink-3);
+}
+
+/* =========================================================================
+   Mobile polish round (≤640px) — post scope-cut audit
+   Serif display sizes, section-row stacking, browse meta compaction.
+   ========================================================================= */
+
+@media (max-width: 640px) {
+  /* M2 — stack home "Recent reviews" heading + "Open full browse view"
+     link. At 393px the link otherwise wraps to 4 short lines beside the
+     copy. */
+  .section-heading-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .section-heading-row .section-link {
+    align-self: flex-start;
+  }
+
+  /* M3/M4/M7 — shrink serif display sizes. Desktop keeps its values;
+     mobile needs less visual weight or long paper titles wrap to 3–4
+     lines and the cards turn into mini-essays rather than a scannable
+     index. */
+  .hero-heading,
+  .hero-heading--left {
+    font-size: 26px;
+    line-height: 1.15;
+  }
+  .hero-preview-title {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+  .home-card-title,
+  .browse-card-title {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .thread-header-title {
+    font-size: 24px;
+    line-height: 1.25;
+  }
+
+  /* M5 — flatten browse page-header aside to one inline row. Avoids the
+     stacked "2 reviews in the current snapshot / Generated 18 Apr ..."
+     double-line meta on mobile. */
+  .page-header-aside {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .page-header-aside .count-chip,
+  .page-header-aside .page-header-meta {
+    display: inline;
+  }
+  .page-header-aside .page-header-meta::before {
+    content: '· ';
+    color: var(--color-ink-4);
+    margin-right: 2px;
+  }
 }
