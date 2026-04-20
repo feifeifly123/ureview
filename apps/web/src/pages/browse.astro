@@ -18,7 +18,7 @@ import Layout from '../components/Layout.astro';
         <div>
           <h1>Browse recent reviews</h1>
           <p class="subtitle">
-            Search by title or abstract, sort by date or trending rank, then jump into the thread.
+            Search by title or abstract, sort by review recency or HF rank, then open the structured review.
           </p>
         </div>
         <div class="page-header-aside" id="browse-header-aside" aria-live="polite"></div>
@@ -38,7 +38,7 @@ import Layout from '../components/Layout.astro';
           <span>Sort</span>
           <select id="browse-sort">
             <option value="newest">Newest</option>
-            <option value="hf">HF rank</option>
+            <option value="hf">HF rank (first seen)</option>
           </select>
         </label>
 

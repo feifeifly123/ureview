@@ -37,7 +37,7 @@ import Layout from '../components/Layout.astro';
       <dl class="about-provenance-grid">
         <div>
           <dt>Source</dt>
-          <dd>Hugging Face Daily Papers</dd>
+          <dd>Hugging Face Trending Papers</dd>
         </div>
         <div>
           <dt>Method</dt>
@@ -45,7 +45,7 @@ import Layout from '../components/Layout.astro';
         </div>
         <div>
           <dt>Update frequency</dt>
-          <dd>Daily, automated</dd>
+          <dd>On-trend, continuous — no fixed schedule</dd>
         </div>
       </dl>
     </section>
@@ -63,13 +63,14 @@ import Layout from '../components/Layout.astro';
 
         <h2 id="how-it-works">How the data flows</h2>
         <ul>
-          <li>Papers are selected from <strong>Hugging Face Daily Papers</strong>.</li>
+          <li>Papers are picked from <strong>Hugging Face Trending Papers</strong> as they surface.</li>
           <li>For each paper, the arXiv abstract is stored verbatim.</li>
           <li>A language model produces a structured review with four dimension scores (1–4 each),
               an overall recommendation (1–6), and a confidence estimate (1–5), plus prose fields
-              for summary, strengths & weaknesses, key questions, and limitations.</li>
+              for summary, strengths &amp; weaknesses, key questions, and limitations.</li>
           <li>The pair is published as JSON and rendered into a three-layer review page:
               speedread, four-dimension judgment, and raw-view audit.</li>
+          <li>One review per paper. If the paper trends again later, we don't re-review it.</li>
         </ul>
 
         <h2 id="rubric">The rubric</h2>
@@ -105,8 +106,18 @@ import Layout from '../components/Layout.astro';
         <h3>Is this peer review?</h3>
         <p>No. It is a lightweight AI reading aid. Use the source link to check the paper yourself.</p>
 
+        <h3>How are papers picked?</h3>
+        <p>
+          We watch the Hugging Face Trending Papers feed. When a paper we haven't reviewed
+          shows up, the pipeline fires a review for it. No fixed daily quota, no editorial
+          calendar — the feed ebbs and flows with what's trending.
+        </p>
+
         <h3>Why was this paper selected?</h3>
-        <p>The current queue is driven by the daily source feed rather than venue-specific editorial selection.</p>
+        <p>
+          Because it was trending on Hugging Face at some point after the site went live,
+          and we hadn't reviewed it yet. There's no venue-specific editorial selection.
+        </p>
 
         <h3>Can the review be wrong?</h3>
         <p>Yes. Treat the opinion as a first-pass impression. The abstract and paper link are always one click away, and every detail page ships a raw-view toggle so you can read the agent's original prose without our structuring.</p>
