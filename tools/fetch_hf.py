@@ -2,61 +2,116 @@
 """Fetch trending papers from Hugging Face.
 
 Product thesis (see product_manager/philosophy_2026-04-20.md):
-this pipeline is trending-driven, not calendar-driven. "An empty fetch"
-is a valid, expected outcome. Runs produce a timestamped raw file so
-that multiple runs per day don't overwrite each other.
+this pipeline is trending-driven, not calendar-driven. HF ships the
+trending list as server-rendered HTML with a `data-target="DailyPapers"`
+mount whose `data-props` attribute is a JSON blob containing every
+paper's metadata. We parse that directly — no scraping of DOM nodes.
 
-Current implementation is a stub pending real HF integration. When the
-real fetch lands, it should target the trending endpoint, not the
-daily endpoint (we explicitly moved away from date-anchored queues).
+Usage:
+    python3 tools/fetch_hf.py                       # write data/raw/trending-{ts}.json
+    python3 tools/fetch_hf.py --dry-run             # preview without writing
+    python3 tools/fetch_hf.py --json-stdout         # emit list to stdout (for studio)
+    python3 tools/fetch_hf.py --min-rank 20         # cap the tail
+
+The HF HTML endpoint is reachable without auth. If your network needs a
+proxy, set HTTPS_PROXY before running; urllib honours it.
 """
 
+from __future__ import annotations
+
 import argparse
+import html as html_mod
 import json
+import os
+import re
+import shutil
+import subprocess
 import sys
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 
+HF_TRENDING_URL = "https://huggingface.co/papers/trending"
+DATA_PROPS_RE = re.compile(
+    r'data-target="DailyPapers"\s+data-props="(.*?)"',
+    re.S,
+)
 
-def fetch_trending_stub(now_iso: str) -> list[dict]:
-    # TODO: Replace with real HF Trending scrape / API call.
-    #
-    # Likely shape (subject to the real HF response):
-    #     url = "https://huggingface.co/api/trending?type=paper"
-    #     with urllib.request.urlopen(url, timeout=15) as r:
-    #         payload = json.load(r)
-    #     for i, entry in enumerate(payload, start=1):
-    #         p = entry["paper"]
-    #         yield {
-    #             "title":    p["title"],
-    #             "url":      f"https://arxiv.org/abs/{p['id']}",
-    #             "abstract": p.get("summary", ""),
-    #             "rank":     i,
-    #         }
-    #
-    # Keep rank stable across a single run (so dedup decisions match
-    # what's in the raw file).
-    return [
-        {
-            "title": f"[Stub] Trending paper A ({now_iso})",
-            "url": "https://arxiv.org/abs/0000.00000",
-            "abstract": "Placeholder abstract.",
-            "rank": 1,
-        },
-        {
-            "title": f"[Stub] Trending paper B ({now_iso})",
-            "url": "https://arxiv.org/abs/0000.00001",
-            "abstract": "Another placeholder abstract.",
-            "rank": 2,
-        },
-    ]
+
+def fetch_html(url: str) -> str:
+    """Fetch HTML, falling back to curl if urllib fails.
+
+    urllib honors HTTPS_PROXY/HTTP_PROXY for HTTP(S) proxies but does not
+    natively speak SOCKS. If the environment has ALL_PROXY set to a SOCKS
+    URL (common on hosts where socks-only egress is the norm), urllib will
+    fail and we hand off to curl which speaks both.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 openagent-review/studio"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, ConnectionResetError) as urllib_err:
+        if not shutil.which("curl"):
+            raise RuntimeError(
+                f"urllib failed ({urllib_err}) and curl is not on PATH to fall back to."
+            )
+        cmd = ["curl", "-sSL", "--max-time", "30", "-A", headers["User-Agent"]]
+        all_proxy = os.environ.get("ALL_PROXY") or os.environ.get("all_proxy")
+        if all_proxy:
+            cmd.extend(["--proxy", all_proxy])
+        cmd.append(url)
+        try:
+            out = subprocess.run(cmd, capture_output=True, check=True, timeout=45)
+        except subprocess.CalledProcessError as curl_err:
+            raise RuntimeError(
+                f"curl fallback failed (exit {curl_err.returncode}): "
+                f"{curl_err.stderr.decode('utf-8', 'replace').strip()}"
+            )
+        return out.stdout.decode("utf-8", errors="replace")
+
+
+def extract_papers(html: str) -> list[dict]:
+    m = DATA_PROPS_RE.search(html)
+    if not m:
+        raise RuntimeError(
+            "Could not find data-target=\"DailyPapers\" in the HF HTML. "
+            "HF may have changed their layout — inspect the page source and update the selector."
+        )
+    raw = html_mod.unescape(m.group(1))
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Could not parse the HF JSON payload: {e}")
+
+    entries = data.get("dailyPapers") or []
+    out: list[dict] = []
+    for i, entry in enumerate(entries, start=1):
+        paper = entry.get("paper") or {}
+        arxiv_id = paper.get("id")
+        title = paper.get("title") or entry.get("title")
+        abstract = paper.get("summary") or entry.get("summary")
+        if not (arxiv_id and title):
+            continue
+        out.append(
+            {
+                "title": title.strip(),
+                "url": f"https://arxiv.org/abs/{arxiv_id}",
+                "abstract": (abstract or "").strip(),
+                "rank": i,
+                "upvotes": paper.get("upvotes"),
+                "arxiv_id": arxiv_id,
+            }
+        )
+    return out
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fetch HF trending papers into data/raw/")
+    parser = argparse.ArgumentParser(description="Fetch HF trending papers")
     parser.add_argument(
         "--min-rank",
         type=int,
@@ -68,20 +123,37 @@ def main() -> int:
         action="store_true",
         help="Print what would be fetched, do not write any file.",
     )
+    parser.add_argument(
+        "--json-stdout",
+        action="store_true",
+        help="Emit the parsed list to stdout as JSON; do not write a raw file.",
+    )
     args = parser.parse_args()
+
+    try:
+        html = fetch_html(HF_TRENDING_URL)
+        papers = extract_papers(html)
+    except (urllib.error.URLError, RuntimeError) as e:
+        print(f"fetch_hf: {e}", file=sys.stderr)
+        return 2
+
+    if args.min_rank is not None:
+        papers = [p for p in papers if p.get("rank", 10**9) <= args.min_rank]
+
+    if args.json_stdout:
+        print(json.dumps(papers, ensure_ascii=False, indent=2))
+        return 0
 
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat(timespec="seconds").replace("+00:00", "Z")
     slug_ts = now.strftime("%Y-%m-%dT%H%M%SZ")
 
-    papers = fetch_trending_stub(now_iso)
-    if args.min_rank is not None:
-        papers = [p for p in papers if p.get("rank", 10**9) <= args.min_rank]
-
     if args.dry_run:
         print(f"[dry-run] Would fetch {len(papers)} trending paper(s) at {now_iso}:")
-        for p in papers:
-            print(f"  rank {p.get('rank', '?')}: {p['title']}  ({p['url']})")
+        for p in papers[:10]:
+            print(f"  rank {p.get('rank', '?')}: {p['title'][:80]}  ({p['url']})")
+        if len(papers) > 10:
+            print(f"  …and {len(papers) - 10} more")
         return 0
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)

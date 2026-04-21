@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-"""Validate all JSON files under data/ against contracts/ schemas and check index reference consistency."""
+"""Validate JSON files under data/ against contracts/ schemas.
 
+Modes:
+    python3 tools/validate_data.py                    # full sweep
+    python3 tools/validate_data.py --single PATH      # just one review file
+"""
+
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -21,14 +27,37 @@ def load_json(path: Path) -> dict:
         return json.load(f)
 
 
-def main() -> int:
+def validate_single(path: Path) -> int:
+    """Validate a single review JSON against review.schema.json.
+
+    Used by the studio server before writing a user-submitted review to disk.
+    Errors go to stderr; on success we print the id on stdout so callers can
+    confirm the file parses.
+    """
+    schema = load_json(CONTRACTS / "review.schema.json")
+    try:
+        data = load_json(path)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"read/parse error: {e}", file=sys.stderr)
+        return 2
+    try:
+        validate(instance=data, schema=schema, format_checker=FormatChecker())
+    except ValidationError as e:
+        # jsonschema's path tells the caller which field broke.
+        loc = ".".join(str(p) for p in e.absolute_path) or "<root>"
+        print(f"schema error at {loc}: {e.message}", file=sys.stderr)
+        return 1
+    print(data.get("id", ""))
+    return 0
+
+
+def validate_all() -> int:
     errors: list[str] = []
 
     review_schema = load_json(CONTRACTS / "review.schema.json")
     latest_schema = load_json(CONTRACTS / "latest.schema.json")
     daily_schema = load_json(CONTRACTS / "daily.schema.json")
 
-    # Collect all review file IDs
     review_ids: set[str] = set()
     reviews_dir = DATA / "reviews"
     if reviews_dir.exists():
@@ -42,7 +71,6 @@ def main() -> int:
                 errors.append(f"{f.relative_to(ROOT)}: {e.message}")
                 print(f" FAIL {f.relative_to(ROOT)}: {e.message}")
 
-    # Validate latest.json
     latest_path = DATA / "latest.json"
     if latest_path.exists():
         data = load_json(latest_path)
@@ -53,14 +81,12 @@ def main() -> int:
             errors.append(f"latest.json: {e.message}")
             print(f" FAIL latest.json: {e.message}")
 
-        # Check reference consistency
         for entry in data.get("reviews", []):
             if entry["id"] not in review_ids:
                 msg = f"latest.json references non-existent review: {entry['id']}"
                 errors.append(msg)
                 print(f" FAIL {msg}")
 
-    # Validate daily/*.json
     daily_dir = DATA / "daily"
     if daily_dir.exists():
         for f in sorted(daily_dir.glob("*.json")):
@@ -84,6 +110,19 @@ def main() -> int:
 
     print("\nAll validations passed")
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate data/ JSON against contracts/")
+    parser.add_argument(
+        "--single",
+        metavar="PATH",
+        help="Validate a single review JSON file (studio use).",
+    )
+    args = parser.parse_args()
+    if args.single:
+        return validate_single(Path(args.single))
+    return validate_all()
 
 
 if __name__ == "__main__":

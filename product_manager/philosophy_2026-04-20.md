@@ -136,11 +136,36 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 
 ---
 
+## 9. Authoring surfaces (Writer vs Reader)
+
+**公共站点是只读的**。`apps/web/` 发布出去的 `openagent.review` 永远不包含编辑界面 — 它从 R2 拉 JSON, 渲染, 结束。
+
+**写入发生在 `apps/studio/`**, 一个**本地**的 Node 小服务器, 绑定 `127.0.0.1:4311`, **不上云**。Studio 的职责:
+
+- 同步 HF Trending, 展示候选论文
+- 拉 arXiv metadata, 预填只读区域
+- 提供"粘贴 LLM 输出"的区域, 让作者把结构化 review JSON 贴进去
+- 派生 feed-card 字段 (why_read / why_doubt / verdict_leaning), 或接受作者手写
+- 表单校验 → 写 `data/reviews/{id}.json` → 触发 `build_indexes.py`
+- 可选: 调用 `publish_r2.py` 把新数据推到 R2
+
+**关键工程纪律**:
+
+- Studio **和公共站共用 `data/reviews/` 这个目录**。不论是命令行手写, 还是 studio 界面保存, 写入路径一致, 仓库里的 JSON 文件**永远是单一真实来源**。
+- Studio **不绕过三层 R2 保险**。publish 走同一个 `publish_r2.py` 子进程, dry-run → 打字确认 → apply, 流程跟 CLI 完全同构。
+- Studio **不存 state**。关掉服务器等于零副作用。所有持久化都在 `data/**`。
+- Studio **没有账号**。127.0.0.1 绑定意味着"有 shell 的人就能改", 加登录只是表演。
+
+这条原则让"写作者使用什么工具"和"读者看到什么"彻底解耦。以后就算 studio 被另一个工具取代 (比如 VSCode 扩展, 或真 LLM 自动写), 只要新的写入工具仍然产出合法的 `data/reviews/*.json`, 整条发布流水线完全不知道发生了什么变化。
+
+---
+
 ## 附录: 关键 commit 路标
 
 - `c7f7e2e` — R2-first migration (数据层和代码层解耦)
 - `88cf525` — Scope cut (砍 scores / confidence / author replies)
 - `3df0cd8` — Structured AI review (4 层详情页 + KaTeX)
-- `(this round)` — Trending pivot + philosophy doc
+- `b3895af` — Trending pivot + philosophy doc
+- `(this round)` — Studio local authoring app + real HF/arXiv fetchers
 
 下次有人问"为什么网站是这样而不是别的", 先读这份, 再读那几个 commit message。

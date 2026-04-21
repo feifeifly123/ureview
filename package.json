@@ -10,7 +10,8 @@
     "build:indexes": "python3 tools/build_indexes.py",
     "publish:data:stage": "python3 tools/publish_r2.py --stage",
     "publish:data:prod": "python3 tools/publish_r2.py --prod",
-    "refresh:data:prod": "python3 tools/build_indexes.py && python3 tools/validate_data.py && python3 tools/publish_r2.py --prod"
+    "refresh:data:prod": "python3 tools/build_indexes.py && python3 tools/validate_data.py && python3 tools/publish_r2.py --prod",
+    "dev:studio": "pnpm --filter @autoreviewer/studio dev"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
