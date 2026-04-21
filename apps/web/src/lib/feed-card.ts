@@ -28,122 +28,125 @@ function dateText(entry: FeedEntry): string {
   return '';
 }
 
-function ratingChip(label: string, value: number | undefined): HTMLElement | null {
-  if (value == null) return null;
-  return el('span', { class: 'rating-chip', title: `${label}: ${value}/4` }, [
-    el('span', { class: 'rating-chip-label' }, label),
-    el('span', { class: 'rating-chip-value' }, String(value)),
-  ]);
+function arxivFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/arxiv\.org\/abs\/([^/?#]+)/i);
+  return m ? m[1].replace(/v\d+$/, '') : null;
 }
 
-function ratingsRow(ratings: FeedRatings | undefined): HTMLElement | null {
-  if (!ratings) return null;
-  const chips = [
-    ratingChip('S', ratings.soundness),
-    ratingChip('P', ratings.presentation),
-    ratingChip('Sig', ratings.significance),
-    ratingChip('Orig', ratings.originality),
-  ].filter((n): n is HTMLElement => n != null);
-  if (chips.length === 0) return null;
-  return el('div', { class: 'rating-chip-row', 'aria-label': 'Dimension ratings' }, chips);
+function arxivFromId(id: string): string | null {
+  // id shape: YYYY-MM-DD-slug — doesn't contain the arxiv id itself.
+  return null;
 }
 
-function topChips(entry: FeedEntry): HTMLElement {
-  const chips: (HTMLElement | null)[] = [el('span', { class: 'topic-chip topic-chip--ai' }, 'AI review')];
+function kickerLine(entry: FeedEntry): HTMLElement {
+  const parts: HTMLElement[] = [];
+  const arxiv = arxivFromUrl((entry as any).paper_url) ?? arxivFromId(entry.id);
+  if (arxiv) {
+    parts.push(el('span', { class: 'id' }, arxiv));
+  }
   if (entry.hf_rank != null) {
-    chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, `HF #${entry.hf_rank}`));
+    if (parts.length) parts.push(el('span', { class: 'sep' }, '·'));
+    parts.push(el('span', { class: 'rank' }, `HF №${String(entry.hf_rank).padStart(2, '0')}`));
   }
   const cats = entry.arxiv_categories ?? [];
   if (cats.length > 0) {
-    chips.push(el('span', { class: 'topic-chip topic-chip--ghost' }, cats[0]));
+    if (parts.length) parts.push(el('span', { class: 'sep' }, '·'));
+    parts.push(el('span', {}, cats[0]));
   }
   if (entry.ethics_flag) {
-    chips.push(el('span', { class: 'topic-chip topic-chip--warning' }, '\u26A0 Ethics flag'));
+    if (parts.length) parts.push(el('span', { class: 'sep' }, '·'));
+    parts.push(el('span', { class: 'ethics' }, '⚠ Ethics'));
   }
-  return el('div', { class: 'home-card-chips' }, chips.filter((n): n is HTMLElement => n != null));
+  return el('div', { class: 'entry-kicker' }, parts);
 }
 
-function whyRows(entry: FeedEntry): HTMLElement | null {
+function whyBlock(entry: FeedEntry): HTMLElement | null {
   const rows: HTMLElement[] = [];
   if (entry.why_read) {
-    rows.push(
-      el('div', { class: 'why-row why-row--read' }, [
-        el('span', { class: 'why-row-label' }, 'Why read'),
-        el('span', { class: 'why-row-text' }, entry.why_read),
-      ])
-    );
+    rows.push(el('div', { class: 'entry-why-row entry-why--read' }, [
+      el('span', { class: 'entry-why-label' }, 'Why read'),
+      el('span', { class: 'entry-why-text' }, entry.why_read),
+    ]));
   }
   if (entry.why_doubt) {
-    rows.push(
-      el('div', { class: 'why-row why-row--doubt' }, [
-        el('span', { class: 'why-row-label' }, 'Why doubt'),
-        el('span', { class: 'why-row-text' }, entry.why_doubt),
-      ])
-    );
+    rows.push(el('div', { class: 'entry-why-row entry-why--doubt' }, [
+      el('span', { class: 'entry-why-label' }, 'Why doubt'),
+      el('span', { class: 'entry-why-text' }, entry.why_doubt),
+    ]));
   }
   if (rows.length === 0) return null;
-  return el('div', { class: 'why-row-stack' }, rows);
+  return el('div', { class: 'entry-why' }, rows);
 }
 
-function footerRow(entry: FeedEntry): HTMLElement {
+function ratingsInline(ratings: FeedRatings | undefined): HTMLElement | null {
+  if (!ratings) return null;
+  const pieces: Array<[string, number | undefined]> = [
+    ['Snd', ratings.soundness],
+    ['Prs', ratings.presentation],
+    ['Sig', ratings.significance],
+    ['Org', ratings.originality],
+  ];
+  const kids = pieces
+    .filter((p): p is [string, number] => p[1] != null)
+    .map(([label, value]) =>
+      el('span', { class: 'entry-rating' }, [
+        el('span', { class: 'entry-rating-label' }, label),
+        el('span', { class: 'entry-rating-value' }, String(value)),
+      ])
+    );
+  if (kids.length === 0) return null;
+  return el('div', { class: 'entry-ratings', 'aria-label': 'Dimension ratings' }, kids);
+}
+
+function footerLine(entry: FeedEntry): HTMLElement {
   const leaning = entry.verdict_leaning;
   const conf = entry.confidence;
   const kqc = entry.key_questions_count ?? 0;
 
-  const left = el('div', { class: 'home-card-meta-row' }, [
-    leaning
-      ? el(
-          'span',
-          { class: `leaning-pill leaning-pill--${leaning}` },
-          leaningLabel(leaning)
-        )
-      : null,
-    conf
-      ? el('span', { class: 'home-card-meta-dot' }, [
-          el('span', { class: 'home-card-meta-sep' }, '\u00b7'),
-          `Confidence ${confidenceBand(conf)}`,
-        ])
-      : null,
-    kqc > 0
-      ? el('span', { class: 'home-card-meta-dot' }, [
-          el('span', { class: 'home-card-meta-sep' }, '\u00b7'),
-          `${kqc} question${kqc === 1 ? '' : 's'}`,
-        ])
-      : null,
-  ].filter((n): n is HTMLElement => n != null));
+  const bits: HTMLElement[] = [];
+  if (leaning) {
+    bits.push(el('span', { class: `entry-leaning entry-leaning--${leaning}` }, leaning));
+  }
+  if (conf) {
+    bits.push(el('span', {}, `Conf · ${confidenceBand(conf)}`));
+  }
+  if (kqc > 0) {
+    bits.push(el('span', {}, `${kqc} Q`));
+  }
+  const ratings = ratingsInline(entry.ratings);
+  if (ratings) bits.push(ratings);
 
-  const right = el(
-    'a',
-    { class: 'home-card-open', href: `/review/?id=${encodeURIComponent(entry.id)}` },
-    'Open review \u2192'
-  );
+  const open = el('span', { class: 'entry-open' }, 'Read →');
 
-  return el('div', { class: 'home-card-footer' }, [left, right]);
+  return el('div', { class: 'entry-footer' }, [
+    el('div', { class: 'entry-footer-bits' }, bits),
+    open,
+  ]);
 }
 
+/**
+ * Builds an <a class="entry"> anchor — a typeset listing (not a card).
+ * Preserves the old export name so callers don't need to change imports.
+ */
 export function buildFeedCard(entry: FeedEntry): HTMLElement {
+  const leaning = entry.verdict_leaning;
+  const classes = ['entry'];
+  if (leaning) classes.push(`entry--${leaning}`);
+
   const kids: (HTMLElement | null)[] = [
-    el('div', { class: 'home-card-top' }, [
-      topChips(entry),
-      dateText(entry)
-        ? el('span', { class: 'home-card-updated' }, dateText(entry))
-        : null,
-    ].filter((n): n is HTMLElement => n != null)),
-    el(
-      'a',
-      { class: 'home-card-title', href: `/review/?id=${encodeURIComponent(entry.id)}` },
-      entry.title
-    ),
-    whyRows(entry),
-    ratingsRow(entry.ratings),
-    footerRow(entry),
+    kickerLine(entry),
+    el('span', { class: 'entry-date' }, dateText(entry)),
+    el('span', { class: 'entry-title' }, entry.title),
+    whyBlock(entry),
+    footerLine(entry),
   ];
 
   return el(
-    'article',
+    'a',
     {
-      class: 'home-card',
-      'data-home-card': 'true',
+      class: classes.join(' '),
+      href: `/review/?id=${encodeURIComponent(entry.id)}`,
       'data-review-id': entry.id,
     },
     kids.filter((n): n is HTMLElement => n != null)

@@ -7,54 +7,57 @@ import Layout from '../components/Layout.astro';
   description="Browse OpenAgent.review by agent verdict — filter by leaning, confidence, ethics, and arXiv category."
   activeNav="browse"
 >
-  <div class="page-header page-header--browse">
-    <div class="container">
+  <div class="container">
+    <section class="page-intro">
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="/">Home</a>
         <span class="sep">/</span>
         <span>Browse</span>
       </nav>
-      <div class="page-header-grid">
+      <div style="display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end;">
         <div>
-          <h1>Browse recent reviews</h1>
-          <p class="subtitle">
-            Filter the current snapshot by the agent's verdict — leaning, confidence, ethics flag, arXiv category — and sort by what matters.
+          <span class="page-intro-eyebrow">Index · Filterable</span>
+          <h1 class="page-intro-title">Browse recent reviews.</h1>
+          <p class="page-intro-lede">
+            Sift the current snapshot by the agent's leaning, its own confidence,
+            ethics flags, and arXiv category.
           </p>
         </div>
-        <div class="page-header-aside" id="browse-header-aside" aria-live="polite"></div>
+        <div class="browse-header-aside" id="browse-header-aside" aria-live="polite"></div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="container browse-shell">
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
       <div class="filter-row" data-filter="leaning">
         <span class="filter-label">Leaning</span>
+        <div class="filter-chips-wrap"></div>
       </div>
       <div class="filter-row" data-filter="confidence">
         <span class="filter-label">Confidence</span>
+        <div class="filter-chips-wrap"></div>
       </div>
       <div class="filter-row" data-filter="ethics">
         <span class="filter-label">Flags</span>
+        <div class="filter-chips-wrap"></div>
       </div>
       <div class="filter-row" data-filter="categories">
         <span class="filter-label">Category</span>
+        <div class="filter-chips-wrap"></div>
       </div>
-      <div class="filter-row filter-row--sort" data-filter="sort">
-        <span class="filter-label">Sort</span>
+      <div class="filter-row" data-filter="sort">
+        <span class="filter-label">Order</span>
+        <div class="filter-chips-wrap"></div>
       </div>
     </section>
 
     <div class="browse-count" id="browse-count" aria-live="polite">Loading…</div>
 
-    <section class="browse-list" id="browse-list" aria-live="polite">
-      <div class="state loading">
-        <strong>Loading reviews…</strong>
-      </div>
+    <section class="entry-list" id="browse-list" aria-live="polite">
+      <div class="state loading"><strong>Loading reviews</strong></div>
     </section>
 
     <div class="state empty" id="browse-empty-state" hidden>
-      <strong>No reviews match this combination.</strong>
+      <strong>No reviews match this combination</strong>
       <button type="button" class="btn-secondary btn-secondary--compact" id="browse-reset">Reset filters</button>
     </div>
   </div>
@@ -74,9 +77,9 @@ import Layout from '../components/Layout.astro';
   const LEANING_ORDER: Record<VerdictLeaning, number> = { positive: 0, mixed: 1, critical: 2 };
 
   const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
-    { key: 'leaning', label: 'Leaning' },
-    { key: 'recommendation', label: 'Recommendation' },
-    { key: 'hf', label: 'HF rank' },
+    { key: 'leaning', label: 'By leaning' },
+    { key: 'recommendation', label: 'By recommendation' },
+    { key: 'hf', label: 'By HF rank' },
     { key: 'newest', label: 'Newest' },
   ];
 
@@ -91,8 +94,6 @@ import Layout from '../components/Layout.astro';
     { value: 'medium', label: 'Medium' },
     { value: 'low', label: 'Low' },
   ];
-
-  // ---------- state ----------
 
   const state = {
     leaning: new Set<VerdictLeaning>(),
@@ -138,8 +139,6 @@ import Layout from '../components/Layout.astro';
     state.sort = DEFAULT_SORT;
   }
 
-  // ---------- chip factory ----------
-
   function chip(opts: {
     label: string;
     count?: number;
@@ -160,8 +159,6 @@ import Layout from '../components/Layout.astro';
     btn.addEventListener('click', opts.onClick);
     return btn;
   }
-
-  // ---------- category stats ----------
 
   function topCategories(reviews: LatestReviewEntry[], n = 6): Array<{ cat: string; count: number }> {
     const counts = new Map<string, number>();
@@ -199,8 +196,6 @@ import Layout from '../components/Layout.astro';
   function ethicsCount(reviews: LatestReviewEntry[]): number {
     return reviews.filter((r) => r.ethics_flag).length;
   }
-
-  // ---------- filter + sort ----------
 
   function applyFilter(reviews: LatestReviewEntry[]): LatestReviewEntry[] {
     return reviews.filter((r) => {
@@ -261,39 +256,41 @@ import Layout from '../components/Layout.astro';
     return sorted;
   }
 
-  // ---------- render ----------
-
   function buildHeaderAside(count: number, generatedAt: string): HTMLElement[] {
     return [
       el('div', { class: 'count-chip' }, [
         el('strong', {}, String(count)),
-        ` review${count === 1 ? '' : 's'} in the current snapshot`,
+        ` review${count === 1 ? '' : 's'} in snapshot`,
       ]),
       el('div', { class: 'page-header-meta' }, `Generated ${formatDateTime(generatedAt)}`),
     ];
   }
 
-  function clearRow(row: HTMLElement) {
-    // Keep the first child (the .filter-label span), drop any previous chips.
-    while (row.children.length > 1) row.removeChild(row.lastChild!);
+  function rowChipsWrap(rowSelector: string): HTMLElement | null {
+    const row = document.querySelector<HTMLElement>(rowSelector);
+    return row?.querySelector<HTMLElement>('.filter-chips-wrap') ?? null;
+  }
+
+  function clearChildren(node: HTMLElement) {
+    while (node.firstChild) node.removeChild(node.firstChild);
   }
 
   function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
-    const leaningRow = document.querySelector<HTMLElement>('[data-filter="leaning"]');
-    const confRow = document.querySelector<HTMLElement>('[data-filter="confidence"]');
-    const ethicsRow = document.querySelector<HTMLElement>('[data-filter="ethics"]');
-    const catsRow = document.querySelector<HTMLElement>('[data-filter="categories"]');
-    const sortRow = document.querySelector<HTMLElement>('[data-filter="sort"]');
-    if (!leaningRow || !confRow || !ethicsRow || !catsRow || !sortRow) return;
+    const leaningWrap = rowChipsWrap('[data-filter="leaning"]');
+    const confWrap = rowChipsWrap('[data-filter="confidence"]');
+    const ethicsWrap = rowChipsWrap('[data-filter="ethics"]');
+    const catsWrap = rowChipsWrap('[data-filter="categories"]');
+    const sortWrap = rowChipsWrap('[data-filter="sort"]');
+    if (!leaningWrap || !confWrap || !ethicsWrap || !catsWrap || !sortWrap) return;
 
     const leaningCounts = countByLeaning(reviews);
     const confCounts = countByConfidence(reviews);
     const flagCount = ethicsCount(reviews);
     const cats = topCategories(reviews);
 
-    clearRow(leaningRow);
+    clearChildren(leaningWrap);
     for (const opt of LEANING_OPTIONS) {
-      leaningRow.appendChild(chip({
+      leaningWrap.appendChild(chip({
         label: opt.label,
         count: leaningCounts[opt.value],
         active: state.leaning.has(opt.value),
@@ -306,9 +303,9 @@ import Layout from '../components/Layout.astro';
       }));
     }
 
-    clearRow(confRow);
+    clearChildren(confWrap);
     for (const opt of CONFIDENCE_OPTIONS) {
-      confRow.appendChild(chip({
+      confWrap.appendChild(chip({
         label: opt.label,
         count: confCounts[opt.value],
         active: state.confidence.has(opt.value),
@@ -320,8 +317,8 @@ import Layout from '../components/Layout.astro';
       }));
     }
 
-    clearRow(ethicsRow);
-    ethicsRow.appendChild(chip({
+    clearChildren(ethicsWrap);
+    ethicsWrap.appendChild(chip({
       label: '⚠ Ethics flagged',
       count: flagCount,
       active: state.ethics,
@@ -329,12 +326,12 @@ import Layout from '../components/Layout.astro';
       onClick: () => { state.ethics = !state.ethics; onChange(); },
     }));
 
-    clearRow(catsRow);
+    clearChildren(catsWrap);
     if (cats.length === 0) {
-      catsRow.appendChild(el('span', { class: 'filter-hint' }, 'none yet'));
+      catsWrap.appendChild(el('span', { class: 'filter-hint' }, 'none yet'));
     } else {
       for (const { cat, count } of cats) {
-        catsRow.appendChild(chip({
+        catsWrap.appendChild(chip({
           label: cat,
           count,
           active: state.categories.has(cat),
@@ -347,9 +344,9 @@ import Layout from '../components/Layout.astro';
       }
     }
 
-    clearRow(sortRow);
+    clearChildren(sortWrap);
     for (const opt of SORT_OPTIONS) {
-      sortRow.appendChild(chip({
+      sortWrap.appendChild(chip({
         label: opt.label,
         active: state.sort === opt.key,
         onClick: () => {
@@ -360,22 +357,6 @@ import Layout from '../components/Layout.astro';
       }));
     }
   }
-
-  function refreshChipActiveStates() {
-    document.querySelectorAll<HTMLButtonElement>('.filter-chip').forEach((btn) => {
-      const leaning = btn.dataset.leaning as VerdictLeaning | undefined;
-      if (leaning) {
-        btn.classList.toggle('active', state.leaning.has(leaning));
-        return;
-      }
-      if (btn.dataset.ethics) {
-        btn.classList.toggle('active', state.ethics);
-        return;
-      }
-    });
-  }
-
-  // ---------- main ----------
 
   (async () => {
     const asideEl = document.getElementById('browse-header-aside');
@@ -410,8 +391,7 @@ import Layout from '../components/Layout.astro';
       const nodes = ordered.map((r) => cards.get(r.id)).filter((n): n is HTMLElement => n != null);
 
       if (nodes.length === 0) {
-        mount(listEl!, el('div', { class: 'state empty-inline' }, ''));
-        listEl!.innerHTML = '';
+        mount(listEl!);
         if (emptyEl) emptyEl.hidden = false;
       } else {
         if (emptyEl) emptyEl.hidden = true;
@@ -420,7 +400,6 @@ import Layout from '../components/Layout.astro';
 
       countEl!.textContent = `Showing ${nodes.length} of ${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
       writeStateToUrl();
-      refreshChipActiveStates();
     }
 
     renderChips(reviews, () => { sync(); renderChips(reviews, () => sync()); });

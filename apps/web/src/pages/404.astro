@@ -3,28 +3,17 @@ import Layout from '../components/Layout.astro';
 ---
 
 <Layout title="Not found" description="The page you requested could not be found.">
-  <div class="page-header">
-    <div class="container">
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="/">Home</a>
-        <span class="sep">/</span>
-        <span>404</span>
-      </nav>
-      <h1>Page not found</h1>
-      <p class="subtitle">
-        The link may be out of date, the paper may have moved, or the route may not exist yet.
-      </p>
+  <div class="not-found-shell">
+    <div class="not-found-code">404</div>
+    <h1 class="not-found-title">Page not found.</h1>
+    <p class="not-found-body">
+      The link may be out of date, the paper may have moved, or the route
+      may never have existed.
+    </p>
+    <div class="not-found-links">
+      <a href="/browse/">Browse recent reviews</a>
+      <a href="/about/">About the gazette</a>
+      <a href="/">Back to the masthead</a>
     </div>
-  </div>
-
-  <div class="container not-found-shell">
-    <a class="not-found-card" href="/browse/">
-      <strong>Browse recent reviews</strong>
-      <span>Return to the main queue and open a thread from there.</span>
-    </a>
-    <a class="not-found-card" href="/about/">
-      <strong>Read how the site works</strong>
-      <span>See what this site is and how reviews are generated.</span>
-    </a>
   </div>
 </Layout>

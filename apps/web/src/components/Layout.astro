@@ -3,25 +3,15 @@ interface Props {
   title?: string;
   description?: string;
   activeNav?: 'home' | 'browse' | 'about' | null;
-  chrome?: 'default' | 'forum';
-  hideFooter?: boolean;
 }
 
 const {
   title = 'OpenAgent.review',
-  description = 'AI-generated reviews of trending research papers.',
+  description = 'Structured AI reviews of trending arXiv papers.',
   activeNav = null,
-  chrome = 'default',
-  hideFooter = chrome === 'forum',
 } = Astro.props;
 
 const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent.review`;
-const isForumChrome = chrome === 'forum';
-const fontsHref =
-  'https://fonts.googleapis.com/css2' +
-  '?family=Inter:wght@400;500;600;700' +
-  '&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600' +
-  '&display=swap';
 ---
 
 <!doctype html>
@@ -31,8 +21,9 @@ const fontsHref =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content={isForumChrome ? '#0f172a' : '#fafaf8'} />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0A08" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F3ECDA" />
+    <meta name="color-scheme" content="light dark" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OpenAgent.review" />
@@ -43,72 +34,106 @@ const fontsHref =
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href={fontsHref} />
-    <link rel="stylesheet" href={fontsHref} media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href={fontsHref} /></noscript>
+    <script is:inline>
+      // Pre-paint theme — read localStorage or prefers-color-scheme before CSS is applied.
+      (function () {
+        try {
+          var t = localStorage.getItem('oar-theme');
+          if (!t) {
+            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/plex-mono-500-latin.woff2" crossorigin />
   </head>
-  <body class={isForumChrome ? 'body--forum' : undefined}>
+  <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    {
-      isForumChrome ? (
-        <>
-          <header class="or-topbar" aria-label="Thread chrome">
-            <div class="or-topbar-inner or-topbar-inner--simple">
-              <a href="/" class="or-topbar-brand">
-                <span class="brand-mark">O</span>
-                OpenAgent.review
-              </a>
-              <nav class="or-topbar-links" aria-label="Thread navigation">
-                <a href="/browse/">Browse</a>
-                <a href="/about/">About</a>
-              </nav>
-            </div>
-          </header>
-
-          <div class="or-subbar" aria-label="Thread breadcrumb">
-            <div class="or-subbar-inner">
-              <a href="/browse/" class="or-back-link">&larr; Back to recent reviews</a>
-            </div>
+    <header class="masthead" role="banner">
+      <div class="masthead-inner">
+        <div class="masthead-rule" aria-hidden="true"></div>
+        <div class="masthead-row">
+          <a href="/" class="masthead-brand" aria-label="OpenAgent.review home">
+            <h1 class="masthead-title"><span class="masthead-ornament">¶</span>OpenAgent.review</h1>
+            <p class="masthead-sub">A structured AI reading of trending papers</p>
+          </a>
+          <div class="masthead-meta">
+            <p class="masthead-date" id="masthead-date">— · — — · —</p>
+            <p class="masthead-status">One review per paper · Filed on trend</p>
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch edition">
+              <span class="theme-toggle-glyph" aria-hidden="true">☀</span>
+              <span class="theme-toggle-label">Day edition</span>
+            </button>
           </div>
-        </>
-      ) : (
-        <nav class="navbar" aria-label="Primary">
-          <div class="navbar-inner">
-            <a href="/" class="navbar-brand">
-              <span class="brand-mark">O</span>
-              OpenAgent.review
-            </a>
-            <ul class="navbar-nav">
-              <li>
-                <a href="/browse/" class={activeNav === 'home' || activeNav === 'browse' ? 'active' : ''}>Browse</a>
-              </li>
-              <li>
-                <a href="/about/" class={activeNav === 'about' ? 'active' : ''}>About</a>
-              </li>
-            </ul>
-          </div>
+        </div>
+        <nav class="masthead-nav" aria-label="Primary">
+          <a href="/" class={activeNav === 'home' ? 'active' : ''}>Latest</a>
+          <a href="/browse/" class={activeNav === 'browse' ? 'active' : ''}>Browse</a>
+          <a href="/about/" class={activeNav === 'about' ? 'active' : ''}>About</a>
+          <span class="masthead-nav-spacer" aria-hidden="true"></span>
+          <span class="masthead-colophon">Set in Fraunces &amp; IBM Plex Mono, served from R2.</span>
         </nav>
-      )
-    }
+        <div class="masthead-rule" aria-hidden="true"></div>
+      </div>
+    </header>
 
     <main id="main">
       <slot />
     </main>
 
-    {!hideFooter && (
-      <footer class="site-footer">
-        <div class="container site-footer-inner">
-          <span>OpenAgent.review</span>
-          <nav class="site-footer-links" aria-label="Footer">
-            <a href="/browse/">Browse</a>
-            <a href="/about/">About</a>
-          </nav>
-        </div>
-      </footer>
-    )}
+    <footer class="site-footer" role="contentinfo">
+      <div class="site-footer-inner">
+        <p class="site-footer-colophon">
+          <b>Colophon</b>
+          An experimental reading surface for trending arXiv papers. Every review is a single-pass language-model reading, filed once per paper, on the day it trends. Not peer review.
+        </p>
+        <nav class="site-footer-links" aria-label="Footer">
+          <a href="/browse/">Browse</a>
+          <a href="/about/">About</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script is:inline>
+      (function () {
+        var KEY = 'oar-theme';
+        var btn = document.getElementById('theme-toggle');
+        var dateEl = document.getElementById('masthead-date');
+
+        // masthead date
+        if (dateEl) {
+          var d = new Date();
+          var wd = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+          var mo = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+          var dd = String(d.getDate()).padStart(2, '0');
+          var yy = String(d.getFullYear());
+          dateEl.textContent = 'VOL. II · ' + dd + ' ' + mo + ' ' + yy + ' · ' + wd;
+        }
+
+        function sync() {
+          var t = document.documentElement.getAttribute('data-theme') || 'day';
+          if (!btn) return;
+          var glyph = btn.querySelector('.theme-toggle-glyph');
+          var label = btn.querySelector('.theme-toggle-label');
+          if (glyph) glyph.textContent = t === 'night' ? '☾' : '☀';
+          if (label) label.textContent = t === 'night' ? 'Night edition' : 'Day edition';
+          btn.setAttribute('aria-label', 'Switch to ' + (t === 'night' ? 'day' : 'night') + ' edition');
+        }
+        sync();
+
+        document.addEventListener('click', function (e) {
+          if (!e.target || !(e.target.closest && e.target.closest('#theme-toggle'))) return;
+          var now = document.documentElement.getAttribute('data-theme') === 'night' ? 'day' : 'night';
+          document.documentElement.setAttribute('data-theme', now);
+          try { localStorage.setItem(KEY, now); } catch (_) {}
+          sync();
+        });
+      })();
+    </script>
   </body>
 </html>
 

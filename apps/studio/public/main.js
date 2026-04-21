@@ -1,13 +1,61 @@
 // OpenAgent Studio — vanilla SPA.
 //
 // Two views share the same root <main id="app">:
-//   Dashboard: HF trending, existing reviews, publish panel
+//   Dashboard: HF trending, existing reviews
 //   Editor:    per-paper form with LLM paste + structured fields
 //
 // Client-side routing via the `view` query param.
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// ---------- theme (day / night) ----------
+
+(function initTheme() {
+  const KEY = 'studio-theme';
+  const saved = localStorage.getItem(KEY);
+  const prefersDay = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+  const initial = saved || (prefersDay ? 'day' : 'night');
+  document.documentElement.setAttribute('data-theme', initial);
+
+  function syncButton() {
+    const t = document.documentElement.getAttribute('data-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const glyph = btn.querySelector('.theme-toggle-glyph');
+    const label = btn.querySelector('.theme-toggle-label');
+    if (glyph) glyph.textContent = t === 'day' ? '☀' : '☾';
+    if (label) label.textContent = t === 'day' ? 'Day edition' : 'Night edition';
+    btn.setAttribute('aria-label', `Switch to ${t === 'day' ? 'night' : 'day'} edition`);
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#theme-toggle')) return;
+    const next = document.documentElement.getAttribute('data-theme') === 'day' ? 'night' : 'day';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem(KEY, next);
+    syncButton();
+  });
+
+  // Button is in the HTML but glyph/label text is theme-dependent
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncButton, { once: true });
+  } else {
+    syncButton();
+  }
+})();
+
+// ---------- masthead date ----------
+
+(function setMastheadDate() {
+  const d = new Date();
+  const wd = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][d.getDay()];
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(2);
+  const target = document.getElementById('masthead-date');
+  if (target) target.textContent = `MS · ${mm}·${dd}·${yy} · ${wd}`;
+})();
 
 // ---------- tiny DOM helper ----------
 
@@ -43,7 +91,10 @@ function toast(msg, kind = 'ok', timeout = 3500) {
 // ---------- API ----------
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, opts);
+  // Strip leading slash so fetch resolves relative to document.baseURI.
+  // This lets Studio work both at http://host:4311/ (direct) and under a
+  // path-prefix proxy like JupyterHub's /user/<u>/proxy/4311/.
+  const res = await fetch(path.replace(/^\//, ''), opts);
   const ct = res.headers.get('content-type') ?? '';
   const payload = ct.includes('application/json') ? await res.json() : await res.text();
   if (!res.ok) {
@@ -104,58 +155,48 @@ let trendingCache = null;
 
 async function renderDashboard() {
   const root = $('#app');
-  mount(root,
+  const grid = el('div', { class: 'dashboard-grid' }, [
     buildTrendingPanel(),
     buildReviewsPanel(),
-    buildPublishPanel(),
-  );
+  ]);
+  mount(root, grid);
   await Promise.all([loadReviewsList(), trendingCache ? renderTrendingList(trendingCache) : null]);
 }
 
 function buildTrendingPanel() {
-  return el('section', { class: 'panel', id: 'trending-panel' }, [
-    el('div', { class: 'panel-title' }, [
-      el('h2', {}, 'HF Trending'),
-      el('div', { class: 'flex gap-2 items-center' }, [
-        el('input', {
-          type: 'text', id: 'arxiv-input', placeholder: 'Add by arXiv ID…',
-          style: { width: '200px' },
-          onkeydown: (e) => { if (e.key === 'Enter') startEditorByArxiv(); },
-        }),
-        el('button', { class: 'btn', onclick: startEditorByArxiv }, 'Open →'),
+  return el('section', { class: 'board board--trending', id: 'trending-panel' }, [
+    el('div', { class: 'board-head' }, [
+      el('div', {}, [
+        el('h2', { class: 'board-title' }, 'HF Trending'),
+        el('span', { class: 'board-subtitle' }, 'Incoming · hugging face'),
+      ]),
+      el('div', { class: 'board-actions' }, [
+        el('div', { class: 'inline-field' }, [
+          el('input', {
+            type: 'text', id: 'arxiv-input', placeholder: 'arXiv ID…',
+            onkeydown: (e) => { if (e.key === 'Enter') startEditorByArxiv(); },
+          }),
+          el('button', { class: 'btn-link', onclick: startEditorByArxiv }, 'Open →'),
+        ]),
         el('button', { class: 'btn btn-primary', id: 'sync-btn', onclick: syncTrending }, 'Sync trending'),
       ]),
     ]),
     el('div', { id: 'trending-list' }, [
-      el('p', { class: 'skel' }, 'Click "Sync trending" to pull the current HF trending list.'),
+      el('p', { class: 'skel' }, 'Click "Sync trending" to pull the current HF feed.'),
     ]),
   ]);
 }
 
 function buildReviewsPanel() {
-  return el('section', { class: 'panel' }, [
-    el('div', { class: 'panel-title' }, [
-      el('h2', {}, 'Existing reviews'),
-      el('span', { class: 'muted', id: 'reviews-count' }, '—'),
+  return el('section', { class: 'board board--reviews' }, [
+    el('div', { class: 'board-head' }, [
+      el('div', {}, [
+        el('h2', { class: 'board-title' }, 'Existing reviews'),
+        el('span', { class: 'board-subtitle' }, 'Filed · on disk'),
+      ]),
+      el('span', { class: 'board-count', id: 'reviews-count' }, '—'),
     ]),
     el('div', { id: 'reviews-list' }, [el('p', { class: 'skel' }, 'Loading…')]),
-  ]);
-}
-
-function buildPublishPanel() {
-  return el('section', { class: 'panel' }, [
-    el('div', { class: 'panel-title' }, [
-      el('h2', {}, 'Publish to R2'),
-      el('span', { class: 'muted' }, 'Production bucket — requires typed confirmation'),
-    ]),
-    el('div', { class: 'flex gap-2' }, [
-      el('button', { class: 'btn', onclick: openPublishModal }, 'Preview R2 changes'),
-    ]),
-    el('p', { class: 'muted mt-2' }, [
-      'Before publishing make sure ',
-      el('span', { class: 'kbd' }, '.env.local'),
-      ' is sourced in the terminal that runs this server (it carries the R2 credentials).',
-    ]),
   ]);
 }
 
@@ -172,25 +213,33 @@ async function loadReviewsList() {
   const count = $('#reviews-count');
   try {
     const reviews = await api('/api/reviews');
-    count.textContent = `${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
+    count.textContent = `${reviews.length} ON FILE`;
     if (reviews.length === 0) {
       mount(list, el('p', { class: 'skel' }, 'No reviews yet. Add one from trending or by arXiv ID above.'));
       return;
     }
-    const rows = reviews.map((r) => el('div', { class: 'row' }, [
-      el('span', { class: 'mono' }, r.arxiv_id || r.id.slice(0, 14)),
-      el('a', {
-        class: 'title', href: `?review=${encodeURIComponent(r.id)}`,
+    const rows = reviews.map((r) => {
+      const leaning = r.verdict_leaning || null;
+      const classes = ['listing', 'listing--review'];
+      if (leaning) classes.push(`listing--${leaning}`);
+      return el('a', {
+        class: classes.join(' '),
+        href: `?review=${encodeURIComponent(r.id)}`,
         onclick: (e) => { e.preventDefault(); navTo({ review: r.id }); },
-      }, r.title),
-      r.verdict_leaning
-        ? el('span', { class: `leaning-pill leaning-pill--${r.verdict_leaning}` }, r.verdict_leaning)
-        : el('span', { class: 'muted' }, '—'),
-      el('span', {}, [
-        el('span', { class: 'muted' }, r.date),
-        r.ethics_flag ? el('span', { class: 'status-chip ethics' }, '⚠ ethics') : null,
-      ]),
-    ]));
+      }, [
+        el('span', { class: 'listing-meta' }, [
+          el('span', { class: 'id' }, r.arxiv_id || r.id.slice(0, 16)),
+        ]),
+        el('span', { class: 'listing-right' }, r.date),
+        el('span', { class: 'listing-title' }, r.title),
+        el('span', { class: 'listing-status' }, [
+          leaning
+            ? el('span', { class: `leaning leaning--${leaning}` }, leaning)
+            : el('span', {}, '—'),
+          r.ethics_flag ? el('span', { class: 'ethics' }, '⚠ ethics') : null,
+        ]),
+      ]);
+    });
     mount(list, ...rows);
   } catch (e) {
     mount(list, el('div', { class: 'error-box' }, `Failed to load reviews: ${e.message}`));
@@ -231,79 +280,26 @@ async function renderTrendingList(papers) {
   const rows = papers.slice(0, 30).map((p) => {
     const arxivId = p.arxiv_id || (p.url?.match(/arxiv\.org\/abs\/(.+)/)?.[1] ?? '').replace(/v\d+$/, '');
     const reviewed = reviewedSet.has(arxivId);
-    return el('div', { class: 'row' }, [
-      el('span', { class: 'mono' }, [
-        `#${p.rank}  `,
-        el('span', { style: { color: 'var(--ink-2)' } }, arxivId),
+    const rank = String(p.rank).padStart(2, '0');
+    return el('a', {
+      class: 'listing listing--trending',
+      href: `?paper=${encodeURIComponent(arxivId)}`,
+      onclick: (e) => { e.preventDefault(); navTo(reviewed ? { review: null } : { paper: arxivId }); },
+    }, [
+      el('span', { class: 'listing-meta' }, [
+        el('span', { class: 'rank' }, `№ ${rank}`),
+        el('span', { class: 'id' }, arxivId),
       ]),
-      el('a', {
-        class: 'title', href: `?paper=${encodeURIComponent(arxivId)}`,
-        onclick: (e) => { e.preventDefault(); navTo(reviewed ? { review: null } : { paper: arxivId }); },
-      }, p.title),
-      el('span', { class: 'muted' }, p.upvotes != null ? `↑ ${p.upvotes}` : ''),
-      el('span', { class: `status-chip ${reviewed ? 'reviewed' : 'new'}` }, reviewed ? '✓ reviewed' : '○ new'),
+      el('span', { class: 'listing-right' }, p.upvotes != null ? `↑ ${p.upvotes}` : ''),
+      el('span', { class: 'listing-title' }, p.title),
+      el('span', { class: 'listing-status' }, [
+        reviewed
+          ? el('span', { class: 'status--reviewed' }, '✓ Reviewed')
+          : el('span', { class: 'status--new' }, '○ New'),
+      ]),
     ]);
   });
   mount(list, ...rows);
-}
-
-// ---------- publish modal ----------
-
-async function openPublishModal() {
-  const backdrop = el('div', { class: 'backdrop', onclick: (e) => { if (e.target === backdrop) backdrop.remove(); } });
-  const output = el('pre', { class: 'plan-output' }, 'Running publish_r2.py --dry-run…');
-  const confirmInput = el('input', { type: 'text', placeholder: 'Type "publish" to enable' });
-  const applyBtn = el('button', { class: 'btn btn-danger', disabled: true, onclick: () => runApply() }, 'Publish now');
-  const closeBtn = el('button', { class: 'btn', onclick: () => backdrop.remove() }, 'Close');
-
-  confirmInput.addEventListener('input', () => { applyBtn.disabled = confirmInput.value.trim() !== 'publish'; });
-
-  const modal = el('div', { class: 'modal' }, [
-    el('div', { class: 'modal-head' }, [
-      el('h3', {}, 'Publish to R2 — production'),
-      el('button', { class: 'btn-link', onclick: () => backdrop.remove() }, '✕'),
-    ]),
-    el('div', { class: 'modal-body' }, [
-      el('p', { class: 'muted' }, 'Dry-run plan:'),
-      output,
-      el('div', { class: 'field mt-2' }, [
-        el('label', {}, 'Confirm — type the word "publish"'),
-        confirmInput,
-      ]),
-    ]),
-    el('div', { class: 'modal-foot' }, [closeBtn, applyBtn]),
-  ]);
-
-  backdrop.appendChild(modal);
-  document.body.appendChild(backdrop);
-
-  try {
-    const plan = await api('/api/publish/plan', { method: 'POST' });
-    output.textContent = plan.stdout || plan.stderr || '(no output)';
-    if (plan.exit !== 0) output.textContent += `\n\n[exit ${plan.exit}]\n${plan.stderr || ''}`;
-  } catch (e) {
-    output.textContent = `plan failed: ${e.message}`;
-  }
-
-  async function runApply() {
-    applyBtn.disabled = true;
-    applyBtn.textContent = 'Publishing…';
-    try {
-      const r = await api('/api/publish/apply', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ confirm: 'publish' }),
-      });
-      output.textContent = r.stdout || r.stderr || '(no output)';
-      if (r.exit === 0) toast('Published to R2', 'ok'); else toast(`Publish exited ${r.exit}`, 'err');
-    } catch (e) {
-      output.textContent = `publish failed: ${e.message}`;
-      toast('Publish failed', 'err');
-    } finally {
-      applyBtn.textContent = 'Publish now';
-      applyBtn.disabled = false;
-    }
-  }
 }
 
 // ---------- editor ----------
@@ -378,57 +374,68 @@ async function renderEditor({ reviewId, arxivId }) {
 }
 
 function buildEditorView(review, isNew) {
-  const container = el('div', { id: 'editor-root' });
+  const container = el('div', { class: 'editor-root' });
 
-  // Block A: arxiv metadata
-  const blockA = el('section', { class: 'panel' }, [
-    el('div', { class: 'panel-title' }, [
-      el('h2', {}, isNew ? 'New review' : `Review ${review.id}`),
-      el('button', { class: 'btn-link', onclick: () => navTo({}) }, '← Back to dashboard'),
+  // Chapter I — Paper metadata
+  const chapterA = el('section', { class: 'chapter chapter--paper' }, [
+    el('header', { class: 'chapter-head' }, [
+      el('span', { class: 'chapter-num' }, 'I · Paper'),
+      el('h2', { class: 'chapter-title' },
+        isNew ? [el('em', {}, 'new record')] : [review.id],
+      ),
+      el('div', { class: 'chapter-action' }, [
+        el('button', { class: 'btn-link', onclick: () => navTo({}) }, '← Back'),
+      ]),
     ]),
-    el('div', { class: 'form-grid' }, [
+    el('p', { class: 'chapter-lede' },
+      'From arXiv. Title, abstract and categories are passed through verbatim — edit HF rank if you want to pin its discovery position.'),
+    el('div', { class: 'field-grid' }, [
       buildField('Title', 'title', review.title),
       buildField('arXiv URL', 'paper_url', review.paper_url),
     ]),
     buildField('Abstract (arXiv)', 'abstract', review.abstract, { textarea: true, tall: true }),
-    el('div', { class: 'form-grid' }, [
+    el('div', { class: 'field-grid' }, [
       buildField('Categories (comma-separated)', 'arxiv_categories', (review.arxiv_categories || []).join(', ')),
       buildField('HF rank', 'hf_rank', review.hf_rank ?? '', { type: 'number' }),
     ]),
   ]);
 
-  // Block B: bulk paste
+  // Chapter II — Paste LLM output
   const pasteArea = el('textarea', {
     class: 'tall',
     id: 'bulk-json',
-    placeholder: '{\n  "ai_review": { ... },\n  "review_highlights": { ... }\n}\n\nAccepts either just { ai_review, review_highlights } or a full review record.',
+    placeholder: '{\n  "ai_review": { ... },\n  "review_highlights": { ... }\n}\n\nAccepts { ai_review, review_highlights } or a full review record.',
   });
-  const blockB = el('section', { class: 'panel' }, [
-    el('div', { class: 'panel-title' }, [
-      el('h2', {}, 'Paste LLM output'),
-      el('button', { class: 'btn', onclick: () => parseBulk(pasteArea.value, review) }, 'Parse & fill'),
+  const chapterB = el('section', { class: 'chapter chapter--paste' }, [
+    el('header', { class: 'chapter-head' }, [
+      el('span', { class: 'chapter-num' }, 'II · Paste'),
+      el('h2', { class: 'chapter-title' }, [el('em', {}, 'LLM output')]),
+      el('div', { class: 'chapter-action' }, [
+        el('button', { class: 'btn', onclick: () => parseBulk(pasteArea.value, review) }, 'Parse & fill'),
+      ]),
     ]),
-    el('p', { class: 'muted' }, 'Paste the JSON the LLM returns; Block C fields will be populated. You can still edit individual fields afterward.'),
+    el('p', { class: 'chapter-lede' },
+      'Paste the JSON the model returns. Chapter III fields are populated and remain editable afterward — this is a one-way shovel, not a live binding.'),
     pasteArea,
   ]);
 
-  // Block C: structured fields
-  const blockC = buildStructuredFields(review);
+  // Chapter III — Structured judgment
+  const chapterC = buildStructuredFields(review);
 
   // Footer
   const saveBtn = el('button', { class: 'btn btn-primary', onclick: () => saveEditor(review) }, isNew ? 'Save new review' : 'Save changes');
   const cancelBtn = el('button', { class: 'btn', onclick: () => navTo({}) }, 'Cancel');
 
-  container.appendChild(blockA);
-  container.appendChild(blockB);
-  container.appendChild(blockC);
-  container.appendChild(el('div', { class: 'flex gap-2', style: { justifyContent: 'flex-end' } }, [cancelBtn, saveBtn]));
+  container.appendChild(chapterA);
+  container.appendChild(chapterB);
+  container.appendChild(chapterC);
+  container.appendChild(el('div', { class: 'footer-bar' }, [cancelBtn, saveBtn]));
   return container;
 }
 
 function buildField(label, key, value, opts = {}) {
   const id = `f-${key}`;
-  const field = el('div', { class: 'field' }, [el('label', { for: id }, label)]);
+  const field = el('div', { class: 'field' }, [el('label', { for: id, class: 'field-label' }, label)]);
   const input = opts.textarea
     ? el('textarea', { id, class: opts.tall ? 'tall' : '' }, String(value || ''))
     : el('input', { id, type: opts.type || 'text', value: value ?? '' });
@@ -436,88 +443,181 @@ function buildField(label, key, value, opts = {}) {
   return field;
 }
 
+// ----- stepper / tick / verdict widgets -----
+
+function buildDotStepper(hiddenId, value, max, ariaLabel) {
+  const hidden = el('input', { type: 'hidden', id: hiddenId, value: String(value || 3) });
+  const group = el('div', { class: hiddenId.startsWith('rating-') ? 'rating-dots' : 'conf-dots', role: 'radiogroup', 'aria-label': ariaLabel });
+  for (let i = 1; i <= max; i++) {
+    const dot = el('button', {
+      type: 'button',
+      class: hiddenId.startsWith('rating-') ? 'rating-dot' : 'conf-dot',
+      role: 'radio',
+      'aria-checked': String(i === value),
+      'aria-label': `${ariaLabel} ${i}`,
+      'data-value': String(i),
+      onclick: () => setStepperValue(hiddenId, i),
+    });
+    group.appendChild(dot);
+  }
+  group.appendChild(hidden);
+  return group;
+}
+
+function setStepperValue(hiddenId, value) {
+  const hidden = $(`#${hiddenId}`);
+  if (!hidden) return;
+  hidden.value = String(value);
+  const group = hidden.parentElement;
+  if (!group) return;
+  group.querySelectorAll('[role="radio"]').forEach((b) => {
+    b.setAttribute('aria-checked', b.dataset.value === String(value) ? 'true' : 'false');
+  });
+}
+
+function buildTickRow(hiddenId, value, options) {
+  const hidden = el('input', { type: 'hidden', id: hiddenId, value: String(value) });
+  const group = el('div', { class: 'tick-row', role: 'radiogroup', 'aria-label': 'Overall recommendation' });
+  options.forEach((label, idx) => {
+    const val = idx + 1;
+    const btn = el('button', {
+      type: 'button',
+      class: 'tick',
+      role: 'radio',
+      'aria-checked': String(val === value),
+      'aria-label': label,
+      'data-value': String(val),
+      onclick: () => setTickValue(hiddenId, val),
+    }, [
+      el('span', { class: 'tick-num' }, String(val)),
+      label,
+    ]);
+    group.appendChild(btn);
+  });
+  group.appendChild(hidden);
+  return group;
+}
+
+function setTickValue(hiddenId, value) {
+  const hidden = $(`#${hiddenId}`);
+  if (!hidden) return;
+  hidden.value = String(value);
+  const group = hidden.parentElement;
+  if (!group) return;
+  group.querySelectorAll('[role="radio"]').forEach((b) => {
+    b.setAttribute('aria-checked', b.dataset.value === String(value) ? 'true' : 'false');
+  });
+}
+
+function buildVerdictCards(value) {
+  const options = [
+    { val: 'positive', name: 'Positive', gloss: 'The agent is net-optimistic.' },
+    { val: 'mixed',    name: 'Mixed',    gloss: 'Strengths and concerns offset.' },
+    { val: 'critical', name: 'Critical', gloss: 'Serious doubts dominate.' },
+  ];
+  const group = el('div', { class: 'verdict-cards' });
+  options.forEach((o) => {
+    const card = el('label', { class: `verdict-card verdict-card--${o.val}` }, [
+      el('input', { type: 'radio', name: 'verdict_leaning', value: o.val, checked: value === o.val }),
+      el('span', { class: 'verdict-card-name' }, o.name),
+      el('span', { class: 'verdict-card-gloss' }, o.gloss),
+    ]);
+    group.appendChild(card);
+  });
+  return group;
+}
+
 function buildStructuredFields(review) {
   const ai = review.ai_review;
   const rh = review.review_highlights;
-  const panel = el('section', { class: 'panel' }, [
-    el('div', { class: 'panel-title' }, [el('h2', {}, 'Structured review')]),
-    buildField('Summary (paper in 60s, LaTeX OK)', 'summary', ai.summary, { textarea: true }),
+  const recLabels = ['S · Rej', 'Rej', 'W · Rej', 'W · Acc', 'Acc', 'S · Acc'];
+
+  return el('section', { class: 'chapter chapter--judgment' }, [
+    el('header', { class: 'chapter-head' }, [
+      el('span', { class: 'chapter-num' }, 'III · Judgment'),
+      el('h2', { class: 'chapter-title' }, [el('em', {}, 'structured review')]),
+    ]),
+    el('p', { class: 'chapter-lede' },
+      'Four dimensions, open questions, a single recommendation on the conference scale, and a feed-ready one-line verdict.'),
+
+    buildField('Summary (paper in 60 s, LaTeX OK)', 'summary', ai.summary, { textarea: true }),
     buildField('Strengths & weaknesses (LaTeX OK)', 'strengths_weaknesses', ai.strengths_weaknesses, { textarea: true, tall: true }),
 
-    el('h3', { style: { margin: '18px 0 8px', fontSize: '14px' } }, 'Ratings (1–4)'),
-    el('div', {}, ['soundness', 'presentation', 'significance', 'originality'].map((k) => el('div', { class: 'rating-row' }, [
-      el('span', {}, k),
-      el('select', { id: `rating-${k}-score` }, [1, 2, 3, 4].map((n) => el('option', { value: n, selected: n === ai.ratings[k].score }, String(n)))),
-      el('input', { id: `rating-${k}-note`, type: 'text', value: ai.ratings[k].note, placeholder: 'One-line justification' }),
-    ]))),
+    // Ratings
+    el('h3', { class: 'sub-heading' }, 'Dimensions · 1–4'),
+    el('div', { class: 'rating-table' }, ['soundness', 'presentation', 'significance', 'originality'].map((k) =>
+      el('div', { class: 'rating-row' }, [
+        el('span', { class: 'rating-name' }, k),
+        buildDotStepper(`rating-${k}-score`, ai.ratings[k].score, 4, `${k} score`),
+        el('input', {
+          id: `rating-${k}-note`, class: 'rating-note', type: 'text',
+          value: ai.ratings[k].note, placeholder: 'One-line justification',
+        }),
+      ])
+    )),
 
-    el('h3', { style: { margin: '18px 0 8px', fontSize: '14px' } }, 'Key questions'),
-    el('div', { id: 'kq-list' }, (ai.key_questions.length ? ai.key_questions : [{ question: '', tag: '' }]).map((q, i) => buildKqRow(q, i))),
-    el('button', { class: 'btn', type: 'button', onclick: addKqRow, style: { marginTop: '6px' } }, '+ Add question'),
+    // Key questions
+    el('h3', { class: 'sub-heading' }, 'Open questions'),
+    el('div', { id: 'kq-list', class: 'kq-list' },
+      (ai.key_questions.length ? ai.key_questions : [{ question: '', tag: '' }]).map((q, i) => buildKqRow(q, i))),
+    el('button', { class: 'btn', type: 'button', onclick: addKqRow, style: { marginTop: '8px' } }, '+ Add question'),
 
     buildField('Limitations (LaTeX OK)', 'limitations', ai.limitations, { textarea: true }),
 
-    el('div', { class: 'form-grid' }, [
-      el('div', { class: 'field' }, [
-        el('label', {}, 'Overall recommendation (1–6)'),
-        el('select', { id: 'f-overall_recommendation' }, [1, 2, 3, 4, 5, 6].map((n) =>
-          el('option', { value: n, selected: n === ai.overall_recommendation }, recommendationLabel(n))
-        )),
-      ]),
-      el('div', { class: 'field' }, [
-        el('label', {}, 'Confidence (1–5)'),
-        el('select', { id: 'f-confidence' }, [1, 2, 3, 4, 5].map((n) =>
-          el('option', { value: n, selected: n === ai.confidence }, String(n))
-        )),
-      ]),
+    // Overall recommendation
+    el('h3', { class: 'sub-heading' }, 'Overall recommendation'),
+    buildTickRow('f-overall_recommendation', ai.overall_recommendation, recLabels),
+
+    // Confidence
+    el('h3', { class: 'sub-heading' }, 'Confidence · 1–5'),
+    el('div', { class: 'conf-block' }, [
+      buildDotStepper('f-confidence', ai.confidence, 5, 'Confidence'),
+      el('span', { class: 'conf-label' }, 'Reviewer certainty'),
     ]),
 
-    el('div', { class: 'field-inline mb-2' }, [
-      el('input', { type: 'checkbox', id: 'f-ethics', checked: !!ai.ethics_flag, onchange: (e) => {
-        $('#f-ethics-concerns-wrap').style.display = e.target.checked ? 'block' : 'none';
-      }}),
-      el('label', { for: 'f-ethics', style: { margin: 0 } }, 'Flag for ethics review'),
+    // Ethics
+    el('h3', { class: 'sub-heading' }, 'Ethics'),
+    el('label', { class: 'ethics-toggle', for: 'f-ethics' }, [
+      el('input', {
+        type: 'checkbox', id: 'f-ethics', checked: !!ai.ethics_flag,
+        onchange: (e) => { $('#f-ethics-concerns-wrap').style.display = e.target.checked ? 'block' : 'none'; },
+      }),
+      'Flag for ethics review',
     ]),
-    el('div', { id: 'f-ethics-concerns-wrap', style: { display: ai.ethics_flag ? 'block' : 'none' } }, [
+    el('div', { id: 'f-ethics-concerns-wrap', class: 'ethics-wrap', style: { display: ai.ethics_flag ? 'block' : 'none' } }, [
       buildField('Ethics concerns', 'ethics_concerns', ai.ethics_concerns || '', { textarea: true }),
     ]),
 
-    el('h3', { style: { margin: '18px 0 8px', fontSize: '14px' } }, 'Feed highlights'),
-    buildField('Why read (1 sentence)', 'why_read', rh.why_read),
-    buildField('Why doubt (1 sentence)', 'why_doubt', rh.why_doubt),
+    // Feed highlights
+    el('h3', { class: 'sub-heading' }, 'Feed highlights'),
+    el('div', { class: 'field-grid' }, [
+      buildField('Why read · 1 sentence', 'why_read', rh.why_read),
+      buildField('Why doubt · 1 sentence', 'why_doubt', rh.why_doubt),
+    ]),
     el('div', { class: 'field' }, [
-      el('label', {}, 'Verdict leaning'),
-      el('div', { class: 'flex gap-3' }, ['positive', 'mixed', 'critical'].map((val) =>
-        el('label', { class: 'flex items-center gap-2', style: { margin: 0, fontWeight: 'normal' } }, [
-          el('input', { type: 'radio', name: 'verdict_leaning', value: val, checked: rh.verdict_leaning === val }),
-          val,
-        ])
-      )),
+      el('span', { class: 'field-label' }, 'Verdict leaning'),
+      buildVerdictCards(rh.verdict_leaning),
     ]),
   ]);
-  return panel;
 }
 
 function buildKqRow(q, i) {
-  return el('div', { class: 'rating-row kq-row' }, [
-    el('span', { class: 'muted' }, `#${i + 1}`),
-    el('input', { type: 'text', class: 'kq-tag', placeholder: 'tag e.g. could raise soundness', value: q.tag || '' }),
-    el('div', { class: 'flex gap-2' }, [
-      el('textarea', { class: 'kq-question', placeholder: 'Question text…', style: { minHeight: '60px' } }, q.question || ''),
-      el('button', { class: 'btn btn-link', type: 'button', style: { color: 'var(--red)', alignSelf: 'start' }, onclick: (e) => {
-        e.target.closest('.kq-row').remove();
-      } }, '✕'),
-    ]),
-  ]);
+  const row = el('div', { class: 'kq-row' });
+  row.appendChild(el('span', { class: 'kq-num' }, `Q.${String(i + 1).padStart(2, '0')}`));
+  row.appendChild(el('div', { class: 'kq-body' }, [
+    el('input', { type: 'text', class: 'kq-tag', placeholder: 'tag · e.g. could raise soundness', value: q.tag || '' }),
+    el('textarea', { class: 'kq-question', placeholder: 'Question text…' }, q.question || ''),
+  ]));
+  row.appendChild(el('button', {
+    class: 'kq-remove', type: 'button',
+    onclick: (e) => e.target.closest('.kq-row').remove(),
+  }, 'remove'));
+  return row;
 }
 
 function addKqRow() {
   const list = $('#kq-list');
   list.appendChild(buildKqRow({}, list.children.length));
-}
-
-function recommendationLabel(n) {
-  return ({ 1: '1 · Strong Reject', 2: '2 · Reject', 3: '3 · Weak Reject', 4: '4 · Weak Accept', 5: '5 · Accept', 6: '6 · Strong Accept' })[n];
 }
 
 function parseBulk(raw, review) {
@@ -535,7 +635,7 @@ function parseBulk(raw, review) {
   if (ai?.ratings) {
     for (const k of ['soundness', 'presentation', 'significance', 'originality']) {
       if (ai.ratings[k]) {
-        $(`#rating-${k}-score`).value = String(ai.ratings[k].score ?? 3);
+        setStepperValue(`rating-${k}-score`, ai.ratings[k].score ?? 3);
         $(`#rating-${k}-note`).value = ai.ratings[k].note ?? '';
       }
     }
@@ -545,8 +645,8 @@ function parseBulk(raw, review) {
     mount(list, ...ai.key_questions.map((q, i) => buildKqRow(q, i)));
     if (!ai.key_questions.length) list.appendChild(buildKqRow({}, 0));
   }
-  if (ai?.overall_recommendation != null) $('#f-overall_recommendation').value = String(ai.overall_recommendation);
-  if (ai?.confidence != null) $('#f-confidence').value = String(ai.confidence);
+  if (ai?.overall_recommendation != null) setTickValue('f-overall_recommendation', Number(ai.overall_recommendation));
+  if (ai?.confidence != null) setStepperValue('f-confidence', Number(ai.confidence));
   if (ai?.ethics_flag != null) {
     $('#f-ethics').checked = !!ai.ethics_flag;
     $('#f-ethics-concerns-wrap').style.display = ai.ethics_flag ? 'block' : 'none';

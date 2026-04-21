@@ -140,21 +140,20 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 
 **公共站点是只读的**。`apps/web/` 发布出去的 `openagent.review` 永远不包含编辑界面 — 它从 R2 拉 JSON, 渲染, 结束。
 
-**写入发生在 `apps/studio/`**, 一个**本地**的 Node 小服务器, 绑定 `127.0.0.1:4311`, **不上云**。Studio 的职责:
+**写入发生在 `apps/studio/`**, 一个 Node 小服务器, 绑定 `0.0.0.0:4311` (允许同网段 LAN 访问, 不上公网)。Studio 的职责:
 
 - 同步 HF Trending, 展示候选论文
 - 拉 arXiv metadata, 预填只读区域
 - 提供"粘贴 LLM 输出"的区域, 让作者把结构化 review JSON 贴进去
 - 派生 feed-card 字段 (why_read / why_doubt / verdict_leaning), 或接受作者手写
 - 表单校验 → 写 `data/reviews/{id}.json` → 触发 `build_indexes.py`
-- 可选: 调用 `publish_r2.py` 把新数据推到 R2
 
 **关键工程纪律**:
 
 - Studio **和公共站共用 `data/reviews/` 这个目录**。不论是命令行手写, 还是 studio 界面保存, 写入路径一致, 仓库里的 JSON 文件**永远是单一真实来源**。
-- Studio **不绕过三层 R2 保险**。publish 走同一个 `publish_r2.py` 子进程, dry-run → 打字确认 → apply, 流程跟 CLI 完全同构。
+- Studio **不具备 publish 能力**。Publish 是 CLI-only 的职责, 只走 `tools/publish_r2.py` (或 `pnpm publish:data:prod` 等), 三层保险 (dry-run → 打字确认 → apply) 只存在于 CLI 一条路径, 跟 §6 "R2 publisher 的三层保险不能绕过" 强一致。新增 publish 入口前先读 §6。
 - Studio **不存 state**。关掉服务器等于零副作用。所有持久化都在 `data/**`。
-- Studio **没有账号**。127.0.0.1 绑定意味着"有 shell 的人就能改", 加登录只是表演。
+- Studio **没有账号**。0.0.0.0 + 无认证意味着"同网段能连到端口的人就能改 `data/reviews/`", 所以只应在可信网络 (家里 / 公司内网) 里跑, 加登录只是表演, 真正的防线是网络边界和"publish 路径不在这里"。
 
 这条原则让"写作者使用什么工具"和"读者看到什么"彻底解耦。以后就算 studio 被另一个工具取代 (比如 VSCode 扩展, 或真 LLM 自动写), 只要新的写入工具仍然产出合法的 `data/reviews/*.json`, 整条发布流水线完全不知道发生了什么变化。
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * OpenAgent Studio — local authoring server.
+ * OpenAgent Studio — authoring server.
  *
- * Local-only by design: binds 127.0.0.1 and never expected to be deployed.
- * Bridges the browser UI to the existing Python pipeline via child_process.
+ * Binds 0.0.0.0 to allow LAN access. No authentication — only run on trusted
+ * networks. Studio has no ability to publish to R2 by design; pushing data to
+ * R2 is CLI-only via tools/publish_r2.py.
  *
  * Routes (see apps/studio/README.md for the UX flow):
  *   GET  /                       → SPA shell
@@ -13,8 +14,6 @@
  *   POST /api/reviews            → save a new review (validate → write → reindex)
  *   GET  /api/trending           → fetch HF trending (via tools/fetch_hf.py --json-stdout)
  *   GET  /api/arxiv?id=...       → fetch arXiv metadata for a paper
- *   POST /api/publish/plan       → run publish_r2.py --prod --dry-run
- *   POST /api/publish/apply      → run publish_r2.py --prod --force (with confirm guard)
  */
 
 import { createServer } from 'node:http';
@@ -25,7 +24,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const HOST = '127.0.0.1';
+const HOST = '0.0.0.0';
 const PORT = Number(process.env.STUDIO_PORT) || 4311;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,12 +35,14 @@ const PUBLIC_DIR = join(__dirname, 'public');
 // ---------- small helpers ----------
 
 const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg':  'image/svg+xml',
-  '.ico':  'image/x-icon',
+  '.html':  'text/html; charset=utf-8',
+  '.js':    'application/javascript; charset=utf-8',
+  '.css':   'text/css; charset=utf-8',
+  '.json':  'application/json; charset=utf-8',
+  '.svg':   'image/svg+xml',
+  '.ico':   'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.woff':  'font/woff',
 };
 
 function send(res, code, body, headers = {}) {
@@ -199,35 +200,6 @@ async function fetchArxiv(id) {
   }
 }
 
-// ---------- R2 publish bridges ----------
-
-async function publishPlan() {
-  const r = await runChild('python3', [
-    join(REPO_ROOT, 'tools', 'publish_r2.py'),
-    '--prod', '--dry-run',
-  ]);
-  return {
-    code: r.code === 0 ? 200 : 500,
-    body: { stdout: r.stdout, stderr: r.stderr, exit: r.code },
-  };
-}
-
-async function publishApply(body) {
-  let parsed;
-  try { parsed = JSON.parse(body); } catch { return { code: 400, error: 'invalid JSON body' }; }
-  if (parsed?.confirm !== 'publish') {
-    return { code: 428, error: 'confirm field must equal the string "publish"' };
-  }
-  const r = await runChild('python3', [
-    join(REPO_ROOT, 'tools', 'publish_r2.py'),
-    '--prod', '--force',
-  ], { env: { REFRESH_YES: '1' } });
-  return {
-    code: r.code === 0 ? 200 : 500,
-    body: { stdout: r.stdout, stderr: r.stderr, exit: r.code },
-  };
-}
-
 // ---------- router ----------
 
 async function handle(req, res) {
@@ -266,16 +238,6 @@ async function handle(req, res) {
     if (req.method === 'GET' && pathname === '/api/arxiv') {
       const id = url.searchParams.get('id');
       const r = await fetchArxiv(id);
-      if (r.error) return send(res, r.code, { error: r.error });
-      return send(res, r.code, r.body);
-    }
-    if (req.method === 'POST' && pathname === '/api/publish/plan') {
-      const r = await publishPlan();
-      return send(res, r.code, r.body);
-    }
-    if (req.method === 'POST' && pathname === '/api/publish/apply') {
-      const body = await readBody(req);
-      const r = await publishApply(body);
       if (r.error) return send(res, r.code, { error: r.error });
       return send(res, r.code, r.body);
     }
