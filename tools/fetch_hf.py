@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch trending papers from Hugging Face.
 
-Product thesis (see product_manager/philosophy_2026-04-20.md):
+Product thesis (see PHILOSOPHY.md):
 this pipeline is trending-driven, not calendar-driven. HF ships the
 trending list as server-rendered HTML with a `data-target="DailyPapers"`
 mount whose `data-props` attribute is a JSON blob containing every

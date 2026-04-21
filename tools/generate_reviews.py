@@ -4,7 +4,7 @@
 One review per arXiv paper, forever. If the paper has already been
 reviewed (matching by arXiv ID extracted from paper_url), the entry
 is skipped unless --force is passed. See
-product_manager/philosophy_2026-04-20.md §4 for the rule.
+PHILOSOPHY.md §4 for the rule.
 
 Shape matches contracts/review.schema.json (ai_review as a structured
 object with Summary, Strengths & Weaknesses, four dimension ratings,

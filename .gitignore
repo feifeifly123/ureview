@@ -7,3 +7,19 @@ data/raw/
 __pycache__/
 .venv/
 .wrangler/
+
+# Ad-hoc audit artifacts — screenshots + zips + patches at root.
+# Subdirectories can still hold intentional images (apps/**, product_manager/**).
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.zip
+/*.patch
+/*.diff
+
+# Tool caches and stale debug dumps.
+.playwright-mcp/
+.ipynb_checkpoints/
+screenshots/
+debug_*/
