@@ -4177,3 +4177,109 @@ textarea:focus-visible {
   .review-header { padding: 18px 18px; }
 }
 
+/* =========================================================================
+   Browse filter bar — review-aware chip groups + sort pills.
+   Replaces the legacy search + sort select + clear-filters toolbar.
+   ========================================================================= */
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--color-canvas-2);
+  border: 1px solid var(--color-rule);
+  margin-bottom: 18px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-label {
+  min-width: 96px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filter-hint {
+  font-size: 12px;
+  color: var(--color-ink-4);
+  font-style: italic;
+}
+
+.filter-chip {
+  appearance: none;
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink-2);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.filter-chip:hover { border-color: var(--color-ink-4); color: var(--color-ink); }
+
+.filter-chip.active {
+  background: var(--color-primary-soft);
+  border-color: transparent;
+  color: var(--color-primary);
+}
+
+.filter-chip .chip-count {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.filter-chip.active .chip-count {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Semantic colors for leaning chips when active */
+.filter-chip.active[data-leaning="positive"] { background: #DCFCE7; color: #15803D; }
+.filter-chip.active[data-leaning="mixed"]    { background: #FEF3C7; color: #B45309; }
+.filter-chip.active[data-leaning="critical"] { background: #FEE2E2; color: #B91C1C; }
+.filter-chip.active[data-ethics]              { background: #FEE2E2; color: #B91C1C; }
+
+.filter-row--sort { margin-top: 2px; }
+.filter-row--sort .filter-chip { font-weight: 700; }
+
+.browse-count {
+  font-size: 13px;
+  color: var(--color-ink-3);
+  margin-bottom: 10px;
+}
+
+#browse-empty-state.empty:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .filter-bar { padding: 10px 12px; }
+  .filter-label {
+    min-width: 0;
+    flex: 0 0 100%;
+    margin-right: 0;
+  }
+  .filter-row { gap: 6px; }
+}
+

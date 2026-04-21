@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Browse reviews"
-  description="Browse recent OpenAgent.review papers — search titles and abstracts, sort by date or trending rank."
+  description="Browse OpenAgent.review by agent verdict — filter by leaning, confidence, ethics, and arXiv category."
   activeNav="browse"
 >
   <div class="page-header page-header--browse">
@@ -18,7 +18,7 @@ import Layout from '../components/Layout.astro';
         <div>
           <h1>Browse recent reviews</h1>
           <p class="subtitle">
-            Search by title or abstract, sort by review recency or HF rank, then open the structured review.
+            Filter the current snapshot by the agent's verdict — leaning, confidence, ethics flag, arXiv category — and sort by what matters.
           </p>
         </div>
         <div class="page-header-aside" id="browse-header-aside" aria-live="polite"></div>
@@ -27,31 +27,25 @@ import Layout from '../components/Layout.astro';
   </div>
 
   <div class="container browse-shell">
-    <section class="browse-toolbar-card" aria-label="Browse controls">
-      <div class="browse-toolbar-top">
-        <label class="browse-search">
-          <span class="sr-only">Search review queue</span>
-          <input id="browse-search" type="search" placeholder="Search title or abstract" />
-        </label>
-
-        <label class="browse-sort-label">
-          <span>Sort</span>
-          <select id="browse-sort">
-            <option value="newest">Newest</option>
-            <option value="hf">HF rank (first seen)</option>
-          </select>
-        </label>
-
-        <button type="button" class="btn-secondary btn-secondary--compact" id="browse-copy-link">
-          Copy current view
-        </button>
+    <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
+      <div class="filter-row" data-filter="leaning">
+        <span class="filter-label">Leaning</span>
       </div>
-
-      <div class="browse-toolbar-bottom">
-        <div id="browse-results-count" class="browse-results-count">Loading…</div>
-        <button type="button" class="browse-clear-filters" id="browse-clear-filters">Clear filters</button>
+      <div class="filter-row" data-filter="confidence">
+        <span class="filter-label">Confidence</span>
+      </div>
+      <div class="filter-row" data-filter="ethics">
+        <span class="filter-label">Flags</span>
+      </div>
+      <div class="filter-row" data-filter="categories">
+        <span class="filter-label">Category</span>
+      </div>
+      <div class="filter-row filter-row--sort" data-filter="sort">
+        <span class="filter-label">Sort</span>
       </div>
     </section>
+
+    <div class="browse-count" id="browse-count" aria-live="polite">Loading…</div>
 
     <section class="browse-list" id="browse-list" aria-live="polite">
       <div class="state loading">
@@ -60,8 +54,8 @@ import Layout from '../components/Layout.astro';
     </section>
 
     <div class="state empty" id="browse-empty-state" hidden>
-      <strong>No reviews match this view</strong>
-      <span>Clear the search or try a different query.</span>
+      <strong>No reviews match this combination.</strong>
+      <button type="button" class="btn-secondary btn-secondary--compact" id="browse-reset">Reset filters</button>
     </div>
   </div>
 </Layout>
@@ -70,10 +64,204 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDateTime } from '../lib/utils';
-  import { buildFeedCard } from '../lib/feed-card';
-  import type { LatestReviewEntry } from '../lib/types';
+  import { buildFeedCard, confidenceBand } from '../lib/feed-card';
+  import type { LatestReviewEntry, VerdictLeaning } from '../lib/types';
 
-  type SortKey = 'newest' | 'hf';
+  type ConfidenceBand = 'high' | 'medium' | 'low';
+  type SortKey = 'leaning' | 'recommendation' | 'hf' | 'newest';
+
+  const DEFAULT_SORT: SortKey = 'leaning';
+  const LEANING_ORDER: Record<VerdictLeaning, number> = { positive: 0, mixed: 1, critical: 2 };
+
+  const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+    { key: 'leaning', label: 'Leaning' },
+    { key: 'recommendation', label: 'Recommendation' },
+    { key: 'hf', label: 'HF rank' },
+    { key: 'newest', label: 'Newest' },
+  ];
+
+  const LEANING_OPTIONS: Array<{ value: VerdictLeaning; label: string }> = [
+    { value: 'positive', label: 'Positive' },
+    { value: 'mixed', label: 'Mixed' },
+    { value: 'critical', label: 'Critical' },
+  ];
+
+  const CONFIDENCE_OPTIONS: Array<{ value: ConfidenceBand; label: string }> = [
+    { value: 'high', label: 'High' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'low', label: 'Low' },
+  ];
+
+  // ---------- state ----------
+
+  const state = {
+    leaning: new Set<VerdictLeaning>(),
+    confidence: new Set<ConfidenceBand>(),
+    ethics: false,
+    categories: new Set<string>(),
+    sort: DEFAULT_SORT,
+  };
+
+  function readStateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const takeSet = <T extends string>(name: string, allowed: readonly T[]): Set<T> => {
+      const raw = (params.get(name) ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+      return new Set(raw.filter((v): v is T => (allowed as readonly string[]).includes(v)));
+    };
+    state.leaning = takeSet('leaning', ['positive', 'mixed', 'critical'] as const);
+    state.confidence = takeSet('confidence', ['high', 'medium', 'low'] as const);
+    state.ethics = params.get('ethics') === '1';
+    state.categories = new Set((params.get('cat') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+    const sortParam = params.get('sort');
+    state.sort = SORT_OPTIONS.find((o) => o.key === sortParam)?.key ?? DEFAULT_SORT;
+  }
+
+  function writeStateToUrl() {
+    const url = new URL(window.location.href);
+    const setOrDelete = (name: string, value: string) => {
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+    };
+    setOrDelete('leaning', [...state.leaning].join(','));
+    setOrDelete('confidence', [...state.confidence].join(','));
+    setOrDelete('ethics', state.ethics ? '1' : '');
+    setOrDelete('cat', [...state.categories].join(','));
+    setOrDelete('sort', state.sort === DEFAULT_SORT ? '' : state.sort);
+    history.replaceState({}, '', url);
+  }
+
+  function resetState() {
+    state.leaning.clear();
+    state.confidence.clear();
+    state.ethics = false;
+    state.categories.clear();
+    state.sort = DEFAULT_SORT;
+  }
+
+  // ---------- chip factory ----------
+
+  function chip(opts: {
+    label: string;
+    count?: number;
+    active: boolean;
+    onClick: () => void;
+    dataset?: Record<string, string>;
+  }): HTMLElement {
+    const children: (HTMLElement | string)[] = [opts.label];
+    if (opts.count != null) children.push(el('span', { class: 'chip-count' }, String(opts.count)));
+    const attrs: Record<string, string> = {
+      type: 'button',
+      class: `filter-chip${opts.active ? ' active' : ''}`,
+    };
+    if (opts.dataset) {
+      for (const [k, v] of Object.entries(opts.dataset)) attrs[`data-${k}`] = v;
+    }
+    const btn = el('button', attrs, children);
+    btn.addEventListener('click', opts.onClick);
+    return btn;
+  }
+
+  // ---------- category stats ----------
+
+  function topCategories(reviews: LatestReviewEntry[], n = 6): Array<{ cat: string; count: number }> {
+    const counts = new Map<string, number>();
+    for (const r of reviews) {
+      for (const c of r.arxiv_categories ?? []) counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, n)
+      .map(([cat, count]) => ({ cat, count }));
+  }
+
+  function reviewConfidenceBand(r: LatestReviewEntry): ConfidenceBand | null {
+    if (r.confidence == null) return null;
+    const band = confidenceBand(r.confidence);
+    if (band === 'high' || band === 'medium' || band === 'low') return band;
+    return null;
+  }
+
+  function countByLeaning(reviews: LatestReviewEntry[]): Record<VerdictLeaning, number> {
+    const out: Record<VerdictLeaning, number> = { positive: 0, mixed: 0, critical: 0 };
+    for (const r of reviews) if (r.verdict_leaning) out[r.verdict_leaning]++;
+    return out;
+  }
+
+  function countByConfidence(reviews: LatestReviewEntry[]): Record<ConfidenceBand, number> {
+    const out: Record<ConfidenceBand, number> = { high: 0, medium: 0, low: 0 };
+    for (const r of reviews) {
+      const b = reviewConfidenceBand(r);
+      if (b) out[b]++;
+    }
+    return out;
+  }
+
+  function ethicsCount(reviews: LatestReviewEntry[]): number {
+    return reviews.filter((r) => r.ethics_flag).length;
+  }
+
+  // ---------- filter + sort ----------
+
+  function applyFilter(reviews: LatestReviewEntry[]): LatestReviewEntry[] {
+    return reviews.filter((r) => {
+      if (state.leaning.size > 0) {
+        if (!r.verdict_leaning || !state.leaning.has(r.verdict_leaning)) return false;
+      }
+      if (state.confidence.size > 0) {
+        const band = reviewConfidenceBand(r);
+        if (!band || !state.confidence.has(band)) return false;
+      }
+      if (state.ethics && !r.ethics_flag) return false;
+      if (state.categories.size > 0) {
+        const cats = r.arxiv_categories ?? [];
+        if (!cats.some((c) => state.categories.has(c))) return false;
+      }
+      return true;
+    });
+  }
+
+  function parseTs(v: string | undefined, fallbackDate: string | undefined): number {
+    if (v) return Date.parse(v);
+    if (fallbackDate) return Date.parse(`${fallbackDate}T00:00:00Z`);
+    return 0;
+  }
+
+  function applySort(arr: LatestReviewEntry[]): LatestReviewEntry[] {
+    const sorted = arr.slice();
+    switch (state.sort) {
+      case 'leaning':
+        sorted.sort((a, b) => {
+          const la = a.verdict_leaning ? LEANING_ORDER[a.verdict_leaning] : 99;
+          const lb = b.verdict_leaning ? LEANING_ORDER[b.verdict_leaning] : 99;
+          if (la !== lb) return la - lb;
+          const ra = a.overall_recommendation ?? 0;
+          const rb = b.overall_recommendation ?? 0;
+          if (rb !== ra) return rb - ra;
+          return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
+        });
+        break;
+      case 'recommendation':
+        sorted.sort((a, b) => {
+          const ra = a.overall_recommendation ?? 0;
+          const rb = b.overall_recommendation ?? 0;
+          if (rb !== ra) return rb - ra;
+          const ca = a.confidence ?? 0;
+          const cb = b.confidence ?? 0;
+          if (cb !== ca) return cb - ca;
+          return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
+        });
+        break;
+      case 'hf':
+        sorted.sort((a, b) => (a.hf_rank ?? 10 ** 9) - (b.hf_rank ?? 10 ** 9));
+        break;
+      case 'newest':
+        sorted.sort((a, b) => parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date));
+        break;
+    }
+    return sorted;
+  }
+
+  // ---------- render ----------
 
   function buildHeaderAside(count: number, generatedAt: string): HTMLElement[] {
     return [
@@ -85,26 +273,117 @@ import Layout from '../components/Layout.astro';
     ];
   }
 
-  function buildCard(review: LatestReviewEntry): HTMLElement {
-    const card = buildFeedCard(review);
-    // Browse keeps per-card data-* attrs for the in-page search.
-    card.setAttribute('data-browse-card', 'true');
-    card.setAttribute('data-title', review.title.toLowerCase());
-    card.setAttribute('data-summary', review.abstract.toLowerCase());
-    return card;
+  function clearRow(row: HTMLElement) {
+    // Keep the first child (the .filter-label span), drop any previous chips.
+    while (row.children.length > 1) row.removeChild(row.lastChild!);
   }
+
+  function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
+    const leaningRow = document.querySelector<HTMLElement>('[data-filter="leaning"]');
+    const confRow = document.querySelector<HTMLElement>('[data-filter="confidence"]');
+    const ethicsRow = document.querySelector<HTMLElement>('[data-filter="ethics"]');
+    const catsRow = document.querySelector<HTMLElement>('[data-filter="categories"]');
+    const sortRow = document.querySelector<HTMLElement>('[data-filter="sort"]');
+    if (!leaningRow || !confRow || !ethicsRow || !catsRow || !sortRow) return;
+
+    const leaningCounts = countByLeaning(reviews);
+    const confCounts = countByConfidence(reviews);
+    const flagCount = ethicsCount(reviews);
+    const cats = topCategories(reviews);
+
+    clearRow(leaningRow);
+    for (const opt of LEANING_OPTIONS) {
+      leaningRow.appendChild(chip({
+        label: opt.label,
+        count: leaningCounts[opt.value],
+        active: state.leaning.has(opt.value),
+        dataset: { leaning: opt.value },
+        onClick: () => {
+          if (state.leaning.has(opt.value)) state.leaning.delete(opt.value);
+          else state.leaning.add(opt.value);
+          onChange();
+        },
+      }));
+    }
+
+    clearRow(confRow);
+    for (const opt of CONFIDENCE_OPTIONS) {
+      confRow.appendChild(chip({
+        label: opt.label,
+        count: confCounts[opt.value],
+        active: state.confidence.has(opt.value),
+        onClick: () => {
+          if (state.confidence.has(opt.value)) state.confidence.delete(opt.value);
+          else state.confidence.add(opt.value);
+          onChange();
+        },
+      }));
+    }
+
+    clearRow(ethicsRow);
+    ethicsRow.appendChild(chip({
+      label: '⚠ Ethics flagged',
+      count: flagCount,
+      active: state.ethics,
+      dataset: { ethics: '1' },
+      onClick: () => { state.ethics = !state.ethics; onChange(); },
+    }));
+
+    clearRow(catsRow);
+    if (cats.length === 0) {
+      catsRow.appendChild(el('span', { class: 'filter-hint' }, 'none yet'));
+    } else {
+      for (const { cat, count } of cats) {
+        catsRow.appendChild(chip({
+          label: cat,
+          count,
+          active: state.categories.has(cat),
+          onClick: () => {
+            if (state.categories.has(cat)) state.categories.delete(cat);
+            else state.categories.add(cat);
+            onChange();
+          },
+        }));
+      }
+    }
+
+    clearRow(sortRow);
+    for (const opt of SORT_OPTIONS) {
+      sortRow.appendChild(chip({
+        label: opt.label,
+        active: state.sort === opt.key,
+        onClick: () => {
+          if (state.sort === opt.key) return;
+          state.sort = opt.key;
+          onChange();
+        },
+      }));
+    }
+  }
+
+  function refreshChipActiveStates() {
+    document.querySelectorAll<HTMLButtonElement>('.filter-chip').forEach((btn) => {
+      const leaning = btn.dataset.leaning as VerdictLeaning | undefined;
+      if (leaning) {
+        btn.classList.toggle('active', state.leaning.has(leaning));
+        return;
+      }
+      if (btn.dataset.ethics) {
+        btn.classList.toggle('active', state.ethics);
+        return;
+      }
+    });
+  }
+
+  // ---------- main ----------
 
   (async () => {
     const asideEl = document.getElementById('browse-header-aside');
     const listEl = document.getElementById('browse-list');
     const emptyEl = document.getElementById('browse-empty-state');
-    const searchInput = document.getElementById('browse-search') as HTMLInputElement | null;
-    const sortSelect = document.getElementById('browse-sort') as HTMLSelectElement | null;
-    const resultsCount = document.getElementById('browse-results-count');
-    const clearFilters = document.getElementById('browse-clear-filters');
-    const copyLinkButton = document.getElementById('browse-copy-link') as HTMLButtonElement | null;
-
-    if (!asideEl || !listEl || !searchInput || !sortSelect || !resultsCount) return;
+    const countEl = document.getElementById('browse-count');
+    const resetBtn = document.getElementById('browse-reset');
+    if (!asideEl || !listEl || !countEl) return;
 
     let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
@@ -119,79 +398,37 @@ import Layout from '../components/Layout.astro';
 
     const reviews = data.reviews;
     const cards = new Map<string, HTMLElement>();
-    reviews.forEach((review) => cards.set(review.id, buildCard(review)));
+    reviews.forEach((review) => cards.set(review.id, buildFeedCard(review)));
 
     mount(asideEl, ...buildHeaderAside(reviews.length, data.generated_at));
 
-    function updateUrl(q: string) {
-      const url = new URL(window.location.href);
-      if (sortSelect?.value && sortSelect.value !== 'newest') url.searchParams.set('sort', sortSelect.value);
-      else url.searchParams.delete('sort');
-      if (q) url.searchParams.set('q', q);
-      else url.searchParams.delete('q');
-      history.replaceState({}, '', url);
-    }
-
-    function sortedReviews(source: LatestReviewEntry[]): LatestReviewEntry[] {
-      const sortKey = (sortSelect?.value as SortKey) ?? 'newest';
-      return source.slice().sort((a, b) => {
-        if (sortKey === 'hf') return (a.hf_rank ?? 10 ** 9) - (b.hf_rank ?? 10 ** 9);
-        return Date.parse(b.date) - Date.parse(a.date);
-      });
-    }
+    readStateFromUrl();
 
     function sync() {
-      const q = searchInput?.value.trim().toLowerCase() ?? '';
-      const filtered = reviews.filter((review) => {
-        const blob = `${review.title.toLowerCase()} ${review.abstract.toLowerCase()}`;
-        return q.length === 0 || blob.includes(q);
-      });
+      const filtered = applyFilter(reviews);
+      const ordered = applySort(filtered);
+      const nodes = ordered.map((r) => cards.get(r.id)).filter((n): n is HTMLElement => n != null);
 
-      const orderedNodes = sortedReviews(filtered)
-        .map((r) => cards.get(r.id))
-        .filter((n): n is HTMLElement => n != null);
-
-      if (orderedNodes.length === 0) {
-        mount(listEl);
+      if (nodes.length === 0) {
+        mount(listEl!, el('div', { class: 'state empty-inline' }, ''));
+        listEl!.innerHTML = '';
         if (emptyEl) emptyEl.hidden = false;
       } else {
         if (emptyEl) emptyEl.hidden = true;
-        mount(listEl, ...orderedNodes);
+        mount(listEl!, ...nodes);
       }
 
-      resultsCount.textContent = `Showing ${filtered.length} result${filtered.length === 1 ? '' : 's'}`;
-      updateUrl(q);
+      countEl!.textContent = `Showing ${nodes.length} of ${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
+      writeStateToUrl();
+      refreshChipActiveStates();
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const initialSort = params.get('sort');
-    const initialQuery = params.get('q');
-    if (initialQuery) searchInput.value = initialQuery;
-    if (initialSort && ['newest', 'hf'].includes(initialSort)) {
-      sortSelect.value = initialSort;
-    }
+    renderChips(reviews, () => { sync(); renderChips(reviews, () => sync()); });
 
-    searchInput.addEventListener('input', sync);
-    sortSelect.addEventListener('change', sync);
-    clearFilters?.addEventListener('click', () => {
-      searchInput.value = '';
-      sortSelect.value = 'newest';
+    resetBtn?.addEventListener('click', () => {
+      resetState();
+      renderChips(reviews, () => { sync(); renderChips(reviews, () => sync()); });
       sync();
-    });
-
-    copyLinkButton?.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        copyLinkButton.textContent = 'Copied';
-        setTimeout(() => {
-          copyLinkButton.textContent = 'Copy current view';
-        }, 1200);
-      } catch {
-        copyLinkButton.textContent = 'Copy failed';
-        setTimeout(() => {
-          copyLinkButton.textContent = 'Copy current view';
-        }, 1200);
-      }
     });
 
     sync();
