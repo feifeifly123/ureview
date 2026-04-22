@@ -10,27 +10,24 @@ Emits a JSON object on stdout with:
 Errors are printed to stderr and the process exits non-zero so the
 studio server can distinguish success from failure.
 
-Networking note: urllib honours HTTP_PROXY / HTTPS_PROXY but does NOT
-speak SOCKS. If the environment has ALL_PROXY set to a SOCKS URL (or
-HTTPS_PROXY accidentally set to a socks5:// URL, which is a common
-misconfiguration in containers that only egress via SOCKS), urllib will
-fail with "Remote end closed connection without response" — the proxy
-doesn't understand HTTP framing. We mirror fetch_hf.py's strategy:
-fall back to curl (which speaks both HTTP and SOCKS) when urllib fails.
+Networking: delegates the HTTP fetch to `tools/_netlib.py`, which is
+SOCKS-safe (falls back from urllib to curl when the proxy speaks SOCKS).
+See PHILOSOPHY.md §6: "all outbound-network tools must be SOCKS-safe".
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import shutil
-import subprocess
 import sys
 import urllib.error
-import urllib.request
 import xml.etree.ElementTree as ET
+from pathlib import Path
+
+# tools/ dir on sys.path so we can import _netlib whether run as script or module
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _netlib import fetch, FetchError  # noqa: E402
 
 ATOM_NS = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -48,39 +45,10 @@ def normalize_id(raw: str) -> str:
     return re.sub(r"v\d+$", "", raw)
 
 
-def fetch_xml(url: str) -> bytes:
-    """Fetch the arXiv Atom feed, falling back to curl if urllib fails."""
-    headers = {"User-Agent": "openagent-review/studio"}
-    try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as r:
-            return r.read()
-    except (urllib.error.URLError, ConnectionResetError) as urllib_err:
-        if not shutil.which("curl"):
-            raise RuntimeError(
-                f"urllib failed ({urllib_err}) and curl is not on PATH to fall back to."
-            )
-        cmd = ["curl", "-sSL", "--max-time", "30", "-A", headers["User-Agent"]]
-        # curl reads ALL_PROXY/HTTPS_PROXY itself, but being explicit is safer
-        # when HTTPS_PROXY is set to a SOCKS URL (urllib would choke, curl handles it).
-        proxy = os.environ.get("ALL_PROXY") or os.environ.get("all_proxy")
-        if proxy:
-            cmd.extend(["--proxy", proxy])
-        cmd.append(url)
-        try:
-            out = subprocess.run(cmd, capture_output=True, check=True, timeout=45)
-        except subprocess.CalledProcessError as curl_err:
-            raise RuntimeError(
-                f"curl fallback failed (exit {curl_err.returncode}): "
-                f"{curl_err.stderr.decode('utf-8', 'replace').strip()}"
-            )
-        return out.stdout
-
-
-def fetch(arxiv_id: str) -> dict:
+def fetch_paper(arxiv_id: str) -> dict:
     canonical = normalize_id(arxiv_id)
     url = f"https://export.arxiv.org/api/query?id_list={canonical}"
-    raw = fetch_xml(url)
+    raw = fetch(url, timeout=15, user_agent="openagent-review/studio")
 
     root = ET.fromstring(raw)
     entry = root.find("atom:entry", ATOM_NS)
@@ -119,12 +87,12 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        data = fetch(args.id)
+        data = fetch_paper(args.id)
     except urllib.error.HTTPError as e:
         print(f"arXiv HTTP {e.code}: {e.reason}", file=sys.stderr)
         return 2
-    except urllib.error.URLError as e:
-        print(f"arXiv network error: {e.reason}", file=sys.stderr)
+    except FetchError as e:
+        print(f"arXiv fetch error: {e}", file=sys.stderr)
         return 2
     except RuntimeError as e:
         print(f"arXiv fetch error: {e}", file=sys.stderr)

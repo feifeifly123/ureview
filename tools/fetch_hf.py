@@ -23,15 +23,15 @@ from __future__ import annotations
 import argparse
 import html as html_mod
 import json
-import os
 import re
-import shutil
-import subprocess
 import sys
 import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Repo-root-relative import; tools/ is on path when run as `python3 tools/fetch_hf.py`
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _netlib import fetch_text, FetchError  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
@@ -42,38 +42,8 @@ DATA_PROPS_RE = re.compile(
     re.S,
 )
 
-
-def fetch_html(url: str) -> str:
-    """Fetch HTML, falling back to curl if urllib fails.
-
-    urllib honors HTTPS_PROXY/HTTP_PROXY for HTTP(S) proxies but does not
-    natively speak SOCKS. If the environment has ALL_PROXY set to a SOCKS
-    URL (common on hosts where socks-only egress is the norm), urllib will
-    fail and we hand off to curl which speaks both.
-    """
-    headers = {"User-Agent": "Mozilla/5.0 openagent-review/studio"}
-    try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return r.read().decode("utf-8", errors="replace")
-    except (urllib.error.URLError, ConnectionResetError) as urllib_err:
-        if not shutil.which("curl"):
-            raise RuntimeError(
-                f"urllib failed ({urllib_err}) and curl is not on PATH to fall back to."
-            )
-        cmd = ["curl", "-sSL", "--max-time", "30", "-A", headers["User-Agent"]]
-        all_proxy = os.environ.get("ALL_PROXY") or os.environ.get("all_proxy")
-        if all_proxy:
-            cmd.extend(["--proxy", all_proxy])
-        cmd.append(url)
-        try:
-            out = subprocess.run(cmd, capture_output=True, check=True, timeout=45)
-        except subprocess.CalledProcessError as curl_err:
-            raise RuntimeError(
-                f"curl fallback failed (exit {curl_err.returncode}): "
-                f"{curl_err.stderr.decode('utf-8', 'replace').strip()}"
-            )
-        return out.stdout.decode("utf-8", errors="replace")
+# HF seems content with any browser-ish UA; keep the historical string for continuity.
+HF_USER_AGENT = "Mozilla/5.0 openagent-review/studio"
 
 
 def extract_papers(html: str) -> list[dict]:
@@ -132,9 +102,9 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        html = fetch_html(HF_DAILY_URL)
+        html = fetch_text(HF_DAILY_URL, timeout=20, user_agent=HF_USER_AGENT)
         papers = extract_papers(html)
-    except (urllib.error.URLError, RuntimeError) as e:
+    except (urllib.error.HTTPError, FetchError, RuntimeError) as e:
         print(f"fetch_hf: {e}", file=sys.stderr)
         return 2
 
