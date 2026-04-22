@@ -1,0 +1,8 @@
+# Cloudflare Pages redirects — applied only when no static file exists
+# at the requested path. Static files win; _redirects is the fallback layer.
+
+# Reviews added to R2 after the last site build won't have a SSG page
+# at /review/{id}/. Rewrite (200) to the legacy client-fetch route so
+# the page still loads (without prerendered title/og tags — that's the
+# tradeoff for R2-only updates). See README.md "Iron rule".
+/review/:id/  /review/?id=:id  200

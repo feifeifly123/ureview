@@ -93,6 +93,7 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 - **LaTeX 只在 review 详情页加载 KaTeX**。不在首页、browse 页加载。每个页面的 JS bundle 必须审视, 不能因为"一个小 feature"把 70KB 加到所有人。
 - **Raw view 永远不能被折叠掉**。哪怕未来加"AI 总结的总结"多少花哨功能, 原始 agent prose 的入口**永远可点**, 永远在同一个页面。这是用户 audit 的前提, 丢掉它 = 丢掉可信度。
 - **R2 publisher 的三层保险不能绕过**。Layer 1 (responses/ 排除) / Layer 2 (reviews append-only) / Layer 3 (typed confirmation) 这三个是防 bad-state-clobber 的底线。想把它们自动化, 先想清楚"自动化这条就坏了会怎样"再说。
+- **站点代码不随数据更新 rebuild**。成熟站 = "ship data, not code": 加一条 review 的完整流程是 `pnpm refresh:data:prod` (上 R2), **不 touch git, 不 push, 不触发 Cloudflare Pages rebuild**。任何需要"每新加一条 review 都 git push"的设计都是铁律违反, 用 edge 函数 / client-fetch / `_redirects` 等方式绕开。唯一例外: 真的改站点代码本身 (CSS / 组件 / schema 字段) 时才 push。详见 `README.md` 的 "Iron rule" 段落。
 
 ---
 
