@@ -1422,6 +1422,15 @@ main {
   .post-read-center { order: 2; justify-content: flex-start; }
   .post-read-back { order: 1; }
   .post-read-browse { order: 3; text-align: left; }
+
+  /* Feed-card density reduction on mobile: the full card packs 8 micro-zones
+     (kicker / date / title / why-read / why-doubt / leaning / 4 ratings /
+     Read →). On 375px that's ~8s to scan — violates the feed's scan-and-tap
+     posture. Keep kicker + date + title + why_read + leaning + "Read →" for
+     scent; hide why_doubt and dimension ratings (both available on the full
+     review page one tap away). */
+  a.entry .entry-why--doubt { display: none; }
+  a.entry .entry-ratings { display: none; }
 }
 
 /* ---------- about / prose page ---------- */
