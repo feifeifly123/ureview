@@ -12,10 +12,18 @@ import Layout from '../components/Layout.astro';
       <span class="page-intro-eyebrow">The Gazette · Machine Reading Desk</span>
       <h1 class="page-intro-title">Structured AI readings of trending papers.</h1>
       <p class="page-intro-lede">
-        One review per paper, filed the day it trends. Four dimension ratings,
-        side-by-side — never averaged into a single score.
+        Spend 2 minutes here, know whether a paper is worth 20.
+        One review per paper, filed the day it trends. Four dimension
+        ratings, side-by-side — never averaged into a single score.
       </p>
     </section>
+
+    <aside class="beta-strip" role="note" aria-label="Beta notice">
+      <span class="beta-tag">BETA</span>
+      <span class="beta-text">
+        First-pass machine readings. The queue fills in as papers trend on <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HF Daily</a>.
+      </span>
+    </aside>
 
     <div id="home-hero-slot" aria-live="polite">
       <section class="hero-featured hero-featured--skel" aria-label="Loading featured filing">
