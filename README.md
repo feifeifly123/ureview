@@ -63,23 +63,43 @@ review stream.
 
 ### What about share-preview (og:title, og:description)?
 
-Reviews that were present in the repo at the last site build get
-per-review static HTML with prerendered `<title>` + `og:*` meta tags,
-so social share cards look good. **New reviews added to R2 after the
-last build still work** — they gracefully fall back to client-side
-rendering via [`apps/web/public/_redirects`](./apps/web/public/_redirects)
-(`/review/:id/` → `/review/?id=:id`), just without prerendered share
-cards until the next optional site rebuild.
+Listings on the home + browse pages link to `/review/?id={id}` —
+the legacy client-fetch URL. That URL works for **any** review in R2,
+regardless of when the site was last built. **Readers never hit a
+404 just because a new review hasn't been baked into the site yet.**
 
-If you want every recent review to have a rich share card, run the
-occasional manual site rebuild:
+As a separate optimization, the site also ships static SSG pages at
+`/review/{id}/` for every review that was in the repo at build time.
+Those pages carry prerendered `<title>` + `og:*` tags, so anyone who
+shares a `/review/{id}/` URL (or was linked from a past site version
+that used that URL) gets a rich social preview.
+
+The tradeoff: links shared from the current listings (the `?id=`
+form) show a generic share preview. If you want the rich preview for
+recent reviews, run the optional site rebuild:
 
 ```bash
 git add data/ && git commit -m "Refresh review snapshot" && git push
 # Cloudflare Pages auto-builds in ~90 seconds
 ```
 
-No schedule, no cron, no pressure. Do it when you feel like it.
+No schedule, no cron, no pressure. The iron rule still holds — the
+rebuild is purely to upgrade share-preview quality for recent
+reviews; the reviews themselves are already live on R2.
+
+### Why we don't auto-rewrite missing SSG pages via `_redirects`
+
+We tried. Cloudflare Pages processes **both** `_redirects` rewrites
+(status 200) and redirects (status 301/302) **before** static asset
+matching — contrary to their docs. So any `/review/:id/` pattern we
+write in `_redirects` ends up hijacking the SSG pages too, erasing
+the P0 benefit for reviews that DO have rich share previews. We
+decided to keep listings on the `?id=` URL instead; it's simpler
+and the iron rule stays bulletproof.
+
+A future Pages Functions-based fallback (edge-level "serve static if
+exists, else legacy") would let us have both. Not done yet; not
+worth the complexity until review volume grows.
 
 ## Daily workflow (mature state)
 

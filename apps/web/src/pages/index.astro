@@ -116,7 +116,7 @@ import Layout from '../components/Layout.astro';
 
     // title linked
     const title = el('h2', { class: 'hero-title' }, [
-      el('a', { href: `/review/${encodeURIComponent(entry.id)}/` }, entry.title),
+      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, entry.title),
     ]);
 
     // lede from why_read (fallback to abstract's first sentence)
@@ -156,7 +156,7 @@ import Layout from '../components/Layout.astro';
     // foot: machine disclaimer + open link
     const foot = el('div', { class: 'hero-foot' }, [
       el('span', {}, 'Machine-generated first-pass reading · Not peer review'),
-      el('a', { href: `/review/${encodeURIComponent(entry.id)}/` }, 'Open the full review →'),
+      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, 'Open the full review →'),
     ]);
 
     return el('section', { class: classes.join(' '), 'aria-label': 'Featured review' }, [

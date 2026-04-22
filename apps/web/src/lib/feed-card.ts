@@ -146,7 +146,7 @@ export function buildFeedCard(entry: FeedEntry): HTMLElement {
     'a',
     {
       class: classes.join(' '),
-      href: `/review/${encodeURIComponent(entry.id)}/`,
+      href: `/review/?id=${encodeURIComponent(entry.id)}`,
       'data-review-id': entry.id,
     },
     kids.filter((n): n is HTMLElement => n != null)
