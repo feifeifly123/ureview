@@ -84,9 +84,6 @@ def build_feed_entry(review: dict[str, Any], include_date: bool = True) -> dict[
     if highlights.get("verdict_leaning"):
         entry["verdict_leaning"] = highlights["verdict_leaning"]
 
-    if "overall_recommendation" in ai:
-        entry["overall_recommendation"] = ai["overall_recommendation"]
-
     ratings = flat_ratings(review)
     if ratings:
         entry["ratings"] = ratings

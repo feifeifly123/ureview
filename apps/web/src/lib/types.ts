@@ -19,7 +19,6 @@ export interface AIReview {
   /** Free-form prose: questions the author(s) should answer to change the verdict. */
   key_questions: string;
   limitations: string;
-  overall_recommendation: 1 | 2 | 3 | 4 | 5 | 6;
   ethics_flag: boolean;
   ethics_concerns?: string | null;
 }
@@ -68,7 +67,6 @@ export interface LatestReviewEntry {
   why_read?: string;
   why_doubt?: string;
   verdict_leaning?: VerdictLeaning;
-  overall_recommendation?: number;
   ratings?: FeedRatings;
   ethics_flag?: boolean;
 }
@@ -87,7 +85,6 @@ export interface DailyReviewEntry {
   why_read?: string;
   why_doubt?: string;
   verdict_leaning?: VerdictLeaning;
-  overall_recommendation?: number;
   ratings?: FeedRatings;
   ethics_flag?: boolean;
 }

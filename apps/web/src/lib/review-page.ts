@@ -5,20 +5,6 @@ import { typeset } from './latex';
 import { leaningLabel } from './feed-card';
 import type { Review, AIReviewRatings } from './types';
 
-const RECOMMENDATION_LABELS: Record<number, string> = {
-  1: 'Strong Reject',
-  2: 'Reject',
-  3: 'Weak Reject',
-  4: 'Weak Accept',
-  5: 'Accept',
-  6: 'Strong Accept',
-};
-
-function recommendationLabel(n: number | undefined): string {
-  if (n == null) return '—';
-  return RECOMMENDATION_LABELS[n] ?? '—';
-}
-
 function paragraphs(text: string): HTMLElement[] {
   return text
     .split(/\n\s*\n/)
@@ -107,19 +93,11 @@ function buildScorecard(review: Review): HTMLElement {
     : leaning === 'mixed' ? 'scorecard-value scorecard-value--mixed'
     : 'scorecard-value scorecard-value--critical';
 
-  const grid = el('div', { class: 'scorecard-grid scorecard-grid--2' }, [
+  const grid = el('div', { class: 'scorecard-grid scorecard-grid--1' }, [
     el('div', { class: 'scorecard-cell' }, [
       el('span', { class: 'scorecard-label' }, 'Verdict leaning'),
       el('div', { class: `scorecard-value ${verdictClass}` }, verdictWord),
       el('span', { class: 'scorecard-gloss' }, leaningLabel(leaning)),
-    ]),
-    el('div', { class: 'scorecard-cell' }, [
-      el('span', { class: 'scorecard-label' }, 'Recommendation'),
-      el('div', { class: 'scorecard-value' }, [
-        String(ai.overall_recommendation),
-        el('span', { class: 'scorecard-scale' }, '/ 6'),
-      ]),
-      el('span', { class: 'scorecard-gloss' }, recommendationLabel(ai.overall_recommendation)),
     ]),
   ]);
 

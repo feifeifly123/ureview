@@ -24,7 +24,6 @@
         "ratings",
         "key_questions",
         "limitations",
-        "overall_recommendation",
         "ethics_flag"
       ],
       "properties": {
@@ -43,7 +42,6 @@
         },
         "key_questions": { "type": "string" },
         "limitations": { "type": "string" },
-        "overall_recommendation": { "type": "integer", "minimum": 1, "maximum": 6 },
         "ethics_flag": { "type": "boolean" },
         "ethics_concerns": { "type": ["string", "null"] }
       },

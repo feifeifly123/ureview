@@ -74,7 +74,6 @@ def stub_ai_review() -> dict:
         },
         "key_questions": "[Stub] Key questions for the authors — what would change the verdict?",
         "limitations": "[Stub] Acknowledged limitations and caveats.",
-        "overall_recommendation": 3,
         "ethics_flag": False,
         "ethics_concerns": None,
     }

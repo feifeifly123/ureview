@@ -34,7 +34,6 @@
     },
     "key_questions": "How well do the reported scaling exponents transfer to non-Transformer architectures (e.g. state-space models, mixture-of-experts, recurrent variants)? (could clarify significance)\n\nHow sensitive is the compute-optimal frontier to training-data diversity and quality, as opposed to raw token count $D$? (could raise soundness)\n\nDo the composed laws $L(N, D)$ continue to hold once $N$ enters regimes where interconnect or memory bandwidth, rather than FLOPs, become the binding constraint? (could reduce confidence gap)",
     "limitations": "The authors acknowledge that the study is limited to Transformer language models trained on English web text. Downstream-task performance is not directly evaluated; all conclusions are framed in terms of upstream cross-entropy. Extrapolations past the measured range should be treated as hypotheses.",
-    "overall_recommendation": 5,
     "ethics_flag": false,
     "ethics_concerns": null
   },

@@ -817,8 +817,7 @@ select {
   font-style: italic;
 }
 
-.rating-dots,
-.tick-row {
+.rating-dots {
   display: inline-flex;
   gap: 10px;
   align-items: center;
@@ -862,53 +861,6 @@ select {
   border-bottom-color: var(--ochre);
   border-bottom-width: 2px;
   padding-bottom: 5px;
-}
-
-/* ---------- tick row (recommendation) ---------- */
-
-.tick-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0;
-  margin: 10px 0 8px;
-  border-top: 1px solid var(--rule);
-}
-.tick {
-  appearance: none;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid var(--rule);
-  padding: 18px 4px 12px;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: color 160ms, border-color 180ms;
-  text-align: center;
-}
-.tick .tick-num {
-  display: block;
-  font-family: var(--font-serif);
-  font-variation-settings: "opsz" 96, "SOFT" 20, "WONK" 0;
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--ink-2);
-  margin-bottom: 8px;
-  font-weight: 500;
-  font-style: italic;
-}
-.tick:hover { color: var(--ink); }
-.tick:hover .tick-num { color: var(--ink); }
-.tick[aria-checked="true"] {
-  border-bottom-color: var(--ochre);
-  color: var(--ochre);
-}
-.tick[aria-checked="true"] .tick-num { color: var(--ochre); }
-.tick:focus-visible {
-  outline: 2px solid var(--ochre);
-  outline-offset: -2px;
 }
 
 /* ---------- verdict cards ---------- */

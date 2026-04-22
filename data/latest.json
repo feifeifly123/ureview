@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-22T07:01:45.287205+00:00",
+  "generated_at": "2026-04-22T07:33:35.341829+00:00",
   "reviews": [
     {
       "id": "2026-04-09-paper-b",
@@ -15,7 +15,6 @@
       "why_read": "Clean empirical demonstration that a trivial prompt change flips a binary switch on reasoning at scale.",
       "why_doubt": "Chain correctness isn't checked; exemplar-choice variance is not quantified; the scale threshold is observed, not explained.",
       "verdict_leaning": "positive",
-      "overall_recommendation": 5,
       "ratings": {
         "soundness": 3,
         "presentation": 4,
@@ -38,7 +37,6 @@
       "why_read": "Gives a clean, reusable mental model for how language-model loss scales with size, data, and compute — and turns it into a concrete budget-allocation recipe.",
       "why_doubt": "Scope is Transformer + English web text; the 'architecture doesn't matter' claim is empirical, not mechanistic.",
       "verdict_leaning": "positive",
-      "overall_recommendation": 5,
       "ratings": {
         "soundness": 4,
         "presentation": 4,

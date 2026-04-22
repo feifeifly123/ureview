@@ -324,7 +324,6 @@ const EMPTY_REVIEW = () => ({
     },
     key_questions: '',
     limitations: '',
-    overall_recommendation: 4,
     ethics_flag: false,
     ethics_concerns: null,
   },
@@ -522,40 +521,6 @@ function setStepperValue(hiddenId, value) {
   });
 }
 
-function buildTickRow(hiddenId, value, options) {
-  const hidden = el('input', { type: 'hidden', id: hiddenId, value: String(value) });
-  const group = el('div', { class: 'tick-row', role: 'radiogroup', 'aria-label': 'Overall recommendation' });
-  options.forEach((label, idx) => {
-    const val = idx + 1;
-    const btn = el('button', {
-      type: 'button',
-      class: 'tick',
-      role: 'radio',
-      'aria-checked': String(val === value),
-      'aria-label': label,
-      'data-value': String(val),
-      onclick: () => setTickValue(hiddenId, val),
-    }, [
-      el('span', { class: 'tick-num' }, String(val)),
-      label,
-    ]);
-    group.appendChild(btn);
-  });
-  group.appendChild(hidden);
-  return group;
-}
-
-function setTickValue(hiddenId, value) {
-  const hidden = $(`#${hiddenId}`);
-  if (!hidden) return;
-  hidden.value = String(value);
-  const group = hidden.parentElement;
-  if (!group) return;
-  group.querySelectorAll('[role="radio"]').forEach((b) => {
-    b.setAttribute('aria-checked', b.dataset.value === String(value) ? 'true' : 'false');
-  });
-}
-
 function buildVerdictCards(value) {
   const options = [
     { val: 'positive', name: 'Positive', gloss: 'The agent is net-optimistic.' },
@@ -577,7 +542,6 @@ function buildVerdictCards(value) {
 function buildStructuredFields(review) {
   const ai = review.ai_review;
   const rh = review.review_highlights;
-  const recLabels = ['S · Rej', 'Rej', 'W · Rej', 'W · Acc', 'Acc', 'S · Acc'];
 
   return el('section', { class: 'chapter chapter--judgment' }, [
     el('header', { class: 'chapter-head' }, [
@@ -607,10 +571,6 @@ function buildStructuredFields(review) {
     buildField('Key questions for authors (LaTeX OK)', 'key_questions', ai.key_questions || '', { textarea: true, tall: true }),
 
     buildField('Limitations (LaTeX OK)', 'limitations', ai.limitations, { textarea: true }),
-
-    // Overall recommendation
-    el('h3', { class: 'sub-heading' }, 'Overall recommendation'),
-    buildTickRow('f-overall_recommendation', ai.overall_recommendation, recLabels),
 
     // Ethics
     el('h3', { class: 'sub-heading' }, 'Ethics'),
@@ -674,7 +634,6 @@ function readFormAsReview(prev) {
       },
       key_questions: $('#f-key_questions').value.trim(),
       limitations: $('#f-limitations').value.trim(),
-      overall_recommendation: Number($('#f-overall_recommendation').value),
       ethics_flag: ethicsFlag,
       ethics_concerns: ethicsConcerns || null,
     },

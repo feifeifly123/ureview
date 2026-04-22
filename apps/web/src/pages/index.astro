@@ -81,14 +81,6 @@ import Layout from '../components/Layout.astro';
   import { buildFeedCard, leaningLabel } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
 
-  function recommendationWord(n: number | undefined): string {
-    if (n == null) return '—';
-    return ({
-      1: 'Strong Reject', 2: 'Reject', 3: 'Weak Reject',
-      4: 'Weak Accept',   5: 'Accept', 6: 'Strong Accept',
-    } as Record<number, string>)[n] ?? '—';
-  }
-
   function buildFeaturedEntry(entry: LatestReviewEntry, index: number, total: number): HTMLElement {
     const leaning = entry.verdict_leaning;
     const classes = ['hero-featured'];
@@ -131,12 +123,6 @@ import Layout from '../components/Layout.astro';
             el('p', { class: 'hero-side-text' }, [
               el('em', {}, leaningLabel(leaning)),
             ]),
-          ])
-        : null,
-      entry.overall_recommendation != null
-        ? el('div', { class: 'hero-side-block' }, [
-            el('span', { class: 'hero-side-label' }, `Recommendation · ${entry.overall_recommendation}/6`),
-            el('p', { class: 'hero-side-text' }, recommendationWord(entry.overall_recommendation)),
           ])
         : null,
       entry.why_doubt

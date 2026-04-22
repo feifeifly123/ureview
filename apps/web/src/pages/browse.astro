@@ -76,14 +76,13 @@ import Layout from '../components/Layout.astro';
   import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry, VerdictLeaning } from '../lib/types';
 
-  type SortKey = 'leaning' | 'recommendation' | 'hf' | 'newest';
+  type SortKey = 'leaning' | 'hf' | 'newest';
 
   const DEFAULT_SORT: SortKey = 'leaning';
   const LEANING_ORDER: Record<VerdictLeaning, number> = { positive: 0, mixed: 1, critical: 2 };
 
   const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
     { key: 'leaning', label: 'By leaning' },
-    { key: 'recommendation', label: 'By recommendation' },
     { key: 'hf', label: 'By HF rank' },
     { key: 'newest', label: 'Newest' },
   ];
@@ -217,17 +216,6 @@ import Layout from '../components/Layout.astro';
           const la = a.verdict_leaning ? LEANING_ORDER[a.verdict_leaning] : 99;
           const lb = b.verdict_leaning ? LEANING_ORDER[b.verdict_leaning] : 99;
           if (la !== lb) return la - lb;
-          const ra = a.overall_recommendation ?? 0;
-          const rb = b.overall_recommendation ?? 0;
-          if (rb !== ra) return rb - ra;
-          return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
-        });
-        break;
-      case 'recommendation':
-        sorted.sort((a, b) => {
-          const ra = a.overall_recommendation ?? 0;
-          const rb = b.overall_recommendation ?? 0;
-          if (rb !== ra) return rb - ra;
           return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
         });
         break;

@@ -1038,7 +1038,7 @@ main {
   gap: 12px 32px;
   padding-left: 12px;
 }
-.scorecard-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.scorecard-grid--1 { grid-template-columns: 1fr; }
 @media (max-width: 720px) { .scorecard-grid { grid-template-columns: 1fr; padding-left: 0; } }
 
 .scorecard-cell { display: flex; flex-direction: column; gap: 6px; }
@@ -1066,14 +1066,6 @@ main {
   font-style: italic;
   font-size: 0.92rem;
   color: var(--ink-2);
-}
-.scorecard-scale {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  color: var(--ink-3);
-  text-transform: uppercase;
-  margin-left: 6px;
 }
 
 .scorecard-lead {
