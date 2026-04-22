@@ -152,7 +152,7 @@ import Layout from '../components/Layout.astro';
   function buildTrustStrip(total: number): HTMLElement {
     return el('p', { class: 'trust-strip-text' }, [
       el('strong', {}, String(total)),
-      ` paper${total === 1 ? '' : 's'} · Source HF Trending · Filed on trend, never on schedule`,
+      ` paper${total === 1 ? '' : 's'} · Source HF Daily · Filed on trend, never on schedule`,
     ]);
   }
 

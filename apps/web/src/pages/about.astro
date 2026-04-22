@@ -32,7 +32,7 @@ import Layout from '../components/Layout.astro';
           <li>Reviews are single-pass language-model opinions, not peer review.</li>
           <li>Each carries four dimension ratings — soundness, presentation, significance, originality — shown side-by-side, never averaged.</li>
           <li>The abstract is the author's own arXiv abstract, verbatim.</li>
-          <li>The queue is driven by the Hugging Face trending feed, not editorial selection.</li>
+          <li>The queue is driven by the Hugging Face Daily Papers feed, not editorial selection.</li>
         </ul>
       </section>
 
@@ -46,11 +46,11 @@ import Layout from '../components/Layout.astro';
 
       <h2 id="how-it-works">How the data flows</h2>
       <ul>
-        <li>Papers are picked from <strong>Hugging Face Trending Papers</strong> as they surface.</li>
+        <li>Papers are picked from <strong>Hugging Face Daily Papers</strong> as they surface.</li>
         <li>For each paper, the arXiv abstract is stored verbatim.</li>
         <li>A language model produces a structured review with four dimension scores (1–4 each)
-          and an overall recommendation (1–6), plus prose fields for summary,
-          strengths &amp; weaknesses, key questions, and limitations.</li>
+          plus prose fields for summary, strengths &amp; weaknesses, key questions,
+          and limitations.</li>
         <li>The pair is published as JSON and rendered into a layered review page:
           verdict scorecard, four-dimension judgment, and raw-view audit.</li>
         <li>One review per paper. If the paper trends again later, we don't re-review it.</li>
@@ -70,8 +70,8 @@ import Layout from '../components/Layout.astro';
       </dl>
       <p>
         Each dimension is scored 1–4 (poor → excellent) and carries a short
-        justification. The overall recommendation uses the 1–6
-        Strong&nbsp;Reject → Strong&nbsp;Accept scale.
+        justification. A separate verdict leaning — positive, mixed, or
+        critical — summarises the reading's overall tone.
       </p>
 
       <h2 id="limits">What this isn't</h2>
@@ -95,9 +95,9 @@ import Layout from '../components/Layout.astro';
 
       <h3>How are papers picked?</h3>
       <p>
-        We watch the Hugging Face Trending Papers feed. When a paper we haven't
+        We watch the Hugging Face Daily Papers feed. When a paper we haven't
         reviewed shows up, the pipeline fires a reading for it. No fixed daily quota,
-        no editorial calendar — the feed ebbs and flows with what's trending.
+        no editorial calendar — the feed ebbs and flows with what HF curates.
       </p>
 
       <h3>Why was this paper selected?</h3>

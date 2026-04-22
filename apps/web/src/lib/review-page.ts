@@ -324,7 +324,11 @@ export async function mainReviewPage() {
   // Legacy path: /review/?id=xxx still fetches client-side
   const id = new URLSearchParams(window.location.search).get('id');
   if (!id) {
-    mount(container, errorState('Missing review ID', 'No ?id= parameter supplied.'));
+    // /review/ with no ?id= is a dead-end. Legacy page still has to exist
+    // (iron rule: R2-only reviews without a pre-baked SSG file rely on this
+    // client-fetch path), but without an id there's nothing to fetch — send
+    // the user to the home feed. replace() avoids a Back-button loop.
+    window.location.replace('/');
     return;
   }
 
