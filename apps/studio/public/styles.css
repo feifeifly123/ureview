@@ -668,10 +668,13 @@ main {
   outline-offset: 2px;
 }
 
-/* locked state: input looks dimmed + cursor: default */
+/* locked state: content is readable (ink, not ink-3 — otherwise users
+   confuse "locked but filled" with "empty") but the field reads as
+   non-interactive: no border color change on focus, default cursor,
+   subtle tint on the rule to signal "this is received data". */
 .field--locked input[readonly],
 .field--locked textarea[readonly] {
-  color: var(--ink-3);
+  color: var(--ink);
   border-bottom-color: var(--rule);
   cursor: default;
   background: transparent;
@@ -686,6 +689,12 @@ main {
   border-color: var(--rule);
   border-bottom-width: 1px;
   padding-bottom: 8px;
+}
+/* empty locked field stays ink-3 (faint) so 'no value yet' is visually
+   distinct from 'value locked but present' */
+.field--locked input[readonly]:placeholder-shown,
+.field--locked textarea[readonly]:placeholder-shown {
+  color: var(--ink-3);
 }
 
 input[type="text"],

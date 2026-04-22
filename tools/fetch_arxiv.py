@@ -21,6 +21,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.error
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -28,6 +29,11 @@ from pathlib import Path
 # tools/ dir on sys.path so we can import _netlib whether run as script or module
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _netlib import fetch, FetchError  # noqa: E402
+
+# arXiv public API: documented hard limit is ~1 request / 3 seconds per IP.
+# When we click too fast, arxiv returns an empty body (or truncated XML) and
+# the parser blows up with "syntax error: line 1, column 0". We back off once.
+_RATE_LIMIT_COOLDOWN_SECONDS = 3.5
 
 ATOM_NS = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -48,12 +54,32 @@ def normalize_id(raw: str) -> str:
 def fetch_paper(arxiv_id: str) -> dict:
     canonical = normalize_id(arxiv_id)
     url = f"https://export.arxiv.org/api/query?id_list={canonical}"
-    raw = fetch(url, timeout=15, user_agent="openagent-review/studio")
 
-    root = ET.fromstring(raw)
-    entry = root.find("atom:entry", ATOM_NS)
-    if entry is None:
-        raise RuntimeError(f"arXiv returned no entry for id={canonical}")
+    last_err: Exception | None = None
+    for attempt in range(2):
+        raw = fetch(url, timeout=15, user_agent="openagent-review/studio")
+        if raw.strip():
+            try:
+                root = ET.fromstring(raw)
+                entry = root.find("atom:entry", ATOM_NS)
+                if entry is not None:
+                    return _parse_entry(entry, canonical)
+                last_err = RuntimeError(f"arXiv returned no entry for id={canonical}")
+            except ET.ParseError as pe:
+                last_err = pe
+        else:
+            last_err = RuntimeError("arXiv returned empty body (likely API rate limit)")
+        if attempt == 0:
+            time.sleep(_RATE_LIMIT_COOLDOWN_SECONDS)
+
+    raise RuntimeError(
+        f"arXiv didn't return a valid response for id={canonical} after retry "
+        f"(arXiv public API rate-limits at ~1 req / 3s; wait a moment and try again). "
+        f"Last error: {last_err}"
+    )
+
+
+def _parse_entry(entry, canonical: str) -> dict:
 
     title = " ".join((entry.findtext("atom:title", default="", namespaces=ATOM_NS) or "").split())
     abstract = " ".join(
