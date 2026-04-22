@@ -123,6 +123,43 @@ benefit for reviews that already have it. So we removed
 `_redirects` and kept listings on the `?id=` URL. Simpler, and
 Iron rule #1 stays bulletproof without violating Iron rule #2.
 
+## 🔒 Iron rule #3: outbound-network tools must be SOCKS-safe
+
+Any script in `tools/` that sends HTTP (fetching HF, arXiv, future
+OpenReview, DOI, etc.) **must** go through `tools/_netlib.py`. Never
+call `urllib.request.urlopen` directly.
+
+**Why**: Python's urllib honours `HTTP_PROXY` / `HTTPS_PROXY` but
+doesn't speak SOCKS. This container egresses via `socks5h://net-relay:1080`
+for parts of the public internet (notably Hugging Face). When urllib
+gets `HTTPS_PROXY=socks5h://...` it tries HTTP framing against a SOCKS
+proxy and fails with `Remote end closed connection without response`.
+`_netlib.fetch()` transparently falls back to `curl` (which speaks
+both HTTP and SOCKS), so the same tool works in every environment.
+
+### Template for new `tools/fetch_*.py`
+
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# tools/ dir on sys.path so _netlib resolves from a direct script or module run
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _netlib import fetch_text, fetch, FetchError
+
+# fetch_text → decoded str; fetch → raw bytes
+html = fetch_text("https://your-source.com/endpoint", timeout=20)
+```
+
+That's it. Don't reimplement the urllib → curl fallback by hand; we
+centralised it precisely so `fetch_hf.py`, `fetch_arxiv.py`, and
+whatever comes next share one correct path. When reviewing a new
+`fetch_*` tool, the first check is: **does it import from
+`_netlib`?**
+
+See `PHILOSOPHY.md` §6 for the formal statement.
+
 ## Daily workflow (mature state)
 
 ```bash
