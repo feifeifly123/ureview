@@ -387,6 +387,14 @@ function buildEditorView(review, isNew) {
   const container = el('div', { class: 'editor-root' });
 
   // Chapter I — Paper metadata
+  // Build a PDF URL from the arxiv paper_url (https://arxiv.org/abs/{id} → /pdf/{id})
+  const pdfUrl = (() => {
+    const m = (review.paper_url || '').match(/arxiv\.org\/abs\/([^/?#]+)/i);
+    if (!m) return null;
+    const id = m[1].replace(/v\d+$/, '');
+    return `https://arxiv.org/pdf/${id}.pdf`;
+  })();
+
   const chapterA = el('section', { class: 'chapter chapter--paper' }, [
     el('header', { class: 'chapter-head' }, [
       el('span', { class: 'chapter-num' }, 'I · Paper'),
@@ -394,8 +402,17 @@ function buildEditorView(review, isNew) {
         isNew ? [el('em', {}, 'new record')] : [review.id],
       ),
       el('div', { class: 'chapter-action' }, [
+        pdfUrl
+          ? el('a', {
+              class: 'btn-link',
+              href: pdfUrl,
+              target: '_blank',
+              rel: 'noopener',
+              title: 'Open the paper PDF on arxiv.org (new tab)',
+            }, '↗ Open PDF')
+          : null,
         el('button', { class: 'btn-link', onclick: () => navTo({}) }, '← Back'),
-      ]),
+      ].filter((n) => n != null)),
     ]),
     el('p', { class: 'chapter-lede' },
       'Passthrough from arXiv and HF Daily. All fields in this block are read-only by default — click ✎ Edit to override if you really need to fix something at the source layer.'),
