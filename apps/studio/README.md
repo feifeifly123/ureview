@@ -31,17 +31,65 @@ The editor has three blocks:
 
 ## Run
 
-```bash
-# 1. If your host needs a SOCKS/HTTP proxy for Hugging Face or arXiv,
-#    set one or both before launching:
-#    export ALL_PROXY='socks5h://user:pass@host:port'   # fetch_hf.py curl fallback picks this up
-#    export HTTPS_PROXY='http://...'                     # urllib picks this up
+Studio spawns `tools/fetch_hf.py` and `tools/fetch_arxiv.py` as Python
+subprocesses, so the shell environment it starts in must be able to
+reach `huggingface.co` and `arxiv.org`. The subprocesses inherit the
+parent env.
 
-# 2. Start the server:
+### Recommended: this container's SOCKS relay
+
+In the Jupyter container this site lives in, the only egress that
+reliably reaches `huggingface.co` is the internal relay at
+`socks5h://net-relay:1080`. The default Claude Code HTTP proxy
+(`http://121.4.45.119:31785`) is blocked by HF. Start Studio like this:
+
+```bash
+ALL_PROXY=socks5h://net-relay:1080 \
+HTTPS_PROXY=socks5h://net-relay:1080 \
+HTTP_PROXY=socks5h://net-relay:1080 \
+pnpm dev:studio
+```
+
+Why three env vars instead of one? `fetch_hf.py` prefers `urllib`
+(reads `HTTPS_PROXY`) and falls back to `curl` (reads `ALL_PROXY`).
+`fetch_arxiv.py` is urllib-only. Setting all three covers both paths
+and avoids surprise fallbacks.
+
+Verify it worked:
+
+```bash
+curl -s http://127.0.0.1:4311/api/trending | python3 -c \
+  'import json,sys; d=json.load(sys.stdin); print(f"{len(d)} papers")'
+# Expect: 50 papers
+```
+
+If that prints `50 papers` or similar, you're good. If it prints a
+JSON error object with `{"error": "..."}`, the proxy didn't reach HF.
+
+### Different host / different proxy
+
+If you're not in this container, use whatever route reaches
+`huggingface.co` from your machine. Common forms:
+
+```bash
+# no proxy needed (your host has direct egress)
 pnpm dev:studio
 
-# → http://0.0.0.0:4311 is ready (reachable from any host on the LAN)
+# corporate HTTP proxy
+HTTPS_PROXY='http://proxy.internal:8080' pnpm dev:studio
+
+# SOCKS5 with auth
+ALL_PROXY='socks5h://user:pass@host:port' pnpm dev:studio
 ```
+
+### After it starts
+
+```
+[studio] http://0.0.0.0:4311 ready
+```
+
+Open in a browser, click **Sync trending**, confirm the trending list
+populates. Studio is now ready for authoring.
 
 The server binds to `0.0.0.0` and has no authentication — anyone who can
 reach the port can overwrite `data/reviews/*.json` and trigger HF/arXiv
