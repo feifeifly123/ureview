@@ -1081,9 +1081,40 @@ main {
   padding-left: 12px;
 }
 .scorecard-grid--1 { grid-template-columns: 1fr; }
+.scorecard-grid--2 { grid-template-columns: repeat(2, 1fr); }
 @media (max-width: 720px) { .scorecard-grid { grid-template-columns: 1fr; padding-left: 0; } }
 
 .scorecard-cell { display: flex; flex-direction: column; gap: 6px; }
+.scorecard-cell--ratings { gap: 10px; }
+.scorecard-ratings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+  align-items: baseline;
+  max-width: 320px;
+}
+.scorecard-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.scorecard-rating-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.scorecard-rating-score {
+  font-family: var(--font-serif);
+  font-variation-settings: "opsz" 96, "SOFT" 22, "WONK" 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--ink);
+  font-weight: 500;
+  font-style: italic;
+}
 .scorecard-label {
   font-family: var(--font-mono);
   font-size: 0.64rem;
@@ -1320,6 +1351,51 @@ main {
 .review-content-stack[data-view="raw"] .scorecard,
 .review-content-stack[data-view="raw"] .ethics-banner { display: none; }
 .review-content-stack[data-view="structured"] .review-section--raw { display: none; }
+
+/* ---------- post-read nav (review page tail) ---------- */
+
+.post-read-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 48px;
+  padding: 18px 0 6px;
+  border-top: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+.post-read-center {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.post-read-link {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  padding: 6px 2px;
+  cursor: pointer;
+  transition: color 140ms;
+}
+.post-read-link:hover { color: var(--ochre); }
+.post-read-link:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 3px;
+}
+.post-read-back  { justify-self: flex-start; }
+.post-read-browse { justify-self: flex-end; text-align: right; }
+@media (max-width: 600px) {
+  .post-read-nav { flex-direction: column; align-items: stretch; gap: 10px; }
+  .post-read-center { order: 2; justify-content: flex-start; }
+  .post-read-back { order: 1; }
+  .post-read-browse { order: 3; text-align: left; }
+}
 
 /* ---------- about / prose page ---------- */
 

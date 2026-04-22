@@ -92,11 +92,27 @@ function buildScorecard(review: Review): HTMLElement {
     : leaning === 'mixed' ? 'scorecard-value scorecard-value--mixed'
     : 'scorecard-value scorecard-value--critical';
 
-  const grid = el('div', { class: 'scorecard-grid scorecard-grid--1' }, [
+  const r = ai.ratings;
+  const ratingChip = (label: string, score: number) => el('span', { class: 'scorecard-rating' }, [
+    el('span', { class: 'scorecard-rating-label' }, label),
+    el('span', { class: 'scorecard-rating-score' }, String(score)),
+  ]);
+
+  const grid = el('div', { class: 'scorecard-grid scorecard-grid--2' }, [
     el('div', { class: 'scorecard-cell' }, [
       el('span', { class: 'scorecard-label' }, 'Verdict leaning'),
       el('div', { class: `scorecard-value ${verdictClass}` }, verdictWord),
       el('span', { class: 'scorecard-gloss' }, leaningLabel(leaning)),
+    ]),
+    el('div', { class: 'scorecard-cell scorecard-cell--ratings' }, [
+      el('span', { class: 'scorecard-label' }, 'Ratings'),
+      el('div', { class: 'scorecard-ratings' }, [
+        ratingChip('Snd', r.soundness.score),
+        ratingChip('Prs', r.presentation.score),
+        ratingChip('Sig', r.significance.score),
+        ratingChip('Org', r.originality.score),
+      ]),
+      el('span', { class: 'scorecard-gloss' }, 'each out of 4'),
     ]),
   ]);
 
@@ -269,6 +285,26 @@ function scheduleTypeset(container: HTMLElement): void {
   }
 }
 
+function buildPostReadNav(review: Review): HTMLElement {
+  return el('nav', { class: 'post-read-nav', 'aria-label': 'Continue reading' }, [
+    el('a', { class: 'post-read-link post-read-back', href: '/' }, '← Back to feed'),
+    el('div', { class: 'post-read-center' }, [
+      el('a', {
+        class: 'post-read-link post-read-arxiv',
+        href: safeHref(review.paper_url),
+        target: '_blank',
+        rel: 'noopener',
+      }, 'Open on arXiv →'),
+      el('button', {
+        class: 'post-read-link post-read-copy',
+        type: 'button',
+        'data-copy-link': 'true',
+      }, 'Copy link'),
+    ]),
+    el('a', { class: 'post-read-link post-read-browse', href: '/browse/' }, 'Browse all reviews →'),
+  ]);
+}
+
 function renderPage(container: HTMLElement, review: Review) {
   const header = buildHeader(review);
   const banner = buildEthicsBanner(review);
@@ -279,6 +315,7 @@ function renderPage(container: HTMLElement, review: Review) {
   const abstract = buildAbstract(review);
   const limits = buildLimits(review);
   const raw = buildRaw(review);
+  const postNav = buildPostReadNav(review);
 
   const stack = el('div', { class: 'review-content-stack', 'data-view': 'structured' }, [
     banner,
@@ -289,6 +326,7 @@ function renderPage(container: HTMLElement, review: Review) {
     abstract,
     limits,
     raw,
+    postNav,
   ].filter((n): n is HTMLElement => n != null));
 
   mount(container, header, stack);
