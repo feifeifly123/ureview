@@ -1,7 +1,6 @@
 import { dataClient } from './data-client';
 import { el, mount } from './dom';
 import { formatDate, safeHref } from './utils';
-import { typeset } from './latex';
 import { leaningLabel } from './feed-card';
 import type { Review, AIReviewRatings } from './types';
 
@@ -244,8 +243,30 @@ function attachCopyLink(container: HTMLElement) {
   });
 }
 
-function typesetAll(container: HTMLElement) {
-  container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
+/**
+ * KaTeX is ~78 KB gzip + ~23 KB CSS and blocks the main thread while typesetting.
+ * Lazy-load it after first paint so the user reads text immediately; formulas
+ * "bloom" in a moment later. Unrendered `$...$` is visible for ~100–500ms — the
+ * tradeoff is a dramatic TTI win, especially on slow connections.
+ */
+function scheduleTypeset(container: HTMLElement): void {
+  const run = async () => {
+    try {
+      const { typeset } = await import('./latex');
+      container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
+    } catch {
+      // Fail-open: leaving raw LaTeX visible beats blocking the page on a
+      // missing chunk (e.g. offline after first paint).
+    }
+  };
+  const ric = (window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  }).requestIdleCallback;
+  if (typeof ric === 'function') {
+    ric(() => { void run(); }, { timeout: 1500 });
+  } else {
+    setTimeout(() => { void run(); }, 50);
+  }
 }
 
 function renderPage(container: HTMLElement, review: Review) {
@@ -273,7 +294,7 @@ function renderPage(container: HTMLElement, review: Review) {
   mount(container, header, stack);
   attachModeToggle(stack);
   attachCopyLink(container);
-  typesetAll(container);
+  scheduleTypeset(container);
 }
 
 function errorState(title: string, detail: string): HTMLElement {
