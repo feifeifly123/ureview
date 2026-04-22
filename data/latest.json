@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-21T01:16:38.633236+00:00",
+  "generated_at": "2026-04-22T06:48:24.964031+00:00",
   "reviews": [
     {
       "id": "2026-04-09-paper-b",
@@ -16,7 +16,6 @@
       "why_doubt": "Chain correctness isn't checked; exemplar-choice variance is not quantified; the scale threshold is observed, not explained.",
       "verdict_leaning": "positive",
       "overall_recommendation": 5,
-      "confidence": 3,
       "ratings": {
         "soundness": 3,
         "presentation": 4,
@@ -41,7 +40,6 @@
       "why_doubt": "Scope is Transformer + English web text; the 'architecture doesn't matter' claim is empirical, not mechanistic.",
       "verdict_leaning": "positive",
       "overall_recommendation": 5,
-      "confidence": 4,
       "ratings": {
         "soundness": 4,
         "presentation": 4,

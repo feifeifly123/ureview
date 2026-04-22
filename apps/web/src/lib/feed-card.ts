@@ -15,13 +15,6 @@ export function leaningLabel(leaning: VerdictLeaning | undefined): string {
   return 'Mixed leaning';
 }
 
-export function confidenceBand(n: number | undefined): string {
-  if (!n) return 'unknown';
-  if (n >= 4) return 'high';
-  if (n >= 3) return 'medium';
-  return 'low';
-}
-
 function dateText(entry: FeedEntry): string {
   const anyEntry = entry as { date?: string; updated_at?: string };
   if (anyEntry.date) return formatDate(anyEntry.date);
@@ -101,15 +94,11 @@ function ratingsInline(ratings: FeedRatings | undefined): HTMLElement | null {
 
 function footerLine(entry: FeedEntry): HTMLElement {
   const leaning = entry.verdict_leaning;
-  const conf = entry.confidence;
   const kqc = entry.key_questions_count ?? 0;
 
   const bits: HTMLElement[] = [];
   if (leaning) {
     bits.push(el('span', { class: `entry-leaning entry-leaning--${leaning}` }, leaning));
-  }
-  if (conf) {
-    bits.push(el('span', {}, `Conf · ${confidenceBand(conf)}`));
   }
   if (kqc > 0) {
     bits.push(el('span', {}, `${kqc} Q`));

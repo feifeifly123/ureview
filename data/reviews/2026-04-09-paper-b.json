@@ -5,25 +5,48 @@
   "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
   "paper_url": "https://arxiv.org/abs/2201.11903",
   "hf_rank": 3,
-  "arxiv_categories": ["cs.CL", "cs.AI"],
+  "arxiv_categories": [
+    "cs.CL",
+    "cs.AI"
+  ],
   "abstract": "We explore how generating a chain of thought—a series of intermediate reasoning steps—significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain-of-thought prompting, where a few chain-of-thought demonstrations are provided as exemplars in prompting. Experiments on three large language models show that chain-of-thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a PaLM 540B with just eight chain-of-thought exemplars achieves state-of-the-art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.",
   "ai_review": {
     "summary": "The paper proposes chain-of-thought (CoT) prompting: inserting a handful of worked-example reasoning traces into the few-shot prompt, without any weight update. On arithmetic, commonsense, and symbolic reasoning benchmarks it shows large gains at sufficient scale — for example, PaLM-540B with 8 CoT exemplars beats a fine-tuned GPT-3 with verifier on GSM8K. The central empirical claim is that CoT is an emergent capability: essentially no lift on small models, step-change improvement past a model-size threshold.",
     "strengths_weaknesses": "Soundness: the gains are measured across three model families and many benchmarks, which makes the scale-dependent behaviour hard to attribute to a single dataset or model artefact; the emergence curve is consistent across tasks. Presentation: the method is one paragraph, the tables are legible, and the per-task breakdowns make the scale threshold visible. Significance: the result has reshaped how practitioners prompt large models and motivated a long line of follow-up work (self-consistency, tree-of-thought, reasoning verifiers). Originality: the core idea — demonstrate the reasoning in the prompt — is simple enough that its value lies mostly in the empirical demonstration of emergence. Weaknesses: the paper is silent on whether the generated chains are actually correct as opposed to merely leading to correct answers; exemplar design is hand-crafted and the sensitivity to exemplar choice is not systematically quantified; compute costs of multi-step decoding are not discussed; the scale threshold is observed rather than explained.",
     "ratings": {
-      "soundness":    { "score": 3, "note": "Empirically robust across three model families, but chain correctness isn't separately verified." },
-      "presentation": { "score": 4, "note": "Crisp method, clean per-task tables, and the emergence curves are easy to read." },
-      "significance": { "score": 4, "note": "Reshaped prompting practice; spawned a large follow-up literature on structured reasoning." },
-      "originality":  { "score": 3, "note": "Simple idea; originality is in the empirical demonstration of the emergent scale threshold." }
+      "soundness": {
+        "score": 3,
+        "note": "Empirically robust across three model families, but chain correctness isn't separately verified."
+      },
+      "presentation": {
+        "score": 4,
+        "note": "Crisp method, clean per-task tables, and the emergence curves are easy to read."
+      },
+      "significance": {
+        "score": 4,
+        "note": "Reshaped prompting practice; spawned a large follow-up literature on structured reasoning."
+      },
+      "originality": {
+        "score": 3,
+        "note": "Simple idea; originality is in the empirical demonstration of the emergent scale threshold."
+      }
     },
     "key_questions": [
-      { "question": "What fraction of accuracy gains on GSM8K come from chains that are actually faithful versus chains that happen to land on correct answers via unrelated reasoning?", "tag": "could raise soundness" },
-      { "question": "How sensitive is CoT to exemplar choice — specifically, what is the performance variance across different hand-written exemplar sets of the same length?", "tag": "could reduce confidence gap" },
-      { "question": "Is the scale threshold a property of pretraining data composition (e.g. presence of reasoning-like text) rather than raw parameter count?", "tag": "could clarify significance" }
+      {
+        "question": "What fraction of accuracy gains on GSM8K come from chains that are actually faithful versus chains that happen to land on correct answers via unrelated reasoning?",
+        "tag": "could raise soundness"
+      },
+      {
+        "question": "How sensitive is CoT to exemplar choice — specifically, what is the performance variance across different hand-written exemplar sets of the same length?",
+        "tag": "could reduce confidence gap"
+      },
+      {
+        "question": "Is the scale threshold a property of pretraining data composition (e.g. presence of reasoning-like text) rather than raw parameter count?",
+        "tag": "could clarify significance"
+      }
     ],
     "limitations": "Decoding-time compute overhead (multi-step generation) is not discussed. Exemplar engineering is manual and its variance is not characterised. The 'why does this emerge with scale' question is left open.",
     "overall_recommendation": 5,
-    "confidence": 3,
     "ethics_flag": false,
     "ethics_concerns": null
   },

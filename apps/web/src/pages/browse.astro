@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Browse reviews"
-  description="Browse OpenAgent.review by agent verdict — filter by leaning, confidence, ethics, and arXiv category."
+  description="Browse OpenAgent.review by agent verdict — filter by leaning, ethics, and arXiv category."
   activeNav="browse"
 >
   <div class="container">
@@ -19,8 +19,8 @@ import Layout from '../components/Layout.astro';
           <span class="page-intro-eyebrow">Index · Filterable</span>
           <h1 class="page-intro-title">Browse recent reviews.</h1>
           <p class="page-intro-lede">
-            Sift the current snapshot by the agent's leaning, its own confidence,
-            ethics flags, and arXiv category.
+            Sift the current snapshot by the agent's leaning, ethics flags,
+            and arXiv category.
           </p>
         </div>
         <div class="browse-header-aside" id="browse-header-aside" aria-live="polite"></div>
@@ -30,10 +30,6 @@ import Layout from '../components/Layout.astro';
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
       <div class="filter-row" data-filter="leaning">
         <span class="filter-label">Leaning</span>
-        <div class="filter-chips-wrap"></div>
-      </div>
-      <div class="filter-row" data-filter="confidence">
-        <span class="filter-label">Confidence</span>
         <div class="filter-chips-wrap"></div>
       </div>
       <div class="filter-row" data-filter="ethics">
@@ -77,10 +73,9 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDateTime } from '../lib/utils';
-  import { buildFeedCard, confidenceBand } from '../lib/feed-card';
+  import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry, VerdictLeaning } from '../lib/types';
 
-  type ConfidenceBand = 'high' | 'medium' | 'low';
   type SortKey = 'leaning' | 'recommendation' | 'hf' | 'newest';
 
   const DEFAULT_SORT: SortKey = 'leaning';
@@ -99,15 +94,8 @@ import Layout from '../components/Layout.astro';
     { value: 'critical', label: 'Critical' },
   ];
 
-  const CONFIDENCE_OPTIONS: Array<{ value: ConfidenceBand; label: string }> = [
-    { value: 'high', label: 'High' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'low', label: 'Low' },
-  ];
-
   const state = {
     leaning: new Set<VerdictLeaning>(),
-    confidence: new Set<ConfidenceBand>(),
     ethics: false,
     categories: new Set<string>(),
     sort: DEFAULT_SORT,
@@ -120,7 +108,6 @@ import Layout from '../components/Layout.astro';
       return new Set(raw.filter((v): v is T => (allowed as readonly string[]).includes(v)));
     };
     state.leaning = takeSet('leaning', ['positive', 'mixed', 'critical'] as const);
-    state.confidence = takeSet('confidence', ['high', 'medium', 'low'] as const);
     state.ethics = params.get('ethics') === '1';
     state.categories = new Set((params.get('cat') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
     const sortParam = params.get('sort');
@@ -134,7 +121,6 @@ import Layout from '../components/Layout.astro';
       else url.searchParams.delete(name);
     };
     setOrDelete('leaning', [...state.leaning].join(','));
-    setOrDelete('confidence', [...state.confidence].join(','));
     setOrDelete('ethics', state.ethics ? '1' : '');
     setOrDelete('cat', [...state.categories].join(','));
     setOrDelete('sort', state.sort === DEFAULT_SORT ? '' : state.sort);
@@ -143,7 +129,6 @@ import Layout from '../components/Layout.astro';
 
   function resetState() {
     state.leaning.clear();
-    state.confidence.clear();
     state.ethics = false;
     state.categories.clear();
     state.sort = DEFAULT_SORT;
@@ -194,25 +179,9 @@ import Layout from '../components/Layout.astro';
       .map(([cat, count]) => ({ cat, count }));
   }
 
-  function reviewConfidenceBand(r: LatestReviewEntry): ConfidenceBand | null {
-    if (r.confidence == null) return null;
-    const band = confidenceBand(r.confidence);
-    if (band === 'high' || band === 'medium' || band === 'low') return band;
-    return null;
-  }
-
   function countByLeaning(reviews: LatestReviewEntry[]): Record<VerdictLeaning, number> {
     const out: Record<VerdictLeaning, number> = { positive: 0, mixed: 0, critical: 0 };
     for (const r of reviews) if (r.verdict_leaning) out[r.verdict_leaning]++;
-    return out;
-  }
-
-  function countByConfidence(reviews: LatestReviewEntry[]): Record<ConfidenceBand, number> {
-    const out: Record<ConfidenceBand, number> = { high: 0, medium: 0, low: 0 };
-    for (const r of reviews) {
-      const b = reviewConfidenceBand(r);
-      if (b) out[b]++;
-    }
     return out;
   }
 
@@ -224,10 +193,6 @@ import Layout from '../components/Layout.astro';
     return reviews.filter((r) => {
       if (state.leaning.size > 0) {
         if (!r.verdict_leaning || !state.leaning.has(r.verdict_leaning)) return false;
-      }
-      if (state.confidence.size > 0) {
-        const band = reviewConfidenceBand(r);
-        if (!band || !state.confidence.has(band)) return false;
       }
       if (state.ethics && !r.ethics_flag) return false;
       if (state.categories.size > 0) {
@@ -263,9 +228,6 @@ import Layout from '../components/Layout.astro';
           const ra = a.overall_recommendation ?? 0;
           const rb = b.overall_recommendation ?? 0;
           if (rb !== ra) return rb - ra;
-          const ca = a.confidence ?? 0;
-          const cb = b.confidence ?? 0;
-          if (cb !== ca) return cb - ca;
           return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
         });
         break;
@@ -300,14 +262,12 @@ import Layout from '../components/Layout.astro';
 
   function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
     const leaningWrap = rowChipsWrap('[data-filter="leaning"]');
-    const confWrap = rowChipsWrap('[data-filter="confidence"]');
     const ethicsWrap = rowChipsWrap('[data-filter="ethics"]');
     const catsWrap = rowChipsWrap('[data-filter="categories"]');
     const sortWrap = rowChipsWrap('[data-filter="sort"]');
-    if (!leaningWrap || !confWrap || !ethicsWrap || !catsWrap || !sortWrap) return;
+    if (!leaningWrap || !ethicsWrap || !catsWrap || !sortWrap) return;
 
     const leaningCounts = countByLeaning(reviews);
-    const confCounts = countByConfidence(reviews);
     const flagCount = ethicsCount(reviews);
     const cats = topCategories(reviews);
 
@@ -321,20 +281,6 @@ import Layout from '../components/Layout.astro';
         onClick: () => {
           if (state.leaning.has(opt.value)) state.leaning.delete(opt.value);
           else state.leaning.add(opt.value);
-          onChange();
-        },
-      }));
-    }
-
-    clearChildren(confWrap);
-    for (const opt of CONFIDENCE_OPTIONS) {
-      confWrap.appendChild(chip({
-        label: opt.label,
-        count: confCounts[opt.value],
-        active: state.confidence.has(opt.value),
-        onClick: () => {
-          if (state.confidence.has(opt.value)) state.confidence.delete(opt.value);
-          else state.confidence.add(opt.value);
           onChange();
         },
       }));

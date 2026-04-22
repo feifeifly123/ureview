@@ -809,15 +809,13 @@ select {
 }
 
 .rating-dots,
-.tick-row,
-.conf-dots {
+.tick-row {
   display: inline-flex;
   gap: 10px;
   align-items: center;
 }
 
-.rating-dot,
-.conf-dot {
+.rating-dot {
   appearance: none;
   background: transparent;
   border: 1px solid var(--ink-4);
@@ -829,17 +827,13 @@ select {
   cursor: pointer;
   transition: border-color 140ms, background 140ms, transform 80ms;
 }
-.rating-dot:hover,
-.conf-dot:hover { border-color: var(--ochre-2); }
-.rating-dot[aria-checked="true"],
-.conf-dot[aria-checked="true"] {
+.rating-dot:hover { border-color: var(--ochre-2); }
+.rating-dot[aria-checked="true"] {
   background: var(--ochre);
   border-color: var(--ochre);
 }
-.rating-dot:active,
-.conf-dot:active { transform: translateY(1px); }
-.rating-dot:focus-visible,
-.conf-dot:focus-visible {
+.rating-dot:active { transform: translateY(1px); }
+.rating-dot:focus-visible {
   outline: 2px solid var(--ochre);
   outline-offset: 3px;
 }
@@ -906,30 +900,6 @@ select {
 .tick:focus-visible {
   outline: 2px solid var(--ochre);
   outline-offset: -2px;
-}
-
-/* ---------- confidence (5-dot inline stepper) ---------- */
-
-.conf-block {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 14px 0;
-}
-.conf-block .conf-label {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.conf-block .conf-value {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 1.4rem;
-  color: var(--ochre);
-  min-width: 2ch;
-  font-variation-settings: "opsz" 48;
 }
 
 /* ---------- verdict cards ---------- */

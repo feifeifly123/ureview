@@ -107,7 +107,7 @@ _历史: 2026-04-22 之前管道是 trending-driven (`/papers/trending`), 现在
 
 ### P1 (下一轮)
 
-- **Browse 页 review-aware filters**: recommendation band, confidence band, ethics flagged, key_questions_count, soundness concern。数据已经在 latest.json 里 flatten 好了, 只差 UI。
+- **Browse 页 review-aware filters**: recommendation band, ethics flagged, key_questions_count, soundness concern。数据已经在 latest.json 里 flatten 好了, 只差 UI。
 - **Compare view**: 2-3 篇并排, 共享 dimension 轴, 看出差异。
 - **Form view**: 按 NeurIPS/ICML review form 严格顺序渲染, 方便复制粘贴。
 - **搜索覆盖 ai_review 字段**: 目前只搜 title+abstract; 扩到 summary + strengths_weaknesses + limitations + key_questions。需要 debounce。

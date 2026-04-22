@@ -78,7 +78,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDate } from '../lib/utils';
-  import { buildFeedCard, leaningLabel, confidenceBand } from '../lib/feed-card';
+  import { buildFeedCard, leaningLabel } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
 
   function recommendationWord(n: number | undefined): string {
@@ -123,7 +123,7 @@ import Layout from '../components/Layout.astro';
     const ledeText = entry.why_read || (entry.abstract ? entry.abstract.slice(0, 220) + '…' : '');
     const lede = el('p', { class: 'hero-lede' }, ledeText);
 
-    // side: verdict, recommendation, confidence, why_doubt
+    // side: verdict, recommendation, why_doubt
     const side = el('aside', { class: 'hero-side', 'aria-label': 'Verdict summary' }, [
       leaning
         ? el('div', { class: 'hero-side-block' }, [
@@ -137,12 +137,6 @@ import Layout from '../components/Layout.astro';
         ? el('div', { class: 'hero-side-block' }, [
             el('span', { class: 'hero-side-label' }, `Recommendation · ${entry.overall_recommendation}/6`),
             el('p', { class: 'hero-side-text' }, recommendationWord(entry.overall_recommendation)),
-          ])
-        : null,
-      entry.confidence != null
-        ? el('div', { class: 'hero-side-block' }, [
-            el('span', { class: 'hero-side-label' }, `Confidence · ${entry.confidence}/5`),
-            el('p', { class: 'hero-side-text' }, [el('em', {}, confidenceBand(entry.confidence))]),
           ])
         : null,
       entry.why_doubt

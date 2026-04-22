@@ -2,7 +2,7 @@ import { dataClient } from './data-client';
 import { el, mount } from './dom';
 import { formatDate, safeHref } from './utils';
 import { typeset } from './latex';
-import { leaningLabel, confidenceBand } from './feed-card';
+import { leaningLabel } from './feed-card';
 import type { Review, KeyQuestion, AIReviewRatings } from './types';
 
 const RECOMMENDATION_LABELS: Record<number, string> = {
@@ -107,7 +107,7 @@ function buildScorecard(review: Review): HTMLElement {
     : leaning === 'mixed' ? 'scorecard-value scorecard-value--mixed'
     : 'scorecard-value scorecard-value--critical';
 
-  const grid = el('div', { class: 'scorecard-grid' }, [
+  const grid = el('div', { class: 'scorecard-grid scorecard-grid--2' }, [
     el('div', { class: 'scorecard-cell' }, [
       el('span', { class: 'scorecard-label' }, 'Verdict leaning'),
       el('div', { class: `scorecard-value ${verdictClass}` }, verdictWord),
@@ -120,14 +120,6 @@ function buildScorecard(review: Review): HTMLElement {
         el('span', { class: 'scorecard-scale' }, '/ 6'),
       ]),
       el('span', { class: 'scorecard-gloss' }, recommendationLabel(ai.overall_recommendation)),
-    ]),
-    el('div', { class: 'scorecard-cell' }, [
-      el('span', { class: 'scorecard-label' }, 'Agent confidence'),
-      el('div', { class: 'scorecard-value' }, [
-        String(ai.confidence),
-        el('span', { class: 'scorecard-scale' }, '/ 5'),
-      ]),
-      el('span', { class: 'scorecard-gloss' }, confidenceBand(ai.confidence)),
     ]),
   ]);
 

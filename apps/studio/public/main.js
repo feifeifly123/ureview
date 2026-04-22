@@ -325,7 +325,6 @@ const EMPTY_REVIEW = () => ({
     key_questions: [],
     limitations: '',
     overall_recommendation: 4,
-    confidence: 3,
     ethics_flag: false,
     ethics_concerns: null,
   },
@@ -411,26 +410,8 @@ function buildEditorView(review, isNew) {
     ]),
   ]);
 
-  // Chapter II — Paste LLM output
-  const pasteArea = el('textarea', {
-    class: 'tall',
-    id: 'bulk-json',
-    placeholder: '{\n  "ai_review": { ... },\n  "review_highlights": { ... }\n}\n\nAccepts { ai_review, review_highlights } or a full review record.',
-  });
-  const chapterB = el('section', { class: 'chapter chapter--paste' }, [
-    el('header', { class: 'chapter-head' }, [
-      el('span', { class: 'chapter-num' }, 'II · Paste'),
-      el('h2', { class: 'chapter-title' }, [el('em', {}, 'LLM output')]),
-      el('div', { class: 'chapter-action' }, [
-        el('button', { class: 'btn', onclick: () => parseBulk(pasteArea.value, review) }, 'Parse & fill'),
-      ]),
-    ]),
-    el('p', { class: 'chapter-lede' },
-      'Paste the JSON the model returns. Chapter III fields are populated and remain editable afterward — this is a one-way shovel, not a live binding.'),
-    pasteArea,
-  ]);
-
-  // Chapter III — Structured judgment
+  // Chapter II — Structured judgment (hand-filled; the Paste LLM shortcut
+  // was removed when authoring switched to fully manual entry).
   const chapterC = buildStructuredFields(review);
 
   // Footer
@@ -438,7 +419,6 @@ function buildEditorView(review, isNew) {
   const cancelBtn = el('button', { class: 'btn', onclick: () => navTo({}) }, 'Cancel');
 
   container.appendChild(chapterA);
-  container.appendChild(chapterB);
   container.appendChild(chapterC);
   container.appendChild(el('div', { class: 'footer-bar' }, [cancelBtn, saveBtn]));
   return container;
@@ -584,7 +564,7 @@ function buildStructuredFields(review) {
 
   return el('section', { class: 'chapter chapter--judgment' }, [
     el('header', { class: 'chapter-head' }, [
-      el('span', { class: 'chapter-num' }, 'III · Judgment'),
+      el('span', { class: 'chapter-num' }, 'II · Judgment'),
       el('h2', { class: 'chapter-title' }, [el('em', {}, 'structured review')]),
     ]),
     el('p', { class: 'chapter-lede' },
@@ -617,13 +597,6 @@ function buildStructuredFields(review) {
     // Overall recommendation
     el('h3', { class: 'sub-heading' }, 'Overall recommendation'),
     buildTickRow('f-overall_recommendation', ai.overall_recommendation, recLabels),
-
-    // Confidence
-    el('h3', { class: 'sub-heading' }, 'Confidence · 1–5'),
-    el('div', { class: 'conf-block' }, [
-      buildDotStepper('f-confidence', ai.confidence, 5, 'Confidence'),
-      el('span', { class: 'conf-label' }, 'Reviewer certainty'),
-    ]),
 
     // Ethics
     el('h3', { class: 'sub-heading' }, 'Ethics'),
@@ -670,51 +643,6 @@ function addKqRow() {
   list.appendChild(buildKqRow({}, list.children.length));
 }
 
-function parseBulk(raw, review) {
-  if (!raw.trim()) { toast('Paste some JSON first', 'warn'); return; }
-  let parsed;
-  try { parsed = JSON.parse(raw); } catch (e) { toast(`JSON parse failed: ${e.message}`, 'err'); return; }
-
-  const ai = parsed.ai_review || parsed;
-  const rh = parsed.review_highlights;
-
-  if (ai?.summary != null) $('#f-summary').value = ai.summary;
-  if (ai?.strengths_weaknesses != null) $('#f-strengths_weaknesses').value = ai.strengths_weaknesses;
-  if (ai?.limitations != null) $('#f-limitations').value = ai.limitations;
-
-  if (ai?.ratings) {
-    for (const k of ['soundness', 'presentation', 'significance', 'originality']) {
-      if (ai.ratings[k]) {
-        setStepperValue(`rating-${k}-score`, ai.ratings[k].score ?? 3);
-        $(`#rating-${k}-note`).value = ai.ratings[k].note ?? '';
-      }
-    }
-  }
-  if (ai?.key_questions) {
-    const list = $('#kq-list');
-    mount(list, ...ai.key_questions.map((q, i) => buildKqRow(q, i)));
-    if (!ai.key_questions.length) list.appendChild(buildKqRow({}, 0));
-  }
-  if (ai?.overall_recommendation != null) setTickValue('f-overall_recommendation', Number(ai.overall_recommendation));
-  if (ai?.confidence != null) setStepperValue('f-confidence', Number(ai.confidence));
-  if (ai?.ethics_flag != null) {
-    $('#f-ethics').checked = !!ai.ethics_flag;
-    $('#f-ethics-concerns-wrap').style.display = ai.ethics_flag ? 'block' : 'none';
-    if (ai.ethics_concerns != null) $('#f-ethics_concerns').value = ai.ethics_concerns || '';
-  }
-
-  if (rh) {
-    if (rh.why_read != null) $('#f-why_read').value = rh.why_read;
-    if (rh.why_doubt != null) $('#f-why_doubt').value = rh.why_doubt;
-    if (rh.verdict_leaning) {
-      const radio = $(`input[name="verdict_leaning"][value="${rh.verdict_leaning}"]`);
-      if (radio) radio.checked = true;
-    }
-  }
-
-  toast('Parsed — review fields populated');
-}
-
 function readFormAsReview(prev) {
   const title = $('#f-title').value.trim();
   const paper_url = $('#f-paper_url').value.trim();
@@ -757,7 +685,6 @@ function readFormAsReview(prev) {
       key_questions: kqRows.map((q) => q.tag ? q : { question: q.question }),
       limitations: $('#f-limitations').value.trim(),
       overall_recommendation: Number($('#f-overall_recommendation').value),
-      confidence: Number($('#f-confidence').value),
       ethics_flag: ethicsFlag,
       ethics_concerns: ethicsConcerns || null,
     },

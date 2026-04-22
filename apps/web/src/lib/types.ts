@@ -24,7 +24,6 @@ export interface AIReview {
   key_questions: KeyQuestion[];
   limitations: string;
   overall_recommendation: 1 | 2 | 3 | 4 | 5 | 6;
-  confidence: 1 | 2 | 3 | 4 | 5;
   ethics_flag: boolean;
   ethics_concerns?: string | null;
 }
@@ -74,7 +73,6 @@ export interface LatestReviewEntry {
   why_doubt?: string;
   verdict_leaning?: VerdictLeaning;
   overall_recommendation?: number;
-  confidence?: number;
   ratings?: FeedRatings;
   key_questions_count?: number;
   ethics_flag?: boolean;
@@ -95,7 +93,6 @@ export interface DailyReviewEntry {
   why_doubt?: string;
   verdict_leaning?: VerdictLeaning;
   overall_recommendation?: number;
-  confidence?: number;
   ratings?: FeedRatings;
   key_questions_count?: number;
   ethics_flag?: boolean;

@@ -24,7 +24,6 @@
           "why_doubt": { "type": "string" },
           "verdict_leaning": { "type": "string", "enum": ["positive", "mixed", "critical"] },
           "overall_recommendation": { "type": "integer", "minimum": 1, "maximum": 6 },
-          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
           "ratings": {
             "type": "object",
             "properties": {

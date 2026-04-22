@@ -8,7 +8,7 @@ PHILOSOPHY.md §4 for the rule.
 
 Shape matches contracts/review.schema.json (ai_review as a structured
 object with Summary, Strengths & Weaknesses, four dimension ratings,
-Key Questions, Limitations, Overall Recommendation, Confidence, Ethics).
+Key Questions, Limitations, Overall Recommendation, Ethics).
 Current implementation is a stub — real LLM wiring happens later.
 """
 
@@ -77,7 +77,6 @@ def stub_ai_review() -> dict:
         ],
         "limitations": "[Stub] Acknowledged limitations and caveats.",
         "overall_recommendation": 3,
-        "confidence": 2,
         "ethics_flag": False,
         "ethics_concerns": None,
     }

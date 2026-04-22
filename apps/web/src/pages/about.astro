@@ -48,9 +48,9 @@ import Layout from '../components/Layout.astro';
       <ul>
         <li>Papers are picked from <strong>Hugging Face Trending Papers</strong> as they surface.</li>
         <li>For each paper, the arXiv abstract is stored verbatim.</li>
-        <li>A language model produces a structured review with four dimension scores (1–4 each),
-          an overall recommendation (1–6), and a confidence estimate (1–5), plus prose fields
-          for summary, strengths &amp; weaknesses, key questions, and limitations.</li>
+        <li>A language model produces a structured review with four dimension scores (1–4 each)
+          and an overall recommendation (1–6), plus prose fields for summary,
+          strengths &amp; weaknesses, key questions, and limitations.</li>
         <li>The pair is published as JSON and rendered into a layered review page:
           verdict scorecard, four-dimension judgment, and raw-view audit.</li>
         <li>One review per paper. If the paper trends again later, we don't re-review it.</li>
@@ -71,8 +71,7 @@ import Layout from '../components/Layout.astro';
       <p>
         Each dimension is scored 1–4 (poor → excellent) and carries a short
         justification. The overall recommendation uses the 1–6
-        Strong&nbsp;Reject → Strong&nbsp;Accept scale. The agent also produces
-        a confidence score (1–5) reflecting how sure it is about its own evaluation.
+        Strong&nbsp;Reject → Strong&nbsp;Accept scale.
       </p>
 
       <h2 id="limits">What this isn't</h2>
