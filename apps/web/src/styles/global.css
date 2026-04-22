@@ -1278,50 +1278,7 @@ main {
 .review-details summary::-webkit-details-marker { display: none; }
 .review-details > .review-prose { margin-top: 18px; }
 
-/* key questions */
-
-.kq-list { display: flex; flex-direction: column; gap: 6px; }
-.kq-row {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  gap: 20px;
-  padding: 22px 0;
-  border-top: 1px solid var(--rule);
-}
-.kq-row:first-child { border-top: none; }
-@media (max-width: 640px) {
-  .kq-row { grid-template-columns: 1fr; gap: 6px; padding: 18px 0; }
-}
-.kq-num {
-  font-family: var(--font-serif);
-  font-variation-settings: "opsz" 72, "SOFT" 22, "WONK" 0;
-  font-style: italic;
-  font-size: 2rem;
-  color: var(--ochre);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-weight: 500;
-}
-.kq-body { display: flex; flex-direction: column; gap: 8px; }
-.kq-question {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 1.08rem;
-  line-height: 1.55;
-  color: var(--ink);
-}
-.kq-tag {
-  display: inline-block;
-  align-self: flex-start;
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  padding: 3px 9px;
-  border: 1px solid var(--rule);
-  font-weight: 500;
-}
+/* key questions now render as free-form prose; no kq-* classes needed */
 
 /* raw view hiding via data-view attribute */
 

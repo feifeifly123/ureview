@@ -94,14 +94,10 @@ function ratingsInline(ratings: FeedRatings | undefined): HTMLElement | null {
 
 function footerLine(entry: FeedEntry): HTMLElement {
   const leaning = entry.verdict_leaning;
-  const kqc = entry.key_questions_count ?? 0;
 
   const bits: HTMLElement[] = [];
   if (leaning) {
     bits.push(el('span', { class: `entry-leaning entry-leaning--${leaning}` }, leaning));
-  }
-  if (kqc > 0) {
-    bits.push(el('span', {}, `${kqc} Q`));
   }
   const ratings = ratingsInline(entry.ratings);
   if (ratings) bits.push(ratings);

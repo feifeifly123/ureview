@@ -91,9 +91,6 @@ def build_feed_entry(review: dict[str, Any], include_date: bool = True) -> dict[
     if ratings:
         entry["ratings"] = ratings
 
-    questions = ai.get("key_questions") or []
-    entry["key_questions_count"] = len(questions)
-
     if ai.get("ethics_flag"):
         entry["ethics_flag"] = True
 

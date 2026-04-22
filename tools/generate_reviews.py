@@ -72,9 +72,7 @@ def stub_ai_review() -> dict:
             "significance": {"score": 3, "note": "[Stub] short justification"},
             "originality":  {"score": 3, "note": "[Stub] short justification"},
         },
-        "key_questions": [
-            {"question": "[Stub] key question 1 — what would change the verdict?", "tag": "could raise soundness"},
-        ],
+        "key_questions": "[Stub] Key questions for the authors — what would change the verdict?",
         "limitations": "[Stub] Acknowledged limitations and caveats.",
         "overall_recommendation": 3,
         "ethics_flag": False,

@@ -31,20 +31,7 @@
         "note": "Simple idea; originality is in the empirical demonstration of the emergent scale threshold."
       }
     },
-    "key_questions": [
-      {
-        "question": "What fraction of accuracy gains on GSM8K come from chains that are actually faithful versus chains that happen to land on correct answers via unrelated reasoning?",
-        "tag": "could raise soundness"
-      },
-      {
-        "question": "How sensitive is CoT to exemplar choice — specifically, what is the performance variance across different hand-written exemplar sets of the same length?",
-        "tag": "could reduce confidence gap"
-      },
-      {
-        "question": "Is the scale threshold a property of pretraining data composition (e.g. presence of reasoning-like text) rather than raw parameter count?",
-        "tag": "could clarify significance"
-      }
-    ],
+    "key_questions": "What fraction of accuracy gains on GSM8K come from chains that are actually faithful versus chains that happen to land on correct answers via unrelated reasoning? (could raise soundness)\n\nHow sensitive is CoT to exemplar choice — specifically, what is the performance variance across different hand-written exemplar sets of the same length? (could reduce confidence gap)\n\nIs the scale threshold a property of pretraining data composition (e.g. presence of reasoning-like text) rather than raw parameter count? (could clarify significance)",
     "limitations": "Decoding-time compute overhead (multi-step generation) is not discussed. Exemplar engineering is manual and its variance is not characterised. The 'why does this emerge with scale' question is left open.",
     "overall_recommendation": 5,
     "ethics_flag": false,

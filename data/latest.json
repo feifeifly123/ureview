@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-22T06:48:24.964031+00:00",
+  "generated_at": "2026-04-22T07:01:45.287205+00:00",
   "reviews": [
     {
       "id": "2026-04-09-paper-b",
@@ -21,8 +21,7 @@
         "presentation": 4,
         "significance": 4,
         "originality": 3
-      },
-      "key_questions_count": 3
+      }
     },
     {
       "id": "2026-04-09-paper-a",
@@ -45,8 +44,7 @@
         "presentation": 4,
         "significance": 4,
         "originality": 3
-      },
-      "key_questions_count": 3
+      }
     }
   ]
 }

@@ -34,7 +34,6 @@
             },
             "additionalProperties": false
           },
-          "key_questions_count": { "type": "integer", "minimum": 0 },
           "ethics_flag": { "type": "boolean" }
         },
         "additionalProperties": false

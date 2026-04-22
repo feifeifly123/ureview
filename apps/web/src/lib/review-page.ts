@@ -3,7 +3,7 @@ import { el, mount } from './dom';
 import { formatDate, safeHref } from './utils';
 import { typeset } from './latex';
 import { leaningLabel } from './feed-card';
-import type { Review, KeyQuestion, AIReviewRatings } from './types';
+import type { Review, AIReviewRatings } from './types';
 
 const RECOMMENDATION_LABELS: Record<number, string> = {
   1: 'Strong Reject',
@@ -170,26 +170,16 @@ function buildJudgment(review: Review): HTMLElement {
   ]);
 }
 
-// ---------- key questions ----------
+// ---------- key questions (free-form prose) ----------
 
 function buildKeyQuestions(review: Review): HTMLElement | null {
-  const qs = review.ai_review.key_questions ?? [];
-  if (qs.length === 0) return null;
-
-  const items = qs.map((q: KeyQuestion, i: number) =>
-    el('article', { class: 'kq-row' }, [
-      el('div', { class: 'kq-num' }, String(i + 1)),
-      el('div', { class: 'kq-body' }, [
-        el('p', { class: 'kq-question', 'data-typeset': 'true' }, q.question),
-        q.tag ? el('span', { class: 'kq-tag' }, q.tag) : null,
-      ].filter((n): n is HTMLElement => n != null)),
-    ])
-  );
+  const text = (review.ai_review.key_questions ?? '').trim();
+  if (!text) return null;
 
   return el('section', { class: 'review-section', id: 'questions' }, [
     el('span', { class: 'review-section-kicker' }, 'II · Follow-up'),
     el('h2', { class: 'review-section-title' }, 'What would change this verdict'),
-    el('div', { class: 'kq-list' }, items),
+    el('div', { class: 'review-prose', 'data-typeset': 'true' }, paragraphs(text)),
   ]);
 }
 

@@ -41,18 +41,7 @@
           },
           "additionalProperties": false
         },
-        "key_questions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["question"],
-            "properties": {
-              "question": { "type": "string" },
-              "tag": { "type": "string" }
-            },
-            "additionalProperties": false
-          }
-        },
+        "key_questions": { "type": "string" },
         "limitations": { "type": "string" },
         "overall_recommendation": { "type": "integer", "minimum": 1, "maximum": 6 },
         "ethics_flag": { "type": "boolean" },

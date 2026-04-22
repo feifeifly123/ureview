@@ -12,16 +12,12 @@ export interface AIReviewRatings {
   originality: RatingDetail;
 }
 
-export interface KeyQuestion {
-  question: string;
-  tag?: string;
-}
-
 export interface AIReview {
   summary: string;
   strengths_weaknesses: string;
   ratings: AIReviewRatings;
-  key_questions: KeyQuestion[];
+  /** Free-form prose: questions the author(s) should answer to change the verdict. */
+  key_questions: string;
   limitations: string;
   overall_recommendation: 1 | 2 | 3 | 4 | 5 | 6;
   ethics_flag: boolean;
@@ -74,7 +70,6 @@ export interface LatestReviewEntry {
   verdict_leaning?: VerdictLeaning;
   overall_recommendation?: number;
   ratings?: FeedRatings;
-  key_questions_count?: number;
   ethics_flag?: boolean;
 }
 
@@ -94,6 +89,5 @@ export interface DailyReviewEntry {
   verdict_leaning?: VerdictLeaning;
   overall_recommendation?: number;
   ratings?: FeedRatings;
-  key_questions_count?: number;
   ethics_flag?: boolean;
 }

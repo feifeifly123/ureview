@@ -322,7 +322,7 @@ const EMPTY_REVIEW = () => ({
       significance: { score: 3, note: '' },
       originality:  { score: 3, note: '' },
     },
-    key_questions: [],
+    key_questions: '',
     limitations: '',
     overall_recommendation: 4,
     ethics_flag: false,
@@ -586,11 +586,8 @@ function buildStructuredFields(review) {
       ])
     )),
 
-    // Key questions
-    el('h3', { class: 'sub-heading' }, 'Open questions'),
-    el('div', { id: 'kq-list', class: 'kq-list' },
-      (ai.key_questions.length ? ai.key_questions : [{ question: '', tag: '' }]).map((q, i) => buildKqRow(q, i))),
-    el('button', { class: 'btn', type: 'button', onclick: addKqRow, style: { marginTop: '8px' } }, '+ Add question'),
+    // Key questions (free-form prose; LLM output uses blank lines between items)
+    buildField('Key questions for authors (LaTeX OK)', 'key_questions', ai.key_questions || '', { textarea: true, tall: true }),
 
     buildField('Limitations (LaTeX OK)', 'limitations', ai.limitations, { textarea: true }),
 
@@ -624,25 +621,6 @@ function buildStructuredFields(review) {
   ]);
 }
 
-function buildKqRow(q, i) {
-  const row = el('div', { class: 'kq-row' });
-  row.appendChild(el('span', { class: 'kq-num' }, `Q.${String(i + 1).padStart(2, '0')}`));
-  row.appendChild(el('div', { class: 'kq-body' }, [
-    el('input', { type: 'text', class: 'kq-tag', placeholder: 'tag · e.g. could raise soundness', value: q.tag || '' }),
-    el('textarea', { class: 'kq-question', placeholder: 'Question text…' }, q.question || ''),
-  ]));
-  row.appendChild(el('button', {
-    class: 'kq-remove', type: 'button',
-    onclick: (e) => e.target.closest('.kq-row').remove(),
-  }, 'remove'));
-  return row;
-}
-
-function addKqRow() {
-  const list = $('#kq-list');
-  list.appendChild(buildKqRow({}, list.children.length));
-}
-
 function readFormAsReview(prev) {
   const title = $('#f-title').value.trim();
   const paper_url = $('#f-paper_url').value.trim();
@@ -658,11 +636,6 @@ function readFormAsReview(prev) {
   const ethicsFlag = $('#f-ethics').checked;
   const ethicsConcernsEl = $('#f-ethics_concerns');
   const ethicsConcerns = ethicsFlag && ethicsConcernsEl ? ethicsConcernsEl.value.trim() : null;
-
-  const kqRows = $$('#kq-list .kq-row').map((row) => ({
-    question: row.querySelector('.kq-question').value.trim(),
-    tag: row.querySelector('.kq-tag').value.trim() || undefined,
-  })).filter((q) => q.question);
 
   return {
     id,
@@ -682,7 +655,7 @@ function readFormAsReview(prev) {
         significance: { score: Number($('#rating-significance-score').value), note: $('#rating-significance-note').value.trim() },
         originality:  { score: Number($('#rating-originality-score').value),  note: $('#rating-originality-note').value.trim() },
       },
-      key_questions: kqRows.map((q) => q.tag ? q : { question: q.question }),
+      key_questions: $('#f-key_questions').value.trim(),
       limitations: $('#f-limitations').value.trim(),
       overall_recommendation: Number($('#f-overall_recommendation').value),
       ethics_flag: ethicsFlag,
