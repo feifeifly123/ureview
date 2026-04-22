@@ -1602,6 +1602,11 @@ main {
 
 /* ---------- states (loading / error / empty) ---------- */
 
+/* Browser's implicit [hidden] { display: none } would be beaten by any class
+   selector of equal or higher specificity (like our .state below). Force it
+   back so placeholders actually disappear when the JS sets el.hidden = true. */
+[hidden] { display: none !important; }
+
 .state {
   padding: 48px 24px;
   text-align: center;
