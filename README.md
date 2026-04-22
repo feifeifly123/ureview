@@ -30,7 +30,7 @@ Two independent layers, **never coupled**:
 The site fetches data at request time. **Deploying new data does not
 require rebuilding the site.**
 
-## 🔒 Iron rule: a mature site ships data, not code
+## 🔒 Iron rule #1: a mature site ships data, not code
 
 Once openagent.review reaches steady state — design stable, review
 schema frozen — the daily workflow is exactly **one command**:
@@ -43,63 +43,85 @@ This rebuilds local indexes, validates the data against the schema,
 and uploads the delta to R2. **It does not touch git. It does not
 rebuild the site. It does not redeploy.**
 
-This is a design constraint, not an accident. The site MUST NOT
-develop build-time dependencies on specific reviews. Any future
-feature that would require a site rebuild per new review is
-**rejected by default**. When reviewing a proposal, ask:
+The site MUST NOT develop build-time dependencies on specific
+reviews. Any proposal that would require a site rebuild per new
+review is **rejected by default**. When reviewing a proposal, ask:
 
 > _Does this force a git push for every new review?_
 
-If yes, find another way. Edge functions, client-side rendering,
-schema-driven components — whatever — but never a build gate on the
-review stream.
+If yes, find another way. Client-side rendering, schema-driven
+components, different URL schemes — whatever — but never a build
+gate on the review stream.
 
-### Why this matters
-
+**Why this matters**:
 - Updates scale with the author's typing speed, not with CI latency
 - Zero risk of a data-layer change breaking the site
 - A review filed Saturday 2 AM doesn't wait for a build pipeline
 - No deploy pressure on review authorship
 
-### What about share-preview (og:title, og:description)?
+## 🔒 Iron rule #2: the public site is a pure static deploy
 
-Listings on the home + browse pages link to `/review/?id={id}` —
-the legacy client-fetch URL. That URL works for **any** review in R2,
-regardless of when the site was last built. **Readers never hit a
-404 just because a new review hasn't been baked into the site yet.**
+The `apps/web/` build output is **100% static assets** — HTML, CSS,
+JS, fonts. Nothing executes at request time on our infrastructure.
 
-As a separate optimization, the site also ships static SSG pages at
-`/review/{id}/` for every review that was in the repo at build time.
-Those pages carry prerendered `<title>` + `og:*` tags, so anyone who
-shares a `/review/{id}/` URL (or was linked from a past site version
-that used that URL) gets a rich social preview.
+This explicitly rules out:
 
-The tradeoff: links shared from the current listings (the `?id=`
-form) show a generic share preview. If you want the rich preview for
-recent reviews, run the optional site rebuild:
+- **Cloudflare Pages Functions / Workers** in front of the public site
+- **Edge middleware** (`_middleware.ts` etc.) that runs per request
+- **SSR / on-demand rendering** of any page
+- **Any server code** that reads R2, transforms HTML, injects data,
+  rewrites paths, or otherwise behaves dynamically per request
 
-```bash
-git add data/ && git commit -m "Refresh review snapshot" && git push
-# Cloudflare Pages auto-builds in ~90 seconds
-```
+The only compute in the public path is the CDN itself (caching +
+TLS) and the reader's browser (client-side rendering). The data
+layer is also static: `data.openagent.review` serves pre-generated
+JSON files from R2, not a query engine.
 
-No schedule, no cron, no pressure. The iron rule still holds — the
-rebuild is purely to upgrade share-preview quality for recent
-reviews; the reviews themselves are already live on R2.
+**Why this matters**:
+- A pure static site has essentially no moving parts to break
+- No function quotas, no cold-start latency, no edge-runtime
+  version drift
+- Cost scales only with traffic, not with invocation counts
+- Every page is trivially reproducible from repo + R2 JSON — no
+  opaque runtime state anywhere
+- Debuggable with `curl` and `view-source:`, every single time
 
-### Why we don't auto-rewrite missing SSG pages via `_redirects`
+**Consequences this rule accepts**:
+
+- Share previews for listing URLs (`/review/?id={id}`) stay generic.
+  Social crawlers don't run JS and can't see the real title. Rich
+  previews only appear for the SSG pages at `/review/{id}/`, which
+  exist for reviews present in the repo at the last site build.
+- There is no fallback that makes missing SSG pages render per-paper
+  share meta on the fly. Reviews added to R2 since the last build
+  still load (listings use the client-fetch URL), but their shared
+  previews fall back to generic.
+- If we want richer share previews for recent reviews, we run an
+  occasional manual site rebuild (`git push`); the reviews
+  themselves have been live on R2 the whole time.
+
+If someone later wants to add edge compute, the question is not
+"is this useful?" (it might be), it's **"does this break Iron rule
+#2?"** Changing this rule requires writing up why — in this README,
+with the reason and the new regime — not quietly adding a Function
+file.
+
+### Share-preview status at a glance
+
+| URL shape | Who uses it | Preview quality |
+|---|---|---|
+| `/review/?id={id}` | home/browse listings; 95% of traffic | Generic site title |
+| `/review/{id}/` | direct links, old shares, post-rebuild | Real paper title + og tags |
+
+### Why we don't auto-rewrite missing SSG via `_redirects`
 
 We tried. Cloudflare Pages processes **both** `_redirects` rewrites
 (status 200) and redirects (status 301/302) **before** static asset
-matching — contrary to their docs. So any `/review/:id/` pattern we
-write in `_redirects` ends up hijacking the SSG pages too, erasing
-the P0 benefit for reviews that DO have rich share previews. We
-decided to keep listings on the `?id=` URL instead; it's simpler
-and the iron rule stays bulletproof.
-
-A future Pages Functions-based fallback (edge-level "serve static if
-exists, else legacy") would let us have both. Not done yet; not
-worth the complexity until review volume grows.
+matching — contrary to their docs. Any `/review/:id/` pattern in
+`_redirects` hijacks the SSG pages too, erasing the rich-preview
+benefit for reviews that already have it. So we removed
+`_redirects` and kept listings on the `?id=` URL. Simpler, and
+Iron rule #1 stays bulletproof without violating Iron rule #2.
 
 ## Daily workflow (mature state)
 
