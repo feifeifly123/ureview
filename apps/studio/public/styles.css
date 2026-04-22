@@ -637,6 +637,57 @@ main {
   font-weight: 500;
 }
 
+/* protected-field header: label on the left, ✎ Edit button on the right */
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.field-label-row .field-label { margin-bottom: 0; }
+
+.field-unlock {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color 140ms, border-color 140ms;
+}
+.field-unlock:hover {
+  color: var(--ochre);
+  border-color: var(--ochre);
+}
+.field-unlock:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* locked state: input looks dimmed + cursor: default */
+.field--locked input[readonly],
+.field--locked textarea[readonly] {
+  color: var(--ink-3);
+  border-bottom-color: var(--rule);
+  cursor: default;
+  background: transparent;
+}
+.field--locked textarea[readonly] {
+  border-color: var(--rule);
+}
+.field--locked input[readonly]:focus,
+.field--locked textarea[readonly]:focus {
+  outline: none;
+  border-bottom-color: var(--rule);
+  border-color: var(--rule);
+  border-bottom-width: 1px;
+  padding-bottom: 8px;
+}
+
 input[type="text"],
 input[type="number"],
 input[type="search"],

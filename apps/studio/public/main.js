@@ -399,15 +399,15 @@ function buildEditorView(review, isNew) {
       ]),
     ]),
     el('p', { class: 'chapter-lede' },
-      'From arXiv. Title, abstract and categories are passed through verbatim — edit HF rank if you want to pin its discovery position.'),
+      'Passthrough from arXiv and HF Daily. All fields in this block are read-only by default — click ✎ Edit to override if you really need to fix something at the source layer.'),
     el('div', { class: 'field-grid' }, [
-      buildField('Title', 'title', review.title),
-      buildField('arXiv URL', 'paper_url', review.paper_url),
+      buildProtectedField('Title', 'title', review.title),
+      buildProtectedField('arXiv URL', 'paper_url', review.paper_url),
     ]),
-    buildField('Abstract (arXiv)', 'abstract', review.abstract, { textarea: true, tall: true }),
+    buildProtectedField('Abstract (arXiv)', 'abstract', review.abstract, { textarea: true, tall: true }),
     el('div', { class: 'field-grid' }, [
-      buildField('Categories (comma-separated)', 'arxiv_categories', (review.arxiv_categories || []).join(', ')),
-      buildField('HF rank', 'hf_rank', review.hf_rank ?? '', { type: 'number' }),
+      buildProtectedField('Categories (comma-separated)', 'arxiv_categories', (review.arxiv_categories || []).join(', ')),
+      buildProtectedField('HF rank', 'hf_rank', review.hf_rank ?? '', { type: 'number' }),
     ]),
   ]);
 
@@ -451,6 +451,45 @@ function buildField(label, key, value, opts = {}) {
     ? el('textarea', { id, class: opts.tall ? 'tall' : '' }, String(value || ''))
     : el('input', { id, type: opts.type || 'text', value: value ?? '' });
   field.appendChild(input);
+  return field;
+}
+
+// A "protected" field is one whose value is passthrough from an upstream
+// source (arXiv / HF) per PHILOSOPHY §4 — it shouldn't be casually edited.
+// It renders readonly with a small ✎ Edit button; clicking the button flips
+// readonly off for just that field. Everything else is identical to buildField.
+function buildProtectedField(label, key, value, opts = {}) {
+  const id = `f-${key}`;
+  const input = opts.textarea
+    ? el('textarea', { id, class: opts.tall ? 'tall' : '', readonly: '' }, String(value || ''))
+    : el('input', { id, type: opts.type || 'text', value: value ?? '', readonly: '' });
+
+  const unlockBtn = el('button', {
+    type: 'button',
+    class: 'field-unlock',
+    'aria-label': `Unlock ${label}`,
+    title: 'Unlock to edit (default: passthrough from upstream)',
+  }, '✎ Edit');
+
+  unlockBtn.addEventListener('click', () => {
+    if (input.hasAttribute('readonly')) {
+      input.removeAttribute('readonly');
+      field.classList.remove('field--locked');
+      unlockBtn.textContent = '✕ Lock';
+      input.focus();
+    } else {
+      input.setAttribute('readonly', '');
+      field.classList.add('field--locked');
+      unlockBtn.textContent = '✎ Edit';
+    }
+  });
+
+  const labelRow = el('div', { class: 'field-label-row' }, [
+    el('label', { for: id, class: 'field-label' }, label),
+    unlockBtn,
+  ]);
+
+  const field = el('div', { class: 'field field--locked' }, [labelRow, input]);
   return field;
 }
 
