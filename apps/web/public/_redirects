@@ -1,8 +1,17 @@
-# Cloudflare Pages redirects — applied only when no static file exists
-# at the requested path. Static files win; _redirects is the fallback layer.
-
-# Reviews added to R2 after the last site build won't have a SSG page
-# at /review/{id}/. Rewrite (200) to the legacy client-fetch route so
-# the page still loads (without prerendered title/og tags — that's the
-# tradeoff for R2-only updates). See README.md "Iron rule".
-/review/:id/  /review/?id=:id  200
+# Cloudflare Pages redirects.
+#
+# IMPORTANT — precedence rules:
+#   - 200 "rewrite" is processed BEFORE static files (would hijack
+#     existing SSG pages). DO NOT use 200 for this fallback.
+#   - 301/302 "redirect" is processed ONLY when no static match exists.
+#     That's what we want here.
+#
+# Reviews added to R2 after the last site build don't have a SSG page
+# at /review/{id}/. For those, 302-redirect to the legacy client-fetch
+# route so the page still loads (URL changes to /review/?id={id}, and
+# share preview falls back to the generic title — accepted tradeoff
+# for R2-only updates). See README.md "Iron rule".
+#
+# Reviews already SSG'd (in git at last build) are served as static
+# files and this rule is skipped for them.
+/review/:id/  /review/?id=:id  302
