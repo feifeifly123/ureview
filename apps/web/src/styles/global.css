@@ -402,7 +402,7 @@ main {
 }
 
 .page-intro {
-  padding: 36px 0 8px;
+  padding: 24px 0 4px;
 }
 .page-intro-eyebrow {
   font-family: var(--font-mono);
@@ -412,27 +412,38 @@ main {
   color: var(--ochre);
   font-weight: 500;
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .page-intro-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 0;
+  font-variation-settings: "opsz" 36, "SOFT" 30, "WONK" 0;
   font-weight: 500;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+/* Page-intro on non-home pages (browse, about, 404) keep a larger title */
+.page-intro--prose .page-intro-title {
   font-size: clamp(2rem, 3.5vw, 2.9rem);
   line-height: 1.02;
+  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 0;
   letter-spacing: -0.018em;
-  color: var(--ink);
   max-width: 22ch;
 }
 .page-intro-lede {
-  margin: 18px 0 0;
+  margin: 10px 0 0;
   font-family: var(--font-serif);
-  font-size: 1.15rem;
+  font-size: 1rem;
   line-height: 1.55;
   color: var(--ink-2);
   max-width: 56ch;
   font-style: italic;
+}
+.page-intro--prose .page-intro-lede {
+  font-size: 1.15rem;
+  margin-top: 18px;
 }
 
 .breadcrumb {
@@ -457,7 +468,7 @@ main {
 /* ---------- hero: featured entry ---------- */
 
 .hero-featured {
-  padding: 44px 0 32px;
+  padding: 28px 0 22px;
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   margin: 16px 0 0;
@@ -506,11 +517,11 @@ main {
 .hero-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-variation-settings: "opsz" 144, "SOFT" 22, "WONK" 0;
+  font-variation-settings: "opsz" 96, "SOFT" 22, "WONK" 0;
   font-weight: 500;
-  font-size: clamp(1.9rem, 3.6vw, 3rem);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.018em;
   color: var(--ink);
 }
 .hero-title a {
@@ -526,10 +537,10 @@ main {
 
 .hero-lede {
   font-family: var(--font-serif);
-  font-size: 1.15rem;
-  line-height: 1.55;
+  font-size: 1.08rem;
+  line-height: 1.5;
   color: var(--ink-2);
-  margin: 22px 0 0;
+  margin: 14px 0 0;
   font-style: italic;
 }
 
@@ -568,8 +579,8 @@ main {
   justify-content: space-between;
   align-items: baseline;
   gap: 20px;
-  padding-top: 18px;
-  margin-top: 28px;
+  padding-top: 14px;
+  margin-top: 18px;
   border-top: 1px dashed var(--rule);
   flex-wrap: wrap;
   font-family: var(--font-mono);
@@ -838,13 +849,26 @@ main {
   gap: 8px;
   font-weight: 500;
 }
-.filter-chip:hover { border-color: var(--ochre); color: var(--ochre); }
+.filter-chip:hover:not(:disabled):not(.is-disabled) { border-color: var(--ochre); color: var(--ochre); }
 .filter-chip.active {
   background: var(--ochre);
   border-color: var(--ochre);
   color: var(--paper);
 }
 .filter-chip.active .chip-count { color: var(--paper); opacity: 0.7; }
+.filter-chip:disabled,
+.filter-chip.is-disabled {
+  color: var(--ink-4);
+  border-color: var(--rule);
+  cursor: default;
+  opacity: 0.55;
+}
+.filter-chip:disabled:hover,
+.filter-chip.is-disabled:hover {
+  color: var(--ink-4);
+  border-color: var(--rule);
+}
+.filter-chip.is-disabled .chip-count { color: var(--ink-4); }
 .chip-count {
   font-size: 0.58rem;
   color: var(--ink-3);
@@ -1599,6 +1623,38 @@ main {
 }
 .btn-secondary:hover { color: var(--ochre); border-color: var(--ochre); }
 .btn-secondary--compact { padding: 6px 11px; font-size: 0.64rem; }
+
+/* ---------- skeleton placeholders (static, no shimmer) ---------- */
+
+.skel-block {
+  background: var(--rule);
+  border-radius: 1px;
+  display: block;
+}
+.skel-line-xs { height: 8px;  width: 28%; }
+.skel-line-sm { height: 10px; width: 45%; }
+.skel-line-md { height: 12px; width: 62%; }
+.skel-line-lg { height: 14px; width: 78%; }
+.skel-line-xl { height: 16px; width: 92%; }
+.skel-title   { height: 24px; width: 70%; margin: 8px 0 10px; }
+.skel-title-big { height: 36px; width: 85%; margin: 10px 0 14px; }
+
+/* hero skeleton: borrow hero-featured layout, neutral-grey color bar */
+.hero-featured--skel::before { background: var(--rule-bold); }
+.hero-featured--skel .hero-kicker,
+.hero-featured--skel .hero-side-label,
+.hero-featured--skel .hero-side-text,
+.hero-featured--skel .hero-foot { color: transparent; }
+
+/* entry skeleton: borrow entry layout, neutral-grey color bar, no hover */
+.entry--skel { cursor: default; pointer-events: none; }
+.entry--skel:hover { background: transparent; }
+.entry--skel::before { background: var(--rule-bold); }
+.entry--skel::after { display: none; }
+.entry--skel .entry-kicker,
+.entry--skel .entry-date,
+.entry--skel .entry-why-label,
+.entry--skel .entry-footer { color: transparent; }
 
 /* ---------- states (loading / error / empty) ---------- */
 

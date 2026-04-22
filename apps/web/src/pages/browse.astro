@@ -8,7 +8,7 @@ import Layout from '../components/Layout.astro';
   activeNav="browse"
 >
   <div class="container">
-    <section class="page-intro">
+    <section class="page-intro page-intro--prose">
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="/">Home</a>
         <span class="sep">/</span>
@@ -53,7 +53,17 @@ import Layout from '../components/Layout.astro';
     <div class="browse-count" id="browse-count" aria-live="polite">Loading…</div>
 
     <section class="entry-list" id="browse-list" aria-live="polite">
-      <div class="state loading"><strong>Loading reviews</strong></div>
+      {Array.from({ length: 5 }).map(() => (
+        <div class="entry entry--skel" aria-hidden="true">
+          <span class="entry-kicker"><span class="skel-block skel-line-xs"></span></span>
+          <span class="entry-date"><span class="skel-block skel-line-xs" style="width:60%;margin-left:auto"></span></span>
+          <span class="entry-title"><span class="skel-block skel-title"></span></span>
+          <div class="entry-why">
+            <div class="entry-why-row"><span class="entry-why-label"><span class="skel-block skel-line-xs"></span></span><span class="entry-why-text"><span class="skel-block skel-line-lg"></span></span></div>
+          </div>
+          <div class="entry-footer"><span class="skel-block skel-line-sm" style="width:30%"></span></div>
+        </div>
+      ))}
     </section>
 
     <div class="state empty" id="browse-empty-state" hidden>
@@ -148,15 +158,28 @@ import Layout from '../components/Layout.astro';
   }): HTMLElement {
     const children: (HTMLElement | string)[] = [opts.label];
     if (opts.count != null) children.push(el('span', { class: 'chip-count' }, String(opts.count)));
+
+    // Disable when count is 0 AND chip is not currently active (preserve deselect path)
+    const disabled = opts.count === 0 && !opts.active;
+
+    const classNames = ['filter-chip'];
+    if (opts.active) classNames.push('active');
+    if (disabled) classNames.push('is-disabled');
+
     const attrs: Record<string, string> = {
       type: 'button',
-      class: `filter-chip${opts.active ? ' active' : ''}`,
+      class: classNames.join(' '),
     };
+    if (disabled) {
+      attrs['aria-disabled'] = 'true';
+      attrs['disabled'] = '';
+      attrs['tabindex'] = '-1';
+    }
     if (opts.dataset) {
       for (const [k, v] of Object.entries(opts.dataset)) attrs[`data-${k}`] = v;
     }
     const btn = el('button', attrs, children);
-    btn.addEventListener('click', opts.onClick);
+    if (!disabled) btn.addEventListener('click', opts.onClick);
     return btn;
   }
 

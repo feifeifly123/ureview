@@ -1,0 +1,366 @@
+import { dataClient } from './data-client';
+import { el, mount } from './dom';
+import { formatDate, safeHref } from './utils';
+import { typeset } from './latex';
+import { leaningLabel, confidenceBand } from './feed-card';
+import type { Review, KeyQuestion, AIReviewRatings } from './types';
+
+const RECOMMENDATION_LABELS: Record<number, string> = {
+  1: 'Strong Reject',
+  2: 'Reject',
+  3: 'Weak Reject',
+  4: 'Weak Accept',
+  5: 'Accept',
+  6: 'Strong Accept',
+};
+
+function recommendationLabel(n: number | undefined): string {
+  if (n == null) return '—';
+  return RECOMMENDATION_LABELS[n] ?? '—';
+}
+
+function paragraphs(text: string): HTMLElement[] {
+  return text
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter((block) => block.length > 0)
+    .map((block) => el('p', {}, block));
+}
+
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  const match = trimmed.match(/^(.+?[.!?])(\s|$)/);
+  return match ? match[1] : trimmed;
+}
+
+function arxivFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/arxiv\.org\/abs\/([^/?#]+)/i);
+  return m ? m[1].replace(/v\d+$/, '') : null;
+}
+
+// ---------- header ----------
+
+function buildHeader(review: Review): HTMLElement {
+  const ai = review.ai_review;
+  const arxiv = arxivFromUrl(review.paper_url);
+
+  const kickerBits: HTMLElement[] = [];
+  if (arxiv) {
+    kickerBits.push(el('span', { class: 'id' }, arxiv));
+    kickerBits.push(el('span', { class: 'sep' }, '·'));
+  }
+  if (review.hf_rank != null) {
+    kickerBits.push(el('span', { class: 'rank' }, `HF №${String(review.hf_rank).padStart(2, '0')}`));
+    kickerBits.push(el('span', { class: 'sep' }, '·'));
+  }
+  (review.arxiv_categories ?? []).forEach((cat, i, all) => {
+    kickerBits.push(el('span', {}, cat));
+    if (i < all.length - 1) kickerBits.push(el('span', { class: 'sep' }, '·'));
+  });
+  if (ai.ethics_flag) {
+    if (kickerBits.length) kickerBits.push(el('span', { class: 'sep' }, '·'));
+    kickerBits.push(el('span', { class: 'ethics' }, '⚠ Ethics flagged'));
+  }
+
+  const kicker = el('div', { class: 'review-kicker' }, kickerBits);
+  const title = el('h1', { class: 'review-title' }, review.title);
+
+  const dateline = el('div', { class: 'review-dateline' }, [
+    el('span', {}, `Filed ${formatDate(review.date)}`),
+    el('span', { class: 'review-dateline-sep' }, '·'),
+    el('a', {
+      class: 'review-action',
+      href: safeHref(review.paper_url),
+      target: '_blank',
+      rel: 'noopener',
+    }, 'Open paper →'),
+    el('button', {
+      class: 'review-action',
+      type: 'button',
+      'data-copy-link': 'true',
+    }, 'Copy link'),
+  ]);
+
+  return el('header', { class: 'review-head' }, [kicker, title, dateline]);
+}
+
+function buildEthicsBanner(review: Review): HTMLElement | null {
+  const ai = review.ai_review;
+  if (!ai.ethics_flag) return null;
+  const kids: HTMLElement[] = [el('strong', {}, '⚠  Flagged for ethics review')];
+  if (ai.ethics_concerns) {
+    kids.push(el('p', {}, ai.ethics_concerns));
+  }
+  return el('div', { class: 'ethics-banner', role: 'alert' }, kids);
+}
+
+// ---------- scorecard ----------
+
+function buildScorecard(review: Review): HTMLElement {
+  const ai = review.ai_review;
+  const highlights = review.review_highlights;
+  const leaning = highlights.verdict_leaning;
+
+  const verdictWord = (leaning === 'positive' ? 'Positive' : leaning === 'critical' ? 'Critical' : 'Mixed');
+  const verdictClass = leaning === 'positive' ? 'scorecard-value--verdict'
+    : leaning === 'mixed' ? 'scorecard-value scorecard-value--mixed'
+    : 'scorecard-value scorecard-value--critical';
+
+  const grid = el('div', { class: 'scorecard-grid' }, [
+    el('div', { class: 'scorecard-cell' }, [
+      el('span', { class: 'scorecard-label' }, 'Verdict leaning'),
+      el('div', { class: `scorecard-value ${verdictClass}` }, verdictWord),
+      el('span', { class: 'scorecard-gloss' }, leaningLabel(leaning)),
+    ]),
+    el('div', { class: 'scorecard-cell' }, [
+      el('span', { class: 'scorecard-label' }, 'Recommendation'),
+      el('div', { class: 'scorecard-value' }, [
+        String(ai.overall_recommendation),
+        el('span', { class: 'scorecard-scale' }, '/ 6'),
+      ]),
+      el('span', { class: 'scorecard-gloss' }, recommendationLabel(ai.overall_recommendation)),
+    ]),
+    el('div', { class: 'scorecard-cell' }, [
+      el('span', { class: 'scorecard-label' }, 'Agent confidence'),
+      el('div', { class: 'scorecard-value' }, [
+        String(ai.confidence),
+        el('span', { class: 'scorecard-scale' }, '/ 5'),
+      ]),
+      el('span', { class: 'scorecard-gloss' }, confidenceBand(ai.confidence)),
+    ]),
+  ]);
+
+  const lead = el('p', { class: 'scorecard-lead', 'data-typeset': 'true' }, firstSentence(ai.summary));
+  const disclaimer = el('p', { class: 'scorecard-disclaimer' }, 'Machine-generated first-pass reading · not peer review');
+
+  return el('section', { class: `scorecard scorecard--${leaning}`, 'aria-label': 'Verdict at a glance' }, [
+    grid,
+    lead,
+    disclaimer,
+  ]);
+}
+
+// ---------- judgment (4 dimensions) ----------
+
+const DIMENSIONS: { key: keyof AIReviewRatings; label: string }[] = [
+  { key: 'soundness', label: 'Soundness' },
+  { key: 'presentation', label: 'Presentation' },
+  { key: 'significance', label: 'Significance' },
+  { key: 'originality', label: 'Originality' },
+];
+
+function buildJudgment(review: Review): HTMLElement {
+  const ai = review.ai_review;
+  const rows = DIMENSIONS.map(({ key, label }) => {
+    const r = ai.ratings[key];
+    return el('div', { class: 'dimension-row' }, [
+      el('span', { class: 'dimension-name' }, label),
+      el('span', { class: 'dimension-score' }, [
+        el('span', { class: 'dimension-score-n' }, String(r.score)),
+        el('span', {}, '/ 4'),
+      ]),
+      el('p', { class: 'dimension-note', 'data-typeset': 'true' }, r.note),
+    ]);
+  });
+
+  return el('section', { class: 'review-section', id: 'judgment' }, [
+    el('span', { class: 'review-section-kicker' }, 'I · Judgment'),
+    el('h2', { class: 'review-section-title' }, 'Four dimensions, read separately'),
+    el('p', { class: 'review-section-intro' }, 'Ratings sit side-by-side — never averaged. The shape of the reasoning matters more than a single number.'),
+    el('div', { class: 'dimension-table' }, rows),
+    el('details', { class: 'review-details' }, [
+      el('summary', {}, 'The agent\u2019s summary in full'),
+      el('div', { class: 'review-prose', 'data-typeset': 'true' }, paragraphs(ai.summary)),
+      el('hr', { style: { border: 'none', borderTop: '1px dashed var(--rule)', margin: '24px 0' } }),
+      el('div', { class: 'review-prose', 'data-typeset': 'true' }, paragraphs(ai.strengths_weaknesses)),
+    ]),
+  ]);
+}
+
+// ---------- key questions ----------
+
+function buildKeyQuestions(review: Review): HTMLElement | null {
+  const qs = review.ai_review.key_questions ?? [];
+  if (qs.length === 0) return null;
+
+  const items = qs.map((q: KeyQuestion, i: number) =>
+    el('article', { class: 'kq-row' }, [
+      el('div', { class: 'kq-num' }, String(i + 1)),
+      el('div', { class: 'kq-body' }, [
+        el('p', { class: 'kq-question', 'data-typeset': 'true' }, q.question),
+        q.tag ? el('span', { class: 'kq-tag' }, q.tag) : null,
+      ].filter((n): n is HTMLElement => n != null)),
+    ])
+  );
+
+  return el('section', { class: 'review-section', id: 'questions' }, [
+    el('span', { class: 'review-section-kicker' }, 'II · Follow-up'),
+    el('h2', { class: 'review-section-title' }, 'What would change this verdict'),
+    el('div', { class: 'kq-list' }, items),
+  ]);
+}
+
+// ---------- abstract + limits ----------
+
+function buildAbstract(review: Review): HTMLElement {
+  return el('section', { class: 'review-section', id: 'abstract' }, [
+    el('span', { class: 'review-section-kicker' }, 'III · From arXiv'),
+    el('h2', { class: 'review-section-title' }, 'Abstract'),
+    el('p', { class: 'review-section-intro' }, 'Taken verbatim from the author\u2019s own arXiv submission.'),
+    el('div', { class: 'review-prose review-prose--abstract', 'data-typeset': 'true' }, paragraphs(review.abstract)),
+  ]);
+}
+
+function buildLimits(review: Review): HTMLElement | null {
+  const text = review.ai_review.limitations?.trim();
+  if (!text) return null;
+  return el('section', { class: 'review-section', id: 'limits' }, [
+    el('span', { class: 'review-section-kicker' }, 'IV · Caveats'),
+    el('h2', { class: 'review-section-title' }, 'Limits & caveats'),
+    el('div', { class: 'review-prose', 'data-typeset': 'true' }, paragraphs(text)),
+  ]);
+}
+
+function buildRaw(review: Review): HTMLElement {
+  const ai = review.ai_review;
+  const composite = [ai.summary, ai.strengths_weaknesses, ai.limitations]
+    .filter((x) => !!x && x.trim().length > 0)
+    .join('\n\n');
+
+  return el('section', { class: 'review-section review-section--raw', id: 'raw' }, [
+    el('span', { class: 'review-section-kicker' }, 'Audit'),
+    el('h2', { class: 'review-section-title' }, 'Raw agent prose'),
+    el('p', { class: 'review-section-intro' }, 'The agent\u2019s original text, joined end-to-end with no restructuring.'),
+    el('div', { class: 'review-prose review-prose--raw', 'data-typeset': 'true' }, paragraphs(composite)),
+  ]);
+}
+
+// ---------- structured/raw toggle ----------
+
+function buildModeToggle(): HTMLElement {
+  return el('div', { class: 'view-toggle', role: 'tablist', 'aria-label': 'Review view mode' }, [
+    el('button', {
+      class: 'view-toggle-btn active', type: 'button', role: 'tab',
+      'aria-selected': 'true', 'data-view-mode': 'structured',
+    }, 'Structured'),
+    el('button', {
+      class: 'view-toggle-btn', type: 'button', role: 'tab',
+      'aria-selected': 'false', 'data-view-mode': 'raw',
+    }, 'Raw'),
+  ]);
+}
+
+function applyViewMode(container: HTMLElement, mode: 'structured' | 'raw') {
+  container.setAttribute('data-view', mode);
+  container.querySelectorAll<HTMLButtonElement>('.view-toggle-btn').forEach((btn) => {
+    const isActive = btn.dataset.viewMode === mode;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+}
+
+function attachModeToggle(container: HTMLElement) {
+  applyViewMode(container, 'structured');
+  container.querySelectorAll<HTMLButtonElement>('.view-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = (btn.dataset.viewMode as 'structured' | 'raw') ?? 'structured';
+      applyViewMode(container, next);
+    });
+  });
+}
+
+function attachCopyLink(container: HTMLElement) {
+  const copyButton = container.querySelector<HTMLButtonElement>('[data-copy-link]');
+  copyButton?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      copyButton.textContent = 'Copied';
+      setTimeout(() => { copyButton.textContent = 'Copy link'; }, 1200);
+    } catch {
+      copyButton.textContent = 'Copy failed';
+      setTimeout(() => { copyButton.textContent = 'Copy link'; }, 1200);
+    }
+  });
+}
+
+function typesetAll(container: HTMLElement) {
+  container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
+}
+
+function renderPage(container: HTMLElement, review: Review) {
+  const header = buildHeader(review);
+  const banner = buildEthicsBanner(review);
+  const scorecard = buildScorecard(review);
+  const toggle = buildModeToggle();
+  const judgment = buildJudgment(review);
+  const questions = buildKeyQuestions(review);
+  const abstract = buildAbstract(review);
+  const limits = buildLimits(review);
+  const raw = buildRaw(review);
+
+  const stack = el('div', { class: 'review-content-stack', 'data-view': 'structured' }, [
+    banner,
+    scorecard,
+    toggle,
+    judgment,
+    questions,
+    abstract,
+    limits,
+    raw,
+  ].filter((n): n is HTMLElement => n != null));
+
+  mount(container, header, stack);
+  attachModeToggle(stack);
+  attachCopyLink(container);
+  typesetAll(container);
+}
+
+function errorState(title: string, detail: string): HTMLElement {
+  return el('div', { class: 'state error' }, [
+    el('strong', {}, title),
+    el('span', {}, detail),
+  ]);
+}
+
+export async function mainReviewPage() {
+  const container = document.getElementById('review-detail');
+  if (!container) return;
+
+  // Prefer pre-baked data (SSG path via /review/{id}/)
+  const prebaked = (window as unknown as { __OAR_REVIEW?: Review }).__OAR_REVIEW;
+  if (prebaked) {
+    // title/meta already set server-side; no need to overwrite document.title
+    renderPage(container, prebaked);
+    if (window.location.hash === '#questions') {
+      setTimeout(() => {
+        document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+      }, 120);
+    }
+    return;
+  }
+
+  // Legacy path: /review/?id=xxx still fetches client-side
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id) {
+    mount(container, errorState('Missing review ID', 'No ?id= parameter supplied.'));
+    return;
+  }
+
+  let review: Review;
+  try {
+    review = await dataClient.getReview(id);
+  } catch (e) {
+    mount(container, errorState('Failed to load review', e instanceof Error ? e.message : String(e)));
+    return;
+  }
+
+  document.title = `${review.title} \u2014 OpenAgent.review`;
+  renderPage(container, review);
+
+  if (window.location.hash === '#questions') {
+    setTimeout(() => {
+      document.getElementById('questions')?.scrollIntoView({ behavior: 'smooth' });
+    }, 120);
+  }
+}

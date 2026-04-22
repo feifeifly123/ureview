@@ -18,7 +18,25 @@ import Layout from '../components/Layout.astro';
     </section>
 
     <div id="home-hero-slot" aria-live="polite">
-      <div class="state loading"><strong>Loading latest filing</strong></div>
+      <section class="hero-featured hero-featured--skel" aria-label="Loading featured filing">
+        <div class="hero-featured-inner">
+          <div class="hero-kicker">
+            <span class="skel-block skel-line-xs" style="width:18%"></span>
+            <span class="skel-block skel-line-xs" style="width:22%"></span>
+            <span class="skel-block skel-line-xs" style="width:14%"></span>
+          </div>
+          <div>
+            <div class="skel-block skel-title-big"></div>
+            <div class="skel-block skel-line-md" style="margin-top:14px"></div>
+            <div class="skel-block skel-line-sm" style="margin-top:6px"></div>
+          </div>
+          <aside class="hero-side">
+            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
+            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
+            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
+          </aside>
+        </div>
+      </section>
     </div>
 
     <div id="home-trust-slot" class="trust-strip" aria-live="polite" hidden></div>
@@ -35,7 +53,17 @@ import Layout from '../components/Layout.astro';
       </header>
 
       <div class="entry-list" id="home-list">
-        <div class="state loading"><strong>Loading reviews</strong></div>
+        {Array.from({ length: 5 }).map(() => (
+          <div class="entry entry--skel" aria-hidden="true">
+            <span class="entry-kicker"><span class="skel-block skel-line-xs"></span></span>
+            <span class="entry-date"><span class="skel-block skel-line-xs" style="width:60%;margin-left:auto"></span></span>
+            <span class="entry-title"><span class="skel-block skel-title"></span></span>
+            <div class="entry-why">
+              <div class="entry-why-row"><span class="entry-why-label"><span class="skel-block skel-line-xs"></span></span><span class="entry-why-text"><span class="skel-block skel-line-lg"></span></span></div>
+            </div>
+            <div class="entry-footer"><span class="skel-block skel-line-sm" style="width:30%"></span></div>
+          </div>
+        ))}
       </div>
 
       <div class="state empty" id="home-empty" hidden>
@@ -88,7 +116,7 @@ import Layout from '../components/Layout.astro';
 
     // title linked
     const title = el('h2', { class: 'hero-title' }, [
-      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, entry.title),
+      el('a', { href: `/review/${encodeURIComponent(entry.id)}/` }, entry.title),
     ]);
 
     // lede from why_read (fallback to abstract's first sentence)
@@ -128,7 +156,7 @@ import Layout from '../components/Layout.astro';
     // foot: machine disclaimer + open link
     const foot = el('div', { class: 'hero-foot' }, [
       el('span', {}, 'Machine-generated first-pass reading · Not peer review'),
-      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, 'Open the full review →'),
+      el('a', { href: `/review/${encodeURIComponent(entry.id)}/` }, 'Open the full review →'),
     ]);
 
     return el('section', { class: classes.join(' '), 'aria-label': 'Featured review' }, [

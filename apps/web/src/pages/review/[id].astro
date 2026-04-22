@@ -1,0 +1,44 @@
+---
+import { readdir, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Layout from '../../components/Layout.astro';
+import type { Review } from '../../lib/types';
+
+export async function getStaticPaths() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  // apps/web/src/pages/review/[id].astro → repo root is 5 levels up
+  const reviewsDir = resolve(here, '..', '..', '..', '..', '..', 'data', 'reviews');
+  const files = (await readdir(reviewsDir)).filter((f) => f.endsWith('.json'));
+  return Promise.all(
+    files.map(async (f) => {
+      const raw = await readFile(resolve(reviewsDir, f), 'utf-8');
+      const review = JSON.parse(raw) as Review;
+      return { params: { id: review.id }, props: { review } };
+    })
+  );
+}
+
+const { review } = Astro.props;
+const ai = review.ai_review;
+const h = review.review_highlights;
+const sentMatch = ai.summary.match(/^(.+?[.!?])(\s|$)/);
+const firstSentence = sentMatch ? sentMatch[1] : ai.summary;
+const rawDesc = (h?.why_read || firstSentence || review.abstract || '').replace(/\s+/g, ' ').trim();
+const description = rawDesc.length > 200 ? rawDesc.slice(0, 197) + '…' : rawDesc;
+const reviewJson = JSON.stringify(review).replace(/</g, '\\u003c');
+---
+
+<Layout title={review.title} description={description}>
+  <div class="review-shell">
+    <article class="review-page-root" id="review-detail">
+      <div class="state loading"><strong>Loading review</strong></div>
+    </article>
+  </div>
+  <script is:inline set:html={`window.__OAR_REVIEW = ${reviewJson};`} />
+</Layout>
+
+<script>
+  import { mainReviewPage } from '../../lib/review-page';
+  mainReviewPage();
+</script>

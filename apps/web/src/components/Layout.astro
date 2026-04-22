@@ -45,6 +45,36 @@ const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {}
       })();
+
+      // Dev-only convenience: when accessed through a path-prefix proxy like
+      // JupyterHub's /user/<u>/proxy/<port>/, internal absolute-path links
+      // (<a href="/browse/">) would escape the prefix. Detect the prefix from
+      // the current URL and transparently rewrite in-site hrefs. Noop in prod.
+      (function () {
+        var m = location.pathname.match(/^(.*\/proxy\/\d+)(?:\/|$)/);
+        if (!m) return;
+        var prefix = m[1];
+        function fix(root) {
+          if (!root || !root.querySelectorAll) return;
+          root.querySelectorAll('a[href^="/"]').forEach(function (a) {
+            var h = a.getAttribute('href');
+            if (!h || h.indexOf('//') === 0 || h.indexOf(prefix + '/') === 0) return;
+            a.setAttribute('href', prefix + h);
+          });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function () { fix(document); });
+        } else {
+          fix(document);
+        }
+        // Client-side rendered content (feed-card, review page) mounts links
+        // after data loads — keep rewriting as the DOM grows.
+        new MutationObserver(function (muts) {
+          muts.forEach(function (mu) {
+            mu.addedNodes.forEach(function (n) { if (n.nodeType === 1) fix(n); });
+          });
+        }).observe(document.documentElement, { childList: true, subtree: true });
+      })();
     </script>
 
     <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-latin.woff2" crossorigin />
