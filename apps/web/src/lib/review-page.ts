@@ -151,7 +151,7 @@ function buildJudgment(review: Review): HTMLElement {
 
   return el('section', { class: 'review-section', id: 'judgment' }, [
     el('span', { class: 'review-section-kicker' }, 'I · Judgment'),
-    el('h2', { class: 'review-section-title' }, 'Four dimensions, read separately'),
+    el('h2', { class: 'review-section-title' }, 'Dimension ratings'),
     el('p', { class: 'review-section-intro' }, 'Ratings sit side-by-side — never averaged. The shape of the reasoning matters more than a single number.'),
     el('div', { class: 'dimension-table' }, rows),
     el('details', { class: 'review-details' }, [
@@ -171,7 +171,7 @@ function buildKeyQuestions(review: Review): HTMLElement | null {
 
   return el('section', { class: 'review-section', id: 'questions' }, [
     el('span', { class: 'review-section-kicker' }, 'II · Follow-up'),
-    el('h2', { class: 'review-section-title' }, 'What would change this verdict'),
+    el('h2', { class: 'review-section-title' }, 'Open questions'),
     el('div', { class: 'review-prose', 'data-typeset': 'true' }, paragraphs(text)),
   ]);
 }
@@ -285,6 +285,41 @@ function scheduleTypeset(container: HTMLElement): void {
   }
 }
 
+function buildJumpNav(review: Review): HTMLElement {
+  const ai = review.ai_review;
+  // Only list sections that will actually render (limits + questions are
+  // conditional). Raw is in a separate view-mode, not linked here.
+  const items: Array<{ id: string; label: string }> = [
+    { id: 'judgment', label: 'Judgment' },
+  ];
+  if ((ai.key_questions ?? '').trim()) items.push({ id: 'questions', label: 'Questions' });
+  items.push({ id: 'abstract', label: 'Abstract' });
+  if ((ai.limitations ?? '').trim()) items.push({ id: 'limits', label: 'Limits' });
+
+  const links = items.map(({ id, label }) =>
+    el('a', {
+      class: 'jump-nav-link',
+      href: `#${id}`,
+      'data-jump-target': id,
+    }, label)
+  );
+  return el('nav', { class: 'jump-nav', 'aria-label': 'Jump to section' }, links);
+}
+
+function attachJumpNav(container: HTMLElement) {
+  container.querySelectorAll<HTMLAnchorElement>('.jump-nav-link').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      const id = a.dataset.jumpTarget;
+      if (!id) return;
+      const target = document.getElementById(id);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', `#${id}`);
+    });
+  });
+}
+
 function buildPostReadNav(review: Review): HTMLElement {
   return el('nav', { class: 'post-read-nav', 'aria-label': 'Continue reading' }, [
     el('a', { class: 'post-read-link post-read-back', href: '/' }, '← Back to feed'),
@@ -309,6 +344,7 @@ function renderPage(container: HTMLElement, review: Review) {
   const header = buildHeader(review);
   const banner = buildEthicsBanner(review);
   const scorecard = buildScorecard(review);
+  const jumpNav = buildJumpNav(review);
   const toggle = buildModeToggle();
   const judgment = buildJudgment(review);
   const questions = buildKeyQuestions(review);
@@ -320,6 +356,7 @@ function renderPage(container: HTMLElement, review: Review) {
   const stack = el('div', { class: 'review-content-stack', 'data-view': 'structured' }, [
     banner,
     scorecard,
+    jumpNav,
     toggle,
     judgment,
     questions,
@@ -331,6 +368,7 @@ function renderPage(container: HTMLElement, review: Review) {
 
   mount(container, header, stack);
   attachModeToggle(stack);
+  attachJumpNav(stack);
   attachCopyLink(container);
   scheduleTypeset(container);
 }

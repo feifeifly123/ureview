@@ -705,20 +705,9 @@ main {
 .entry--mixed::before    { background: var(--olive); }
 .entry--critical::before { background: var(--madder); }
 
-.entry::after {
-  content: "▸";
-  position: absolute;
-  right: 12px;
-  top: 28px;
-  opacity: 0;
-  color: var(--ochre);
-  font-size: 0.9rem;
-  transition: transform 220ms var(--ease), opacity 220ms;
-  transform: translateX(10px);
-}
 .entry:hover { background: var(--paper-2); }
 .entry:hover::before { width: 3px; }
-.entry:hover::after { opacity: 1; transform: translateX(0); }
+.entry:hover .entry-open { color: var(--ochre); }
 
 .entry-kicker {
   grid-column: 1 / 2;
@@ -1351,6 +1340,44 @@ main {
 .review-content-stack[data-view="raw"] .scorecard,
 .review-content-stack[data-view="raw"] .ethics-banner { display: none; }
 .review-content-stack[data-view="structured"] .review-section--raw { display: none; }
+
+/* ---------- jump nav (sticky TOC at review page top) ---------- */
+
+.jump-nav {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 10px 16px;
+  margin: 18px 0 4px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.jump-nav::-webkit-scrollbar { display: none; }
+.jump-nav-link {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  padding: 4px 2px;
+  text-decoration: none;
+  transition: color 140ms;
+}
+.jump-nav-link:hover { color: var(--ochre); }
+.jump-nav-link:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 3px;
+}
+.review-content-stack[data-view="raw"] .jump-nav { display: none; }
 
 /* ---------- post-read nav (review page tail) ---------- */
 
