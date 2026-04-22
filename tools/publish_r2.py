@@ -64,7 +64,7 @@ def cache_control_for(key: str, env: str) -> str:
     if key.startswith("daily/"):
         return "public, max-age=300, stale-while-revalidate=900"
     if key.startswith("reviews/"):
-        return "public, max-age=300, stale-while-revalidate=900"
+        return "public, max-age=31536000, immutable"
     return "public, max-age=300, stale-while-revalidate=600"
 
 
