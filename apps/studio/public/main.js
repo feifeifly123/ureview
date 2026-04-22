@@ -365,6 +365,17 @@ async function renderEditor({ reviewId, arxivId }) {
       review.arxiv_categories = meta.arxiv_categories || [];
       review.slug = slugify(meta.title);
       review.id = `${review.date}-${review.slug}`;
+
+      // HF rank comes from the Daily list, not the arXiv API. If we
+      // already synced today's Daily and this paper is in it, pre-fill
+      // the rank so the author doesn't have to look it up by hand.
+      if (dailyCache) {
+        const hit = dailyCache.find((p) => {
+          const pid = (p.arxiv_id || '').replace(/v\d+$/, '');
+          return pid === arxivId;
+        });
+        if (hit && hit.rank != null) review.hf_rank = hit.rank;
+      }
     } catch (e) {
       toast(`arXiv fetch failed: ${e.message}`, 'err', 5000);
     }
