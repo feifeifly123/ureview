@@ -1,7 +1,7 @@
 // OpenAgent Studio — vanilla SPA.
 //
 // Two views share the same root <main id="app">:
-//   Dashboard: HF trending, existing reviews
+//   Dashboard: HF Daily papers, existing reviews
 //   Editor:    per-paper form with LLM paste + structured fields
 //
 // Client-side routing via the `view` query param.
@@ -151,24 +151,24 @@ async function route() {
 
 // ---------- dashboard ----------
 
-let trendingCache = null;
+let dailyCache = null;
 
 async function renderDashboard() {
   const root = $('#app');
   const grid = el('div', { class: 'dashboard-grid' }, [
-    buildTrendingPanel(),
+    buildDailyPanel(),
     buildReviewsPanel(),
   ]);
   mount(root, grid);
-  await Promise.all([loadReviewsList(), trendingCache ? renderTrendingList(trendingCache) : null]);
+  await Promise.all([loadReviewsList(), dailyCache ? renderDailyList(dailyCache) : null]);
 }
 
-function buildTrendingPanel() {
-  return el('section', { class: 'board board--trending', id: 'trending-panel' }, [
+function buildDailyPanel() {
+  return el('section', { class: 'board board--daily', id: 'daily-panel' }, [
     el('div', { class: 'board-head' }, [
       el('div', {}, [
-        el('h2', { class: 'board-title' }, 'HF Trending'),
-        el('span', { class: 'board-subtitle' }, 'Incoming · hugging face'),
+        el('h2', { class: 'board-title' }, 'HF Daily'),
+        el('span', { class: 'board-subtitle' }, "Today's papers · hugging face"),
       ]),
       el('div', { class: 'board-actions' }, [
         el('div', { class: 'inline-field' }, [
@@ -178,11 +178,11 @@ function buildTrendingPanel() {
           }),
           el('button', { class: 'btn-link', onclick: startEditorByArxiv }, 'Open →'),
         ]),
-        el('button', { class: 'btn btn-primary', id: 'sync-btn', onclick: syncTrending }, 'Sync trending'),
+        el('button', { class: 'btn btn-primary', id: 'sync-btn', onclick: syncDaily }, 'Sync daily'),
       ]),
     ]),
-    el('div', { id: 'trending-list' }, [
-      el('p', { class: 'skel' }, 'Click "Sync trending" to pull the current HF feed.'),
+    el('div', { id: 'daily-list' }, [
+      el('p', { class: 'skel' }, 'Click "Sync daily" to pull today\'s HF Daily papers.'),
     ]),
   ]);
 }
@@ -215,7 +215,7 @@ async function loadReviewsList() {
     const reviews = await api('/api/reviews');
     count.textContent = `${reviews.length} ON FILE`;
     if (reviews.length === 0) {
-      mount(list, el('p', { class: 'skel' }, 'No reviews yet. Add one from trending or by arXiv ID above.'));
+      mount(list, el('p', { class: 'skel' }, 'No reviews yet. Add one from today\'s HF Daily or by arXiv ID above.'));
       return;
     }
     const rows = reviews.map((r) => {
@@ -246,25 +246,25 @@ async function loadReviewsList() {
   }
 }
 
-async function syncTrending() {
+async function syncDaily() {
   const btn = $('#sync-btn');
   btn.disabled = true;
   btn.textContent = 'Syncing…';
   try {
-    trendingCache = await api('/api/trending');
-    renderTrendingList(trendingCache);
-    toast(`Fetched ${trendingCache.length} trending papers`);
+    dailyCache = await api('/api/daily');
+    renderDailyList(dailyCache);
+    toast(`Fetched ${dailyCache.length} daily papers`);
   } catch (e) {
-    mount($('#trending-list'), el('div', { class: 'error-box' }, `HF sync failed:\n${e.message}`));
+    mount($('#daily-list'), el('div', { class: 'error-box' }, `HF sync failed:\n${e.message}`));
     toast('HF sync failed — see panel', 'err');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Sync trending';
+    btn.textContent = 'Sync daily';
   }
 }
 
-async function renderTrendingList(papers) {
-  const list = $('#trending-list');
+async function renderDailyList(papers) {
+  const list = $('#daily-list');
   if (!list) return;
   let reviewedSet = new Set();
   try {
@@ -273,7 +273,7 @@ async function renderTrendingList(papers) {
   } catch {}
 
   if (!papers.length) {
-    mount(list, el('p', { class: 'skel' }, 'No papers in the trending feed.'));
+    mount(list, el('p', { class: 'skel' }, 'No papers in today\'s HF Daily.'));
     return;
   }
 
@@ -282,7 +282,7 @@ async function renderTrendingList(papers) {
     const reviewed = reviewedSet.has(arxivId);
     const rank = String(p.rank).padStart(2, '0');
     return el('a', {
-      class: 'listing listing--trending',
+      class: 'listing listing--daily',
       href: `?paper=${encodeURIComponent(arxivId)}`,
       onclick: (e) => { e.preventDefault(); navTo(reviewed ? { review: null } : { paper: arxivId }); },
     }, [

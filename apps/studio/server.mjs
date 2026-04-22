@@ -12,7 +12,7 @@
  *   GET  /api/reviews            → list existing reviews (title + status)
  *   GET  /api/review/:id         → one review JSON verbatim
  *   POST /api/reviews            → save a new review (validate → write → reindex)
- *   GET  /api/trending           → fetch HF trending (via tools/fetch_hf.py --json-stdout)
+ *   GET  /api/daily              → fetch HF Daily papers (via tools/fetch_hf.py --json-stdout)
  *   GET  /api/arxiv?id=...       → fetch arXiv metadata for a paper
  */
 
@@ -178,7 +178,7 @@ async function saveReview(body) {
 
 // ---------- HF + arXiv bridges ----------
 
-async function fetchTrending() {
+async function fetchDaily() {
   const r = await runChild('python3', [join(REPO_ROOT, 'tools', 'fetch_hf.py'), '--json-stdout']);
   if (r.code !== 0) return { code: 502, error: r.stderr.trim() || 'fetch_hf.py failed' };
   try {
@@ -230,8 +230,8 @@ async function handle(req, res) {
       if (r.error) return send(res, r.code, { error: r.error });
       return send(res, r.code, r.body);
     }
-    if (req.method === 'GET' && pathname === '/api/trending') {
-      const r = await fetchTrending();
+    if (req.method === 'GET' && pathname === '/api/daily') {
+      const r = await fetchDaily();
       if (r.error) return send(res, r.code, { error: r.error });
       return send(res, r.code, r.body);
     }

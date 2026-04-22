@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit per-paper structured review JSONs from fetched trending papers.
+"""Emit per-paper structured review JSONs from fetched HF Daily papers.
 
 One review per arXiv paper, forever. If the paper has already been
 reviewed (matching by arXiv ID extracted from paper_url), the entry
@@ -93,13 +93,17 @@ def stub_highlights() -> dict:
 
 def pick_raw_source(args: argparse.Namespace) -> Path | None:
     """Resolve the raw input file. Explicit --input takes precedence;
-    otherwise fall back to the newest trending-*.json in data/raw/, then
-    (legacy) to data/raw/{today}.json."""
+    otherwise prefer the newest daily-*.json in data/raw/, then fall back
+    to legacy trending-*.json (from the trending-driven era), then
+    data/raw/{today}.json."""
     if args.input:
         p = Path(args.input)
         return p if p.exists() else None
     if not RAW_DIR.exists():
         return None
+    daily = sorted(RAW_DIR.glob("daily-*.json"), reverse=True)
+    if daily:
+        return daily[0]
     trending = sorted(RAW_DIR.glob("trending-*.json"), reverse=True)
     if trending:
         return trending[0]
@@ -111,7 +115,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate per-paper review JSONs")
     parser.add_argument(
         "--input",
-        help="Raw papers file (default: newest data/raw/trending-*.json)",
+        help="Raw papers file (default: newest data/raw/daily-*.json)",
     )
     parser.add_argument(
         "--force",

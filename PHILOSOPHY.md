@@ -1,6 +1,6 @@
 # OpenAgent.review — 产品设计哲学
 
-_写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)_
+_写于 2026-04-20, 第 6 轮改版后 (trending-driven pivot), 2026-04-22 迁移到 daily-driven_
 
 这份文档是**产品北极星**。任何改动, 包括功能增加、schema 调整、UI 重构, 都先过一遍这里的原则。如果新改动违反了下面任何一条, 要么在这里改掉原则、说明为什么, 要么放弃那次改动。
 
@@ -8,12 +8,14 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 
 ## 1. 核心命题 (Core thesis)
 
-**一句话**: 当一篇 arXiv 论文在 HF 上 trending, 我们跑一份结构化的 AI review, 发出来, 就这样。
+**一句话**: HF 每天发一份 Daily Papers 精选, 我们挑里面的论文跑一份结构化的 AI review, 发出来, 就这样。
 
-- **Trending-driven, not calendar-driven**。没有每日配额, 没有编辑日历, 没有"今天要发几篇"的 KPI。看到了 trending 的论文 → 跑 pipeline → 发布。
-- **Reactive pipeline, not scheduled**。cron 可以每小时去 poll 一次 HF, 但"poll 结果是空"是正常状态。pipeline 能容忍一整天没动作。
-- **One review per arXiv paper, ever**。同一篇论文不管 trending 多少次, 只有一条 review。需要刷新时明确 `--force`。
+- **Daily-driven (HF 的 cadence, 不是我们的)**。上游 `huggingface.co/papers` 每天选 ~20 篇; 我们跟着 HF 的节奏走。不是"每天必须发 N 篇"的自我 KPI — HF 没选或我们没挑就不跑; 拒绝"本周日报"式的编辑日历。
+- **Reactive within HF's cadence**。cron 可以每天 poll 一次 HF 的 Daily 页, 但"poll 结果全都 review 过了"是正常状态。pipeline 能容忍一整天没动作。
+- **One review per arXiv paper, ever**。同一篇论文不管出现在多少天的 Daily 里, 只有一条 review。需要刷新时明确 `--force`。
 - **Information, not opinion about the site itself**。我们只负责把 paper 的结构化 judgment 送出去, 不做 PR、不做榜单、不做编辑年度盘点。
+
+_历史: 2026-04-22 之前管道是 trending-driven (`/papers/trending`), 现在切到 daily-driven (`/papers`)。切换原因: trending 信号噪声大且不稳定, daily 是 HF 编辑/社区的精选, 信号更干净; 对站点来说, "每天看 HF 选的那 20 篇"比"观察热度榜滚动"更合理。代码层面的 pivot: `tools/fetch_hf.py` URL 改为 `/papers`, 所有 `trending` 命名改 `daily`, UI 文案同步 (`apps/studio/public/main.js`, `server.mjs`, README), 解析器不变 (HF 两条 URL 都用 `data-target="DailyPapers"` mount)。_
 
 ---
 
@@ -36,7 +38,7 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 显式声明的 non-goal, 对每一次需求评估都适用:
 
 - **不是同行评审**。AI review 是一遍过的语言模型意见, 没有人工校验, 没有 area chair, 没有 publication decision。About 页顶部的 disclaimer 不能被"设计简洁"为名拿掉。
-- **不做编辑日历**。没有"今天的 N 篇"这种概念。`/day/` 页 (已删) 就是违反这条的遗物。
+- **不做我们自己的编辑日历**。"每天那 20 篇"的选题权在 HF, 不是我们自定义。我们不会搞"本周精选"/"月度盘点"之类的自编目; 如果要回看, 通过 review 本身的时间戳就够了。(注: `/day/` 页在 trending-driven 时期被删过; daily pivot 后如果想把它回来, 是一个独立的 UI 讨论, 不在这条里。)
 - **不把四维度压成一个总分**。Soundness 3、Originality 2、Significance 4, **不能被平均成 3.0**。展示时必须四个分开。这条是 M3 圆桌会议记录在案的死原则。
 - **不假装客观中立**。"positive / mixed / critical" 是**色带**, 不是"共识评级"。色带只 communicate agent 的倾向, 不 communicate "社区怎么看"。
 - **不做作者回复流**。没有 rebuttal 线程, 没有 author portal, 没有 version 分歧。这块 scope 在 commit `88cf525` 被砍掉了, 砍得干净。
@@ -51,7 +53,7 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 | 字段 | 权威来源 | 我们做什么 |
 |------|---------|-----------|
 | `title`, `abstract`, `paper_url`, `arxiv_categories` | **arXiv API** | 纯 passthrough, 原文不修改 |
-| `hf_rank` | HF Trending | **一次性记录**, 首次观察到的排名 |
+| `hf_rank` | HF Daily | **一次性记录**, 首次观察到的当天排名 |
 | `ai_review.*` (summary, strengths, 4 ratings, questions, limits, rec, conf, ethics) | **LLM** | 生成, 从此只读 |
 | `review_highlights.*` (why_read, why_doubt, leaning) | LLM (或从 ai_review 派生) | 生成, 用于 feed 展示 |
 | `id`, `slug`, `date` | pipeline | 派生自 title + 首次 review 时间 |
@@ -60,8 +62,8 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 ### id 的语义
 
 - `id = "{date}-{slug}"`, 例如 `2026-04-09-scaling-laws-for-neural-language-models`。
-- `date` 是 **首次 review 的日期**, **不是** arXiv 提交日期, **不是** HF trending 日期。
-- 一旦一个 review 有 id, id **永远不变**。即使同一篇论文再 trending, 我们跳过 (见 §1)。
+- `date` 是 **首次 review 的日期**, **不是** arXiv 提交日期, **不是** HF Daily 收录日期。
+- 一旦一个 review 有 id, id **永远不变**。即使同一篇论文再次出现在 HF Daily, 我们跳过 (见 §1)。
 
 ### 去重键
 
@@ -144,7 +146,7 @@ _写于 2026-04-20, commit-of-record: 第 6 轮改版后 (trending-driven pivot)
 
 **写入发生在 `apps/studio/`**, 一个 Node 小服务器, 绑定 `0.0.0.0:4311` (允许同网段 LAN 访问, 不上公网)。Studio 的职责:
 
-- 同步 HF Trending, 展示候选论文
+- 同步 HF Daily, 展示今天的候选论文
 - 拉 arXiv metadata, 预填只读区域
 - 提供"粘贴 LLM 输出"的区域, 让作者把结构化 review JSON 贴进去
 - 派生 feed-card 字段 (why_read / why_doubt / verdict_leaning), 或接受作者手写

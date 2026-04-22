@@ -10,10 +10,10 @@ via `tools/publish_r2.py`.
 
 One page, two panels:
 
-1. **HF Trending** — click *Sync trending* to pull the current
-   `huggingface.co/papers/trending` list (50 papers). Each row shows
-   whether it's already been reviewed. Click a row (or type an arXiv
-   ID in the input) to open the editor.
+1. **HF Daily** — click *Sync daily* to pull today's
+   `huggingface.co/papers` Daily Papers (≈ 20 papers hand-picked by HF
+   each day). Each row shows whether it's already been reviewed. Click
+   a row (or type an arXiv ID in the input) to open the editor.
 2. **Existing reviews** — list of every file under `data/reviews/`
    with its leaning, date, and ethics flag. Click to re-open in the
    editor.
@@ -58,9 +58,9 @@ and avoids surprise fallbacks.
 Verify it worked:
 
 ```bash
-curl -s http://127.0.0.1:4311/api/trending | python3 -c \
+curl -s http://127.0.0.1:4311/api/daily | python3 -c \
   'import json,sys; d=json.load(sys.stdin); print(f"{len(d)} papers")'
-# Expect: 50 papers
+# Expect: ~20 papers (HF's daily curation size)
 ```
 
 If that prints `50 papers` or similar, you're good. If it prints a
@@ -88,8 +88,8 @@ ALL_PROXY='socks5h://user:pass@host:port' pnpm dev:studio
 [studio] http://0.0.0.0:4311 ready
 ```
 
-Open in a browser, click **Sync trending**, confirm the trending list
-populates. Studio is now ready for authoring.
+Open in a browser, click **Sync daily**, confirm today's HF Daily
+papers populate. Studio is now ready for authoring.
 
 The server binds to `0.0.0.0` and has no authentication — anyone who can
 reach the port can overwrite `data/reviews/*.json` and trigger HF/arXiv
@@ -134,7 +134,7 @@ to push data run `tools/publish_r2.py` from the CLI.
 | `GET` | `/api/reviews` | list of existing reviews (metadata only) |
 | `GET` | `/api/review/:id` | one review JSON verbatim |
 | `POST` | `/api/reviews` | body = full review JSON; validates + writes + reindexes |
-| `GET` | `/api/trending` | HF trending (via fetch_hf.py --json-stdout) |
+| `GET` | `/api/daily` | HF Daily papers (via fetch_hf.py --json-stdout) |
 | `GET` | `/api/arxiv?id=` | arXiv metadata (via fetch_arxiv.py --id) |
 
 ## Troubleshooting

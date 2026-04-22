@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Fetch trending papers from Hugging Face.
+"""Fetch HF Daily Papers from Hugging Face.
 
 Product thesis (see PHILOSOPHY.md):
-this pipeline is trending-driven, not calendar-driven. HF ships the
-trending list as server-rendered HTML with a `data-target="DailyPapers"`
-mount whose `data-props` attribute is a JSON blob containing every
-paper's metadata. We parse that directly — no scraping of DOM nodes.
+we follow HF's curated "Daily Papers" feed — ~20 papers/day hand-picked
+by HF. The page at `huggingface.co/papers` ships those as server-rendered
+HTML with a `data-target="DailyPapers"` mount whose `data-props` attribute
+is a JSON blob containing each paper's metadata. We parse that directly —
+no scraping of DOM nodes.
 
 Usage:
-    python3 tools/fetch_hf.py                       # write data/raw/trending-{ts}.json
+    python3 tools/fetch_hf.py                       # write data/raw/daily-{ts}.json
     python3 tools/fetch_hf.py --dry-run             # preview without writing
     python3 tools/fetch_hf.py --json-stdout         # emit list to stdout (for studio)
     python3 tools/fetch_hf.py --min-rank 20         # cap the tail
@@ -35,7 +36,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 
-HF_TRENDING_URL = "https://huggingface.co/papers/trending"
+HF_DAILY_URL = "https://huggingface.co/papers"
 DATA_PROPS_RE = re.compile(
     r'data-target="DailyPapers"\s+data-props="(.*?)"',
     re.S,
@@ -111,12 +112,12 @@ def extract_papers(html: str) -> list[dict]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fetch HF trending papers")
+    parser = argparse.ArgumentParser(description="Fetch HF Daily Papers")
     parser.add_argument(
         "--min-rank",
         type=int,
         default=None,
-        help="Keep only papers with rank <= this (skip deep trending tail).",
+        help="Keep only papers with rank <= this (skip deep tail).",
     )
     parser.add_argument(
         "--dry-run",
@@ -131,7 +132,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        html = fetch_html(HF_TRENDING_URL)
+        html = fetch_html(HF_DAILY_URL)
         papers = extract_papers(html)
     except (urllib.error.URLError, RuntimeError) as e:
         print(f"fetch_hf: {e}", file=sys.stderr)
@@ -149,7 +150,7 @@ def main() -> int:
     slug_ts = now.strftime("%Y-%m-%dT%H%M%SZ")
 
     if args.dry_run:
-        print(f"[dry-run] Would fetch {len(papers)} trending paper(s) at {now_iso}:")
+        print(f"[dry-run] Would fetch {len(papers)} daily paper(s) at {now_iso}:")
         for p in papers[:10]:
             print(f"  rank {p.get('rank', '?')}: {p['title'][:80]}  ({p['url']})")
         if len(papers) > 10:
@@ -157,7 +158,7 @@ def main() -> int:
         return 0
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = RAW_DIR / f"trending-{slug_ts}.json"
+    out_path = RAW_DIR / f"daily-{slug_ts}.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(papers, f, ensure_ascii=False, indent=2)
 
