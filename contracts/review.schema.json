@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["id", "slug", "date", "title", "paper_url", "abstract", "ai_review", "review_highlights", "updated_at"],
   "properties": {
-    "id": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}-.+" },
+    "id": { "type": "string", "pattern": "^(\\d{4}\\.\\d{4,5}|[a-z-]+/\\d{7})$" },
     "slug": { "type": "string" },
     "date": { "type": "string", "format": "date" },
     "title": { "type": "string" },

@@ -362,7 +362,8 @@ async function renderEditor({ reviewId, arxivId }) {
       review.paper_url = meta.paper_url;
       review.arxiv_categories = meta.arxiv_categories || [];
       review.slug = slugify(meta.title);
-      review.id = `${review.date}-${review.slug}`;
+      // Canonical id = arxiv id (already normalized by /api/arxiv).
+      review.id = arxivId;
 
       // HF rank comes from the Daily list, not the arXiv API. If we
       // already synced today's Daily and this paper is in it, pre-fill
@@ -608,7 +609,10 @@ function readFormAsReview(prev) {
 
   const date = prev.date || new Date().toISOString().slice(0, 10);
   const slug = prev.slug || slugify(title);
-  const id = prev.id || `${date}-${slug}`;
+  // Canonical id = arxiv id extracted from paper_url (strip any version suffix).
+  const arxivMatch = (paper_url || '').match(/arxiv\.org\/abs\/([^/?#]+)/i);
+  const arxivId = arxivMatch ? arxivMatch[1].replace(/v\d+$/, '') : '';
+  const id = prev.id || arxivId;
 
   const ethicsFlag = $('#f-ethics').checked;
   const ethicsConcernsEl = $('#f-ethics_concerns');

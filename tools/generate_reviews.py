@@ -146,7 +146,11 @@ def main() -> int:
             continue
 
         slug = slugify(paper["title"])
-        review_id = f"{today}-{slug}"
+        if not aid:
+            print(f"  skipped {paper.get('title', '?')[:60]}: no arxiv id in url")
+            skipped += 1
+            continue
+        review_id = aid
 
         review = {
             "id": review_id,
