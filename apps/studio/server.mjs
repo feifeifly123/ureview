@@ -108,12 +108,22 @@ async function serveStatic(req, res, relativePath) {
 
 // ---------- review inventory ----------
 
+async function* walkJson(dir) {
+  // Recursive walk: yields .json file paths under dir. Used so we can pick up
+  // both new-style ids (data/reviews/2401.12345.json) and old-style
+  // (data/reviews/math/0211159.json).
+  if (!existsSync(dir)) return;
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walkJson(full);
+    else if (entry.isFile() && entry.name.endsWith('.json')) yield full;
+  }
+}
+
 async function listReviews() {
-  if (!existsSync(REVIEWS_DIR)) return [];
-  const files = (await readdir(REVIEWS_DIR)).filter((f) => f.endsWith('.json')).sort();
   const out = [];
-  for (const f of files) {
-    const raw = await readFile(join(REVIEWS_DIR, f), 'utf-8');
+  for await (const path of walkJson(REVIEWS_DIR)) {
+    const raw = await readFile(path, 'utf-8');
     let j;
     try { j = JSON.parse(raw); } catch { continue; }
     out.push({
@@ -121,18 +131,19 @@ async function listReviews() {
       title: j.title,
       date: j.date,
       paper_url: j.paper_url,
-      verdict_leaning: j.review_highlights?.verdict_leaning,
-      ethics_flag: Boolean(j.ai_review?.ethics_flag),
-      arxiv_id: (j.paper_url?.match(/arxiv\.org\/abs\/([^/?#]+)/i)?.[1] ?? '').replace(/v\d+$/, ''),
+      authors: j.authors || [],
+      arxiv_categories: j.arxiv_categories || [],
     });
   }
+  out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   return out;
 }
 
 async function readReview(id) {
-  const filename = `${id}.json`;
-  if (!/^[\w.\-]+\.json$/.test(filename)) throw new Error('bad id');
-  const p = join(REVIEWS_DIR, filename);
+  // arxiv ids include "/" for old-style (math/0211159); reject only path-
+  // traversal characters, not the slash itself.
+  if (!/^[A-Za-z0-9./_\-]+$/.test(id) || id.includes('..')) throw new Error('bad id');
+  const p = join(REVIEWS_DIR, `${id}.json`);
   const raw = await readFile(p, 'utf-8');
   return JSON.parse(raw);
 }
@@ -143,13 +154,15 @@ async function saveReview(body) {
   let review;
   try { review = JSON.parse(body); } catch (e) { return { code: 400, error: `invalid JSON: ${e.message}` }; }
 
-  if (!review.id || !/^\d{4}-\d{2}-\d{2}-.+/.test(review.id)) {
-    return { code: 400, error: 'review.id missing or malformed (want YYYY-MM-DD-slug)' };
+  if (!review.id || !/^(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})$/.test(review.id)) {
+    return { code: 400, error: 'review.id missing or malformed (want arxiv id like 2401.12345 or math/0211159)' };
   }
 
-  // Write to a temp file, run validator, only move to final location if it passes.
+  // Old-style arxiv ids contain a slash (e.g. math/0211159). Both the temp
+  // path and the final on-disk path need their parent dirs created first.
   const tmp = await mkdtemp(join(tmpdir(), 'studio-review-'));
   const tmpFile = join(tmp, `${review.id}.json`);
+  mkdirSync(dirname(tmpFile), { recursive: true });
   await writeFile(tmpFile, JSON.stringify(review, null, 2), 'utf-8');
 
   const validator = await runChild('python3', [
@@ -164,6 +177,7 @@ async function saveReview(body) {
 
   if (!existsSync(REVIEWS_DIR)) mkdirSync(REVIEWS_DIR, { recursive: true });
   const dest = join(REVIEWS_DIR, `${review.id}.json`);
+  mkdirSync(dirname(dest), { recursive: true });
   await writeFile(dest, JSON.stringify(review, null, 2), 'utf-8');
   await rm(tmp, { recursive: true, force: true });
 
@@ -176,21 +190,12 @@ async function saveReview(body) {
   return { code: 200, body: { ok: true, id: review.id, indexes_rebuilt: true } };
 }
 
-// ---------- HF + arXiv bridges ----------
-
-async function fetchDaily() {
-  const r = await runChild('python3', [join(REPO_ROOT, 'tools', 'fetch_hf.py'), '--json-stdout']);
-  if (r.code !== 0) return { code: 502, error: r.stderr.trim() || 'fetch_hf.py failed' };
-  try {
-    const list = JSON.parse(r.stdout);
-    return { code: 200, body: list };
-  } catch (e) {
-    return { code: 502, error: `could not parse fetch_hf output: ${e.message}` };
-  }
-}
+// ---------- arXiv bridge ----------
 
 async function fetchArxiv(id) {
-  if (!/^[\w.\-]+$/.test(id || '')) return { code: 400, error: 'bad arxiv id' };
+  // Accept new-style (NNNN.NNNNN, optional vN), old-style (math/NNNNNNN), and
+  // raw arxiv URL fragments — fetch_arxiv.py normalises.
+  if (!/^[A-Za-z0-9./_\-]+$/.test(id || '')) return { code: 400, error: 'bad arxiv id' };
   const r = await runChild('python3', [join(REPO_ROOT, 'tools', 'fetch_arxiv.py'), '--id', id]);
   if (r.code !== 0) return { code: 502, error: r.stderr.trim() || 'fetch_arxiv.py failed' };
   try {
@@ -219,19 +224,14 @@ async function handle(req, res) {
     if (req.method === 'GET' && pathname === '/api/reviews') {
       return send(res, 200, await listReviews());
     }
-    const reviewMatch = pathname.match(/^\/api\/review\/([A-Za-z0-9._-]+)$/);
+    const reviewMatch = pathname.match(/^\/api\/review\/([A-Za-z0-9._%/\-]+)$/);
     if (req.method === 'GET' && reviewMatch) {
-      try { return send(res, 200, await readReview(reviewMatch[1])); }
+      try { return send(res, 200, await readReview(decodeURIComponent(reviewMatch[1]))); }
       catch { return send(res, 404, { error: 'review not found' }); }
     }
     if (req.method === 'POST' && pathname === '/api/reviews') {
       const body = await readBody(req);
       const r = await saveReview(body);
-      if (r.error) return send(res, r.code, { error: r.error });
-      return send(res, r.code, r.body);
-    }
-    if (req.method === 'GET' && pathname === '/api/daily') {
-      const r = await fetchDaily();
       if (r.error) return send(res, r.code, { error: r.error });
       return send(res, r.code, r.body);
     }

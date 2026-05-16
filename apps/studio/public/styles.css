@@ -204,12 +204,19 @@ body::after {
   color: var(--ink);
 }
 
-.masthead-ornament {
+.masthead-initial {
   color: var(--ochre);
-  font-variation-settings: "opsz" 144, "WONK" 1;
-  margin-right: 0.12em;
-  font-weight: 400;
-  font-style: italic;
+  font-family: "Helvetica Neue", "Arial Black", Helvetica, Arial, sans-serif;
+  font-style: normal;
+  font-weight: 900;
+  font-size: 1.4em;
+  line-height: 0.85;
+  letter-spacing: -0.045em;
+  margin-right: 0.03em;
+  vertical-align: -0.05em;
+}
+.masthead-rest {
+  /* inherits .masthead-title */
 }
 
 .masthead-sub {
@@ -734,18 +741,38 @@ textarea {
   transition: border-color 160ms;
 }
 textarea.tall { min-height: 220px; }
+textarea.tall--xl { min-height: 460px; }
 
 /* mono for JSON-ish / code-adjacent fields */
 #f-abstract,
-#bulk-json,
-#f-summary,
-#f-strengths_weaknesses,
-#f-limitations,
-#f-ethics_concerns {
+#f-ai_proof_review {
   font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.62;
   color: var(--ink-2);
+}
+
+/* new-review entry form on dashboard */
+.new-review-form {
+  padding: 18px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.new-review-hint {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.field-hint {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  text-transform: uppercase;
 }
 #bulk-json { min-height: 240px; }
 

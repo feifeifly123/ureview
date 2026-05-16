@@ -56,12 +56,11 @@ def validate_all() -> int:
 
     review_schema = load_json(CONTRACTS / "review.schema.json")
     latest_schema = load_json(CONTRACTS / "latest.schema.json")
-    daily_schema = load_json(CONTRACTS / "daily.schema.json")
 
     review_ids: set[str] = set()
     reviews_dir = DATA / "reviews"
     if reviews_dir.exists():
-        for f in sorted(reviews_dir.glob("*.json")):
+        for f in sorted(reviews_dir.rglob("*.json")):
             data = load_json(f)
             try:
                 validate(instance=data, schema=review_schema, format_checker=FormatChecker())
@@ -86,23 +85,6 @@ def validate_all() -> int:
                 msg = f"latest.json references non-existent review: {entry['id']}"
                 errors.append(msg)
                 print(f" FAIL {msg}")
-
-    daily_dir = DATA / "daily"
-    if daily_dir.exists():
-        for f in sorted(daily_dir.glob("*.json")):
-            data = load_json(f)
-            try:
-                validate(instance=data, schema=daily_schema, format_checker=FormatChecker())
-                print(f"  OK  {f.relative_to(ROOT)}")
-            except ValidationError as e:
-                errors.append(f"{f.relative_to(ROOT)}: {e.message}")
-                print(f" FAIL {f.relative_to(ROOT)}: {e.message}")
-
-            for entry in data.get("reviews", []):
-                if entry["id"] not in review_ids:
-                    msg = f"{f.name} references non-existent review: {entry['id']}"
-                    errors.append(msg)
-                    print(f" FAIL {msg}")
 
     if errors:
         print(f"\nValidation failed: {len(errors)} error(s)")

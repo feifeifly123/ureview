@@ -10,32 +10,19 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "date", "title", "abstract"],
+        "required": ["id", "date", "title", "authors", "arxiv_categories", "review_lede"],
         "properties": {
           "id": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "title": { "type": "string" },
-          "abstract": { "type": "string" },
-          "hf_rank": { "type": "integer", "minimum": 1 },
-          "arxiv_categories": {
-            "type": "array",
-            "items": { "type": "string" }
-          },
+          "authors": { "type": "array", "items": { "type": "string" } },
+          "arxiv_categories": { "type": "array", "items": { "type": "string", "pattern": "^math\\." } },
+          "published": { "type": ["string", "null"] },
           "updated_at": { "type": "string", "format": "date-time" },
-          "why_read": { "type": "string" },
-          "why_doubt": { "type": "string" },
-          "verdict_leaning": { "type": "string", "enum": ["positive", "mixed", "critical"] },
-          "ratings": {
-            "type": "object",
-            "properties": {
-              "soundness": { "type": "integer", "minimum": 1, "maximum": 4 },
-              "presentation": { "type": "integer", "minimum": 1, "maximum": 4 },
-              "significance": { "type": "integer", "minimum": 1, "maximum": 4 },
-              "originality": { "type": "integer", "minimum": 1, "maximum": 4 }
-            },
-            "additionalProperties": false
-          },
-          "ethics_flag": { "type": "boolean" }
+          "review_lede": {
+            "type": "string",
+            "description": "First sentence(s) of ai_proof_review, truncated for listings."
+          }
         },
         "additionalProperties": false
       }

@@ -5,7 +5,7 @@ Usage:
     python3 tools/fetch_arxiv.py --id 2001.08361
 
 Emits a JSON object on stdout with:
-    { arxiv_id, title, abstract, paper_url, arxiv_categories, published }
+    { arxiv_id, title, abstract, paper_url, arxiv_categories, authors, published }
 
 Errors are printed to stderr and the process exits non-zero so the
 studio server can distinguish success from failure.
@@ -93,12 +93,19 @@ def _parse_entry(entry, canonical: str) -> dict:
         if term and term not in categories:
             categories.append(term)
 
+    authors = []
+    for au in entry.findall("atom:author", ATOM_NS):
+        name = (au.findtext("atom:name", default="", namespaces=ATOM_NS) or "").strip()
+        if name and name not in authors:
+            authors.append(name)
+
     return {
         "arxiv_id": canonical,
         "title": title,
         "abstract": abstract,
         "paper_url": f"https://arxiv.org/abs/{canonical}",
         "arxiv_categories": categories,
+        "authors": authors,
         "published": published,
     }
 

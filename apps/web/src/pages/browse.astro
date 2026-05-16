@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Browse reviews"
-  description="Browse Ureview by agent verdict — filter by leaning, ethics, and arXiv category."
+  description="Browse Ureview by arxiv math category and date."
   activeNav="browse"
 >
   <div class="container">
@@ -19,8 +19,7 @@ import Layout from '../components/Layout.astro';
           <span class="page-intro-eyebrow">Index · Filterable</span>
           <h1 class="page-intro-title">Browse recent reviews.</h1>
           <p class="page-intro-lede">
-            Sift the current snapshot by the agent's leaning, ethics flags,
-            and arXiv category.
+            Filter by arxiv math sub-category. Sort by date.
           </p>
         </div>
         <div class="browse-header-aside" id="browse-header-aside" aria-live="polite"></div>
@@ -28,14 +27,6 @@ import Layout from '../components/Layout.astro';
     </section>
 
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
-      <div class="filter-row" data-filter="leaning">
-        <span class="filter-label">Leaning</span>
-        <div class="filter-chips-wrap"></div>
-      </div>
-      <div class="filter-row" data-filter="ethics">
-        <span class="filter-label">Flags</span>
-        <div class="filter-chips-wrap"></div>
-      </div>
       <div class="filter-row" data-filter="categories">
         <span class="filter-label">Category</span>
         <div class="filter-chips-wrap"></div>
@@ -52,11 +43,7 @@ import Layout from '../components/Layout.astro';
       {Array.from({ length: 5 }).map(() => (
         <div class="entry entry--skel" aria-hidden="true">
           <span class="entry-kicker"><span class="skel-block skel-line-xs"></span></span>
-          <span class="entry-date"><span class="skel-block skel-line-xs" style="width:60%;margin-left:auto"></span></span>
           <span class="entry-title"><span class="skel-block skel-title"></span></span>
-          <div class="entry-why">
-            <div class="entry-why-row"><span class="entry-why-label"><span class="skel-block skel-line-xs"></span></span><span class="entry-why-text"><span class="skel-block skel-line-lg"></span></span></div>
-          </div>
           <div class="entry-footer"><span class="skel-block skel-line-sm" style="width:30%"></span></div>
         </div>
       ))}
@@ -74,40 +61,24 @@ import Layout from '../components/Layout.astro';
   import { el, mount } from '../lib/dom';
   import { formatDateTime } from '../lib/utils';
   import { buildFeedCard } from '../lib/feed-card';
-  import type { LatestReviewEntry, VerdictLeaning } from '../lib/types';
+  import type { LatestReviewEntry } from '../lib/types';
 
-  type SortKey = 'leaning' | 'hf' | 'newest';
+  type SortKey = 'newest' | 'oldest';
 
-  const DEFAULT_SORT: SortKey = 'leaning';
-  const LEANING_ORDER: Record<VerdictLeaning, number> = { positive: 0, mixed: 1, critical: 2 };
+  const DEFAULT_SORT: SortKey = 'newest';
 
   const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
-    { key: 'leaning', label: 'By leaning' },
-    { key: 'hf', label: 'By HF rank' },
-    { key: 'newest', label: 'Newest' },
-  ];
-
-  const LEANING_OPTIONS: Array<{ value: VerdictLeaning; label: string }> = [
-    { value: 'positive', label: 'Positive' },
-    { value: 'mixed', label: 'Mixed' },
-    { value: 'critical', label: 'Critical' },
+    { key: 'newest', label: 'Newest first' },
+    { key: 'oldest', label: 'Oldest first' },
   ];
 
   const state = {
-    leaning: new Set<VerdictLeaning>(),
-    ethics: false,
     categories: new Set<string>(),
     sort: DEFAULT_SORT,
   };
 
   function readStateFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    const takeSet = <T extends string>(name: string, allowed: readonly T[]): Set<T> => {
-      const raw = (params.get(name) ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-      return new Set(raw.filter((v): v is T => (allowed as readonly string[]).includes(v)));
-    };
-    state.leaning = takeSet('leaning', ['positive', 'mixed', 'critical'] as const);
-    state.ethics = params.get('ethics') === '1';
     state.categories = new Set((params.get('cat') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
     const sortParam = params.get('sort');
     state.sort = SORT_OPTIONS.find((o) => o.key === sortParam)?.key ?? DEFAULT_SORT;
@@ -119,16 +90,12 @@ import Layout from '../components/Layout.astro';
       if (value) url.searchParams.set(name, value);
       else url.searchParams.delete(name);
     };
-    setOrDelete('leaning', [...state.leaning].join(','));
-    setOrDelete('ethics', state.ethics ? '1' : '');
     setOrDelete('cat', [...state.categories].join(','));
     setOrDelete('sort', state.sort === DEFAULT_SORT ? '' : state.sort);
     history.replaceState({}, '', url);
   }
 
   function resetState() {
-    state.leaning.clear();
-    state.ethics = false;
     state.categories.clear();
     state.sort = DEFAULT_SORT;
   }
@@ -138,36 +105,25 @@ import Layout from '../components/Layout.astro';
     count?: number;
     active: boolean;
     onClick: () => void;
-    dataset?: Record<string, string>;
   }): HTMLElement {
     const children: (HTMLElement | string)[] = [opts.label];
     if (opts.count != null) children.push(el('span', { class: 'chip-count' }, String(opts.count)));
-
-    // Disable when count is 0 AND chip is not currently active (preserve deselect path)
     const disabled = opts.count === 0 && !opts.active;
-
     const classNames = ['filter-chip'];
     if (opts.active) classNames.push('active');
     if (disabled) classNames.push('is-disabled');
-
-    const attrs: Record<string, string> = {
-      type: 'button',
-      class: classNames.join(' '),
-    };
+    const attrs: Record<string, string> = { type: 'button', class: classNames.join(' ') };
     if (disabled) {
       attrs['aria-disabled'] = 'true';
       attrs['disabled'] = '';
       attrs['tabindex'] = '-1';
-    }
-    if (opts.dataset) {
-      for (const [k, v] of Object.entries(opts.dataset)) attrs[`data-${k}`] = v;
     }
     const btn = el('button', attrs, children);
     if (!disabled) btn.addEventListener('click', opts.onClick);
     return btn;
   }
 
-  function topCategories(reviews: LatestReviewEntry[], n = 6): Array<{ cat: string; count: number }> {
+  function topCategories(reviews: LatestReviewEntry[], n = 8): Array<{ cat: string; count: number }> {
     const counts = new Map<string, number>();
     for (const r of reviews) {
       for (const c of r.arxiv_categories ?? []) counts.set(c, (counts.get(c) ?? 0) + 1);
@@ -178,22 +134,8 @@ import Layout from '../components/Layout.astro';
       .map(([cat, count]) => ({ cat, count }));
   }
 
-  function countByLeaning(reviews: LatestReviewEntry[]): Record<VerdictLeaning, number> {
-    const out: Record<VerdictLeaning, number> = { positive: 0, mixed: 0, critical: 0 };
-    for (const r of reviews) if (r.verdict_leaning) out[r.verdict_leaning]++;
-    return out;
-  }
-
-  function ethicsCount(reviews: LatestReviewEntry[]): number {
-    return reviews.filter((r) => r.ethics_flag).length;
-  }
-
   function applyFilter(reviews: LatestReviewEntry[]): LatestReviewEntry[] {
     return reviews.filter((r) => {
-      if (state.leaning.size > 0) {
-        if (!r.verdict_leaning || !state.leaning.has(r.verdict_leaning)) return false;
-      }
-      if (state.ethics && !r.ethics_flag) return false;
       if (state.categories.size > 0) {
         const cats = r.arxiv_categories ?? [];
         if (!cats.some((c) => state.categories.has(c))) return false;
@@ -210,21 +152,10 @@ import Layout from '../components/Layout.astro';
 
   function applySort(arr: LatestReviewEntry[]): LatestReviewEntry[] {
     const sorted = arr.slice();
-    switch (state.sort) {
-      case 'leaning':
-        sorted.sort((a, b) => {
-          const la = a.verdict_leaning ? LEANING_ORDER[a.verdict_leaning] : 99;
-          const lb = b.verdict_leaning ? LEANING_ORDER[b.verdict_leaning] : 99;
-          if (la !== lb) return la - lb;
-          return parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date);
-        });
-        break;
-      case 'hf':
-        sorted.sort((a, b) => (a.hf_rank ?? 10 ** 9) - (b.hf_rank ?? 10 ** 9));
-        break;
-      case 'newest':
-        sorted.sort((a, b) => parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date));
-        break;
+    if (state.sort === 'oldest') {
+      sorted.sort((a, b) => parseTs(a.updated_at, a.date) - parseTs(b.updated_at, b.date));
+    } else {
+      sorted.sort((a, b) => parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date));
     }
     return sorted;
   }
@@ -249,39 +180,11 @@ import Layout from '../components/Layout.astro';
   }
 
   function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
-    const leaningWrap = rowChipsWrap('[data-filter="leaning"]');
-    const ethicsWrap = rowChipsWrap('[data-filter="ethics"]');
     const catsWrap = rowChipsWrap('[data-filter="categories"]');
     const sortWrap = rowChipsWrap('[data-filter="sort"]');
-    if (!leaningWrap || !ethicsWrap || !catsWrap || !sortWrap) return;
+    if (!catsWrap || !sortWrap) return;
 
-    const leaningCounts = countByLeaning(reviews);
-    const flagCount = ethicsCount(reviews);
     const cats = topCategories(reviews);
-
-    clearChildren(leaningWrap);
-    for (const opt of LEANING_OPTIONS) {
-      leaningWrap.appendChild(chip({
-        label: opt.label,
-        count: leaningCounts[opt.value],
-        active: state.leaning.has(opt.value),
-        dataset: { leaning: opt.value },
-        onClick: () => {
-          if (state.leaning.has(opt.value)) state.leaning.delete(opt.value);
-          else state.leaning.add(opt.value);
-          onChange();
-        },
-      }));
-    }
-
-    clearChildren(ethicsWrap);
-    ethicsWrap.appendChild(chip({
-      label: '⚠ Ethics flagged',
-      count: flagCount,
-      active: state.ethics,
-      dataset: { ethics: '1' },
-      onClick: () => { state.ethics = !state.ethics; onChange(); },
-    }));
 
     clearChildren(catsWrap);
     if (cats.length === 0) {

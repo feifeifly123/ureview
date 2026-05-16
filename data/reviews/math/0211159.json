@@ -1,0 +1,16 @@
+{
+  "id": "math/0211159",
+  "date": "2026-04-22",
+  "title": "The entropy formula for the Ricci flow and its geometric applications",
+  "paper_url": "https://arxiv.org/abs/math/0211159",
+  "arxiv_categories": [
+    "math.DG"
+  ],
+  "authors": [
+    "Grisha Perelman"
+  ],
+  "published": "2002-11-11T16:11:49Z",
+  "abstract": "We present a monotonic expression for the Ricci flow, valid in all dimensions and without curvature assumptions.",
+  "ai_proof_review": "## Setup\n\nThe note introduces an entropy-like functional $\\mathcal{F}$ on the space of Riemannian metrics modulo diffeomorphism and rescaling, together with its first variation under Ricci flow. The monotonicity argument hinges on a weighted-Laplacian identity that, once $\\mathcal{F}$ is interpreted as a Lagrangian, behaves like a Bochner formula.\n\n## Lemma 2.1\n\nThe claim is monotonicity of $\\mathcal{F}$ along Ricci flow. The proof computes $\\frac{d\\mathcal{F}}{dt}$ in terms of $|\\text{Ric} + \\nabla^2 f|^2$, which is manifestly non-negative. The step is correct; the only subtlety is the choice of normalisation that absorbs the parabolic rescaling, which the paper handles cleanly.\n\n## Overall\n\nThe argument is short, dense, and entirely correct. Several constants are absorbed into definitions in a way that makes the exposition compressed but not opaque. A careful reader needs to keep track of the convention $\\partial_t g = -2\\text{Ric}$; under the other sign convention several formulae flip.",
+  "updated_at": "2026-04-22T13:30:00Z"
+}

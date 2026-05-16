@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Rebuild latest.json and daily/*.json indexes from data/reviews/*.json.
+"""Rebuild latest.json from data/reviews/*.json for the math-paper site.
 
-latest.json is sorted by review.updated_at desc, then hf_rank asc. Daily
-indexes preserve hf_rank order within a day. Each entry carries enough
-structured-review fields to render a rich feed card without fetching
-the per-paper JSON.
+Each feed entry carries enough to render a listing card without fetching
+the per-paper JSON: id, title, authors, categories, date, and a one-
+sentence "lede" extracted from the start of ai_proof_review.
 """
 
 import json
+import re
 import sys
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,7 +16,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 REVIEWS_DIR = DATA / "reviews"
-DAILY_DIR = DATA / "daily"
+
+LEDE_MAX_CHARS = 240
 
 
 def load_json(path: Path) -> dict:
@@ -36,98 +36,63 @@ def parse_iso(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def sort_key(review: dict[str, Any]) -> tuple[datetime, int]:
+def sort_key(review: dict[str, Any]) -> datetime:
     updated = review.get("updated_at") or f"{review['date']}T00:00:00Z"
-    return (parse_iso(updated), -review.get("hf_rank", 10**9))
+    return parse_iso(updated)
 
 
-def flat_ratings(review: dict[str, Any]) -> dict[str, int]:
-    """Extract just the numeric scores from ai_review.ratings.
+def extract_lede(text: str) -> str:
+    """First paragraph or sentence of ai_proof_review, stripped of
+    markdown headers + emphasis markers, truncated to LEDE_MAX_CHARS."""
+    if not text:
+        return ""
+    # Drop leading markdown headers and pull the first non-blank paragraph.
+    for block in re.split(r"\n\s*\n", text.strip()):
+        block = block.strip()
+        if not block or block.startswith("#"):
+            continue
+        # Strip basic markdown emphasis so listings read as plain prose.
+        plain = re.sub(r"[*_`]+", "", block)
+        plain = " ".join(plain.split())
+        if len(plain) > LEDE_MAX_CHARS:
+            plain = plain[: LEDE_MAX_CHARS - 1].rstrip() + "…"
+        return plain
+    return ""
 
-    The full review JSON stores { score, note } per dimension; indexes
-    only need the score.
-    """
-    ai = review.get("ai_review", {}) or {}
-    raw = ai.get("ratings", {}) or {}
-    out: dict[str, int] = {}
-    for dim in ("soundness", "presentation", "significance", "originality"):
-        if dim in raw and isinstance(raw[dim], dict) and "score" in raw[dim]:
-            out[dim] = int(raw[dim]["score"])
-    return out
 
-
-def build_feed_entry(review: dict[str, Any], include_date: bool = True) -> dict[str, Any]:
-    """Shared builder for latest + daily entries. include_date controls
-    whether the `date` field is copied (daily/*.json groups by date so
-    entries don't repeat it)."""
-    ai = review.get("ai_review", {}) or {}
-    highlights = review.get("review_highlights", {}) or {}
-
+def build_feed_entry(review: dict[str, Any]) -> dict[str, Any]:
     entry: dict[str, Any] = {
         "id": review["id"],
+        "date": review["date"],
         "title": review["title"],
-        "abstract": review["abstract"],
+        "authors": review.get("authors") or [],
+        "arxiv_categories": review.get("arxiv_categories") or [],
+        "review_lede": extract_lede(review.get("ai_proof_review", "")),
     }
-    if include_date:
-        entry["date"] = review["date"]
-    if "hf_rank" in review:
-        entry["hf_rank"] = review["hf_rank"]
-    if "arxiv_categories" in review and review["arxiv_categories"]:
-        entry["arxiv_categories"] = review["arxiv_categories"]
-    if include_date and review.get("updated_at"):
+    if review.get("published"):
+        entry["published"] = review["published"]
+    if review.get("updated_at"):
         entry["updated_at"] = review["updated_at"]
-
-    if highlights.get("why_read"):
-        entry["why_read"] = highlights["why_read"]
-    if highlights.get("why_doubt"):
-        entry["why_doubt"] = highlights["why_doubt"]
-    if highlights.get("verdict_leaning"):
-        entry["verdict_leaning"] = highlights["verdict_leaning"]
-
-    ratings = flat_ratings(review)
-    if ratings:
-        entry["ratings"] = ratings
-
-    if ai.get("ethics_flag"):
-        entry["ethics_flag"] = True
-
     return entry
 
 
 def main() -> int:
-    if not REVIEWS_DIR.exists():
-        print("data/reviews/ directory does not exist")
-        return 1
-
     reviews: list[dict[str, Any]] = []
-    for f in sorted(REVIEWS_DIR.glob("*.json")):
-        reviews.append(load_json(f))
-
-    if not reviews:
-        print("No review files found")
-        return 1
-
-    by_date: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for r in reviews:
-        by_date[r["date"]].append(r)
-
-    DAILY_DIR.mkdir(parents=True, exist_ok=True)
-    for date, items in sorted(by_date.items()):
-        items_sorted = sorted(items, key=lambda r: r.get("hf_rank", 10**9))
-        daily = {
-            "date": date,
-            "reviews": [build_feed_entry(r, include_date=False) for r in items_sorted],
-        }
-        write_json(DAILY_DIR / f"{date}.json", daily)
+    if REVIEWS_DIR.exists():
+        # rglob picks up both flat ids (2401.12345.json) and old-style subdir
+        # layouts (math/0211159.json).
+        for f in sorted(REVIEWS_DIR.rglob("*.json")):
+            reviews.append(load_json(f))
 
     reviews.sort(key=sort_key, reverse=True)
+
     latest = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "reviews": [build_feed_entry(r, include_date=True) for r in reviews[:50]],
+        "reviews": [build_feed_entry(r) for r in reviews[:50]],
     }
     write_json(DATA / "latest.json", latest)
 
-    print(f"\nIndex generation complete: {len(reviews)} reviews, {len(by_date)} days")
+    print(f"\nIndex generation complete: {len(reviews)} reviews")
     return 0
 
 

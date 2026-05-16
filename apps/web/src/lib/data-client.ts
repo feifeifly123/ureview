@@ -1,4 +1,4 @@
-import type { LatestIndex, Review, DailyIndex } from './types';
+import type { LatestIndex, Review } from './types';
 
 // When served behind a path-prefix proxy like JupyterHub (/user/<u>/proxy/<port>/),
 // a relative DATA_BASE like "/data" would resolve to the hub root, not the proxied
@@ -23,5 +23,4 @@ async function fetchJSON<T>(path: string): Promise<T> {
 export const dataClient = {
   getLatest: () => fetchJSON<LatestIndex>('/latest.json'),
   getReview: (id: string) => fetchJSON<Review>(`/reviews/${id}.json`),
-  getDaily: (date: string) => fetchJSON<DailyIndex>(`/daily/${date}.json`),
 };

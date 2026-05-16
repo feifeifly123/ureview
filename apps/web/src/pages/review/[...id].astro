@@ -1,0 +1,69 @@
+---
+import { readdir, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Layout from '../../components/Layout.astro';
+import type { Review } from '../../lib/types';
+
+export async function getStaticPaths() {
+  // Inline recursive walker — Astro extracts getStaticPaths into its own
+  // bundle, so any helper defined outside the function is unreachable here.
+  async function collect(dir: string, acc: string[]): Promise<void> {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) await collect(full, acc);
+      else if (entry.isFile() && entry.name.endsWith('.json')) acc.push(full);
+    }
+  }
+
+  const here = dirname(fileURLToPath(import.meta.url));
+  // apps/web/src/pages/review/[id].astro → repo root is 5 levels up
+  const reviewsDir = resolve(here, '..', '..', '..', '..', '..', 'data', 'reviews');
+  const paths: string[] = [];
+  await collect(reviewsDir, paths);
+  return Promise.all(
+    paths.map(async (p) => {
+      const raw = await readFile(p, 'utf-8');
+      const review = JSON.parse(raw) as Review;
+      return { params: { id: review.id }, props: { review } };
+    })
+  );
+}
+
+const { review } = Astro.props;
+// Description = first sentence of the ai_proof_review (skip headings),
+// fallback to the arxiv abstract's first sentence.
+function leadSentence(text: string): string {
+  for (const block of (text || '').split(/\n\s*\n/)) {
+    const trimmed = block.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const m = trimmed.match(/^(.+?[.!?])(\s|$)/);
+    return m ? m[1] : trimmed;
+  }
+  return '';
+}
+const lead = leadSentence(review.ai_proof_review) || leadSentence(review.abstract);
+const rawDesc = lead.replace(/\s+/g, ' ').trim();
+const description = rawDesc.length > 200 ? rawDesc.slice(0, 197) + '…' : rawDesc;
+const reviewJson = JSON.stringify(review).replace(/</g, '\\u003c');
+---
+
+<Layout title={review.title} description={description}>
+  <div class="review-shell">
+    <article class="review-page-root" id="review-detail">
+      <div class="state loading"><strong>Loading review</strong></div>
+    </article>
+  </div>
+  <script is:inline set:html={`window.__OAR_REVIEW = ${reviewJson};`} />
+</Layout>
+
+<script>
+  import { mainReviewPage } from '../../lib/review-page';
+  mainReviewPage();
+</script>

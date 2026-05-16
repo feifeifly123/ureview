@@ -4,24 +4,25 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Ureview"
-  description="Structured AI reviews of trending arXiv papers — one reading per paper, filed as it trends."
+  description="AI proof reviews of arxiv math papers — one structured machine reading per paper."
   activeNav="home"
 >
   <div class="container">
     <section class="page-intro">
       <span class="page-intro-eyebrow">The Gazette · Machine Reading Desk</span>
-      <h1 class="page-intro-title">Structured AI readings of trending papers.</h1>
+      <h1 class="page-intro-title">AI proof reviews of arxiv math papers.</h1>
       <p class="page-intro-lede">
-        Spend 2 minutes here, know whether a paper is worth 20.
-        One review per paper, filed the day it trends. Four dimension
-        ratings, side-by-side — never averaged into a single score.
+        For every paper, one long-form machine reading of the proof —
+        what it shows, where the argument leans, what to watch for.
+        The metadata is straight from arxiv; the review is the only
+        thing we file.
       </p>
     </section>
 
     <aside class="beta-strip" role="note" aria-label="Beta notice">
       <span class="beta-tag">BETA</span>
       <span class="beta-text">
-        First-pass machine readings. The queue fills in as papers trend on <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HF Daily</a>.
+        First-pass machine readings of <a href="https://arxiv.org/archive/math" target="_blank" rel="noopener">arxiv math</a> papers. Not peer review.
       </span>
     </aside>
 
@@ -38,11 +39,6 @@ import Layout from '../components/Layout.astro';
             <div class="skel-block skel-line-md" style="margin-top:14px"></div>
             <div class="skel-block skel-line-sm" style="margin-top:6px"></div>
           </div>
-          <aside class="hero-side">
-            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
-            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
-            <div class="hero-side-block"><span class="skel-block skel-line-xs"></span><div class="skel-block skel-line-sm" style="margin-top:8px"></div></div>
-          </aside>
         </div>
       </section>
     </div>
@@ -64,19 +60,15 @@ import Layout from '../components/Layout.astro';
         {Array.from({ length: 5 }).map(() => (
           <div class="entry entry--skel" aria-hidden="true">
             <span class="entry-kicker"><span class="skel-block skel-line-xs"></span></span>
-            <span class="entry-date"><span class="skel-block skel-line-xs" style="width:60%;margin-left:auto"></span></span>
             <span class="entry-title"><span class="skel-block skel-title"></span></span>
-            <div class="entry-why">
-              <div class="entry-why-row"><span class="entry-why-label"><span class="skel-block skel-line-xs"></span></span><span class="entry-why-text"><span class="skel-block skel-line-lg"></span></span></div>
-            </div>
             <div class="entry-footer"><span class="skel-block skel-line-sm" style="width:30%"></span></div>
           </div>
         ))}
       </div>
 
       <div class="state empty" id="home-empty" hidden>
-        <strong>No filings yet</strong>
-        <span>Papers are added as the HF feed updates.</span>
+        <strong>No reviews yet</strong>
+        <span>Reviews are filed one at a time as math papers come in.</span>
       </div>
     </section>
   </div>
@@ -86,82 +78,74 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { formatDate } from '../lib/utils';
-  import { buildFeedCard, leaningLabel } from '../lib/feed-card';
+  import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
 
-  function buildFeaturedEntry(entry: LatestReviewEntry, index: number, total: number): HTMLElement {
-    const leaning = entry.verdict_leaning;
-    const classes = ['hero-featured'];
-    if (leaning) classes.push(`hero-featured--${leaning}`);
+  function authorsLine(authors: string[]): string {
+    if (!authors || authors.length === 0) return '';
+    if (authors.length <= 3) return authors.join(', ');
+    return `${authors.slice(0, 3).join(', ')}, et al. (${authors.length - 3} more)`;
+  }
 
-    // kicker: issue · date · arxiv category · hf rank · ethics
+  function buildFeaturedEntry(entry: LatestReviewEntry, total: number): HTMLElement {
     const kickerBits: HTMLElement[] = [];
     kickerBits.push(el('span', { class: 'issue-no' }, `№ ${String(total).padStart(3, '0')}`));
     kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
     kickerBits.push(el('span', {}, formatDate(entry.date)));
-    if (entry.hf_rank != null) {
-      kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
-      kickerBits.push(el('span', {}, `HF №${String(entry.hf_rank).padStart(2, '0')}`));
-    }
+    kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
+    kickerBits.push(el('span', {}, entry.id));
     const cats = entry.arxiv_categories ?? [];
     if (cats.length > 0) {
       kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
       kickerBits.push(el('span', {}, cats[0]));
     }
-    if (entry.ethics_flag) {
-      kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
-      kickerBits.push(el('span', { style: { color: 'var(--madder)' } }, '⚠ Ethics'));
-    }
     const kicker = el('div', { class: 'hero-kicker' }, kickerBits);
 
-    // title linked
     const title = el('h2', { class: 'hero-title' }, [
       el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, entry.title),
     ]);
 
-    // lede from why_read (fallback to abstract's first sentence)
-    const ledeText = entry.why_read || (entry.abstract ? entry.abstract.slice(0, 220) + '…' : '');
-    const lede = el('p', { class: 'hero-lede' }, ledeText);
+    const authors = authorsLine(entry.authors ?? []);
+    const authorsEl = authors ? el('p', { class: 'hero-authors' }, authors) : null;
 
-    // side: verdict, recommendation, why_doubt
-    const side = el('aside', { class: 'hero-side', 'aria-label': 'Verdict summary' }, [
-      leaning
-        ? el('div', { class: 'hero-side-block' }, [
-            el('span', { class: 'hero-side-label' }, 'Verdict leaning'),
-            el('p', { class: 'hero-side-text' }, [
-              el('em', {}, leaningLabel(leaning)),
-            ]),
-          ])
-        : null,
-      entry.why_doubt
-        ? el('div', { class: 'hero-side-block' }, [
-            el('span', { class: 'hero-side-label' }, 'Why doubt'),
-            el('p', { class: 'hero-side-text' }, [el('em', {}, entry.why_doubt)]),
-          ])
-        : null,
-    ].filter((n): n is HTMLElement => n != null));
+    const lede = entry.review_lede
+      ? el('p', { class: 'hero-lede', 'data-typeset': 'true' }, entry.review_lede)
+      : null;
 
-    // foot: machine disclaimer + open link
     const foot = el('div', { class: 'hero-foot' }, [
-      el('span', {}, 'Machine-generated first-pass reading · Not peer review'),
+      el('span', {}, 'Machine-generated proof reading · Not peer review'),
       el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, 'Open the full review →'),
     ]);
 
-    return el('section', { class: classes.join(' '), 'aria-label': 'Featured review' }, [
-      el('div', { class: 'hero-featured-inner' }, [
-        kicker,
-        el('div', {}, [title, lede]),
-        side,
-        foot,
-      ]),
+    return el('section', { class: 'hero-featured', 'aria-label': 'Featured review' }, [
+      el(
+        'div',
+        { class: 'hero-featured-inner' },
+        [kicker, el('div', {}, [title, authorsEl, lede].filter((n): n is HTMLElement => n != null)), foot],
+      ),
     ]);
   }
 
   function buildTrustStrip(total: number): HTMLElement {
     return el('p', { class: 'trust-strip-text' }, [
       el('strong', {}, String(total)),
-      ` paper${total === 1 ? '' : 's'} · Source HF Daily · Filed on trend, never on schedule`,
+      ` review${total === 1 ? '' : 's'} · Source arxiv math · Filed one at a time`,
     ]);
+  }
+
+  async function scheduleTypesetIn(container: HTMLElement) {
+    if (!container.querySelector('[data-typeset]')) return;
+    const run = async () => {
+      try {
+        const { typeset } = await import('../lib/latex');
+        container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
+      } catch {}
+    };
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    }).requestIdleCallback;
+    if (typeof ric === 'function') ric(() => { void run(); }, { timeout: 1500 });
+    else setTimeout(() => { void run(); }, 50);
   }
 
   (async () => {
@@ -187,7 +171,7 @@ import Layout from '../components/Layout.astro';
     const featured = reviews[0];
 
     if (featured) {
-      mount(heroSlot, buildFeaturedEntry(featured, 0, reviews.length));
+      mount(heroSlot, buildFeaturedEntry(featured, reviews.length));
     } else {
       mount(heroSlot);
     }
@@ -198,10 +182,14 @@ import Layout from '../components/Layout.astro';
     const rest = reviews.slice(1);
     if (rest.length === 0) {
       mount(listEl);
-      if (emptyEl) emptyEl.hidden = false;
+      if (emptyEl && reviews.length === 0) emptyEl.hidden = false;
+      // typeset hero lede if any
+      if (heroSlot) await scheduleTypesetIn(heroSlot);
       return;
     }
     if (emptyEl) emptyEl.hidden = true;
     mount(listEl, ...rest.map((r) => buildFeedCard(r)));
+    await scheduleTypesetIn(heroSlot);
+    await scheduleTypesetIn(listEl);
   })();
 </script>
