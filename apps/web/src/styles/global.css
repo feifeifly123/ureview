@@ -270,14 +270,14 @@ a:hover { color: var(--ochre-2); }
 }
 .masthead-initial {
   color: var(--ochre);
-  font-family: var(--font-serif);
-  font-variation-settings: "opsz" 144, "SOFT" 22, "WONK" 1;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 1.55em;
-  line-height: 0.8;
-  margin-right: -0.02em;
-  vertical-align: -0.04em;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1.35em;
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+  margin-right: 0.04em;
+  vertical-align: -0.06em;
 }
 .masthead-rest {
   /* inherits .masthead-title */
