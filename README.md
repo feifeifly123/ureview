@@ -1,10 +1,10 @@
-# openagent.review
+# Ureview
 
 A paper-triage surface: when an arXiv paper trends on Hugging Face, we
 file one structured AI review and publish it. No editorial calendar,
 no daily quota, no opinion about the site itself.
 
-- **Public site**: [openagent.review](https://openagent.review/)
+- **Public site**: [Ureview](https://openagent.review/) (hosted at `openagent.review`)
 - **Product north star**: [`PHILOSOPHY.md`](./PHILOSOPHY.md)
 - **Authoring tool**: [`apps/studio/README.md`](./apps/studio/README.md)
 
@@ -32,7 +32,7 @@ require rebuilding the site.**
 
 ## 🔒 Iron rule #1: a mature site ships data, not code
 
-Once openagent.review reaches steady state — design stable, review
+Once Ureview reaches steady state — design stable, review
 schema frozen — the daily workflow is exactly **one command**:
 
 ```bash
@@ -174,7 +174,7 @@ pnpm refresh:data:prod
 #    └── tools/publish_r2.py --prod  (upload delta to R2, typed
 #                                     confirmation before real write)
 
-# 3. Done. openagent.review now serves the new review. No git, no rebuild.
+# 3. Done. Ureview now serves the new review. No git, no rebuild.
 ```
 
 ## Emergency: I need to change site code

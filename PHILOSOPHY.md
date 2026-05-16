@@ -1,4 +1,4 @@
-# OpenAgent.review — 产品设计哲学
+# Ureview — 产品设计哲学
 
 _写于 2026-04-20, 第 6 轮改版后 (trending-driven pivot), 2026-04-22 迁移到 daily-driven_
 

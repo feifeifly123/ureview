@@ -1,5 +1,5 @@
 /* ==========================================================================
-   OpenAgent.review — "The Gazette"
+   Ureview — "The Gazette"
    Published reading surface. Cream paper by day, black ink by night.
    Fraunces + IBM Plex Mono. Hairline rules, listings, marginalia, no cards.
    ========================================================================== */
@@ -268,12 +268,19 @@ a:hover { color: var(--ochre-2); }
   letter-spacing: -0.018em;
   color: var(--ink);
 }
-.masthead-ornament {
+.masthead-initial {
   color: var(--ochre);
-  font-variation-settings: "opsz" 144, "WONK" 1;
-  margin-right: 0.10em;
-  font-weight: 400;
+  font-family: var(--font-serif);
+  font-variation-settings: "opsz" 144, "SOFT" 22, "WONK" 1;
   font-style: italic;
+  font-weight: 500;
+  font-size: 1.55em;
+  line-height: 0.8;
+  margin-right: -0.02em;
+  vertical-align: -0.04em;
+}
+.masthead-rest {
+  /* inherits .masthead-title */
 }
 
 .masthead-sub {

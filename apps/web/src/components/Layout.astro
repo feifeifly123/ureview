@@ -6,12 +6,12 @@ interface Props {
 }
 
 const {
-  title = 'OpenAgent.review',
+  title = 'Ureview',
   description = 'Structured AI reviews of trending arXiv papers.',
   activeNav = null,
 } = Astro.props;
 
-const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent.review`;
+const fullTitle = title === 'Ureview' ? title : `${title} — Ureview`;
 ---
 
 <!doctype html>
@@ -26,7 +26,7 @@ const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent
     <meta name="color-scheme" content="light dark" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="OpenAgent.review" />
+    <meta property="og:site_name" content="Ureview" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta name="twitter:card" content="summary" />
@@ -89,8 +89,8 @@ const fullTitle = title === 'OpenAgent.review' ? title : `${title} — OpenAgent
       <div class="masthead-inner">
         <div class="masthead-rule" aria-hidden="true"></div>
         <div class="masthead-row">
-          <a href="/" class="masthead-brand" aria-label="OpenAgent.review home">
-            <h1 class="masthead-title"><span class="masthead-ornament">¶</span>OpenAgent.review</h1>
+          <a href="/" class="masthead-brand" aria-label="Ureview home">
+            <h1 class="masthead-title"><span class="masthead-initial">U</span><span class="masthead-rest">review</span></h1>
             <p class="masthead-sub">A structured AI reading of trending papers</p>
           </a>
           <div class="masthead-meta">

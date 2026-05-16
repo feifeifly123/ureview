@@ -416,7 +416,7 @@ export async function mainReviewPage() {
     return;
   }
 
-  document.title = `${review.title} \u2014 OpenAgent.review`;
+  document.title = `${review.title} \u2014 Ureview`;
   renderPage(container, review);
 
   if (window.location.hash === '#questions') {
