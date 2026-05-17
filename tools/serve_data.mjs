@@ -49,7 +49,10 @@ const server = createServer(async (req, res) => {
   }
 });
 
-const HOST = process.env.HOST || '0.0.0.0';
+const RAW_HOST = process.env.HOST;
+const HOST = RAW_HOST && /^(\d{1,3}\.){3}\d{1,3}$|^::|^localhost$/.test(RAW_HOST)
+  ? RAW_HOST
+  : '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
   console.log(`Data server listening on http://${HOST}:${PORT}  (serving ${DATA_DIR})`);
