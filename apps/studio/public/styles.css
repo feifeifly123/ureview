@@ -752,6 +752,51 @@ textarea.tall--xl { min-height: 460px; }
   color: var(--ink-2);
 }
 
+/* Markdown + LaTeX preview pane — sits in the same slot as the textarea, */
+/* visually echoes the public review page's reading rhythm.               */
+.prose-preview {
+  min-height: 460px;
+  padding: 24px 26px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.62;
+  color: var(--ink-1);
+  overflow-x: auto;
+}
+.prose-preview p {
+  margin: 0 0 1em;
+}
+.prose-preview p:last-child {
+  margin-bottom: 0;
+}
+.prose-preview .prose-preview-heading {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 1.6em 0 0.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--rule);
+}
+.prose-preview .prose-preview-heading:first-child {
+  margin-top: 0;
+}
+.prose-preview .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Preview toggle button (chapter-action slot). */
+.toggle-preview {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
 /* new-review entry form on dashboard */
 .new-review-form {
   padding: 18px 22px 22px;
@@ -1143,4 +1188,96 @@ a:hover { color: var(--ochre-2); }
 ::selection {
   background: var(--ochre);
   color: var(--paper);
+}
+
+/* ---------- login view ---------- */
+
+.login-shell {
+  display: flex;
+  justify-content: center;
+  padding: 80px 24px 120px;
+}
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 36px 36px 32px;
+  background: var(--paper);
+  border: 1px solid var(--rule-bold);
+  border-left: 3px solid var(--ochre);
+}
+.login-kicker {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+}
+.login-title {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.login-sub {
+  margin: 0 0 24px;
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.login-field input {
+  appearance: none;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: 1px solid var(--rule-bold);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  border-radius: 0;
+  transition: border-color 160ms;
+}
+.login-field input:focus {
+  outline: none;
+  border-color: var(--ochre);
+}
+.login-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--madder);
+  background: rgba(193, 38, 38, 0.06);
+  border-left: 2px solid var(--madder);
+}
+.login-actions {
+  margin-top: 18px;
+}
+.login-actions .btn-primary {
+  width: 100%;
+  padding: 12px 18px;
+}
+.login-hint {
+  margin: 22px 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+/* Logout button in the masthead nav — same base style as other nav tabs,
+   tucked right with subtle visual hint that it's a session action. */
+.masthead-logout {
+  margin-left: auto;
 }

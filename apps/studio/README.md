@@ -2,9 +2,12 @@
 
 Authoring UI for writing structured paper reviews into
 `data/reviews/*.json`. Binds `0.0.0.0:4311` so other machines on your LAN
-can reach it; it has **no authentication**, so only run it on a trusted
-network. Studio has no ability to push to R2 — publishing is CLI-only
-via `tools/publish_r2.py`.
+can reach it. Browser access is **gated by a single shared token** that
+the server prints on startup (see *Login token* below). Studio has no
+ability to push to R2 — publishing is CLI-only via `tools/publish_r2.py`.
+
+Threat model is "LAN with one trusted human". Transport is plain HTTP;
+if you need TLS, terminate it in a reverse proxy.
 
 ## What it does
 
@@ -28,6 +31,39 @@ The editor has three blocks:
   four dimension ratings (score + note each), key questions (list),
   limitations, recommendation, confidence, ethics flag/concerns,
   feed highlights (why_read / why_doubt / leaning).
+
+## Login token
+
+On startup, the server prints a banner like:
+
+```
+══════════════════════════════════════════════════════
+  Studio login token (this session only)
+
+      KqfP7zL3mNvHwYsR2tB5cE8aDjGl9bX_
+
+  Paste into the browser login screen.
+  A fresh token is issued on each restart.
+  Set STUDIO_TOKEN in env to pin it.
+══════════════════════════════════════════════════════
+```
+
+Copy that string, open `http://<host>:4311/`, paste it into the
+single-field login screen. Successful login sets an HttpOnly
+`studio_session` cookie that lasts 12 hours; restarting the server
+revokes all sessions (logout = `kill`).
+
+To pin a token across restarts (handy for scripted deploys), set it
+ahead of time:
+
+```bash
+STUDIO_TOKEN='your-long-random-string' pnpm dev:studio
+```
+
+Failure throttle: 5 wrong tokens from one IP locks login for 5
+minutes. The token only travels in the `POST /api/auth/login` body —
+never in URLs or GET headers — so it shouldn't end up in shell history
+or access logs.
 
 ## Run
 

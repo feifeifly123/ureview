@@ -90,14 +90,131 @@ function toast(msg, kind = 'ok', timeout = 3500) {
 // ---------- API ----------
 
 async function api(path, opts = {}) {
-  const res = await fetch(path.replace(/^\//, ''), opts);
+  const res = await fetch(path.replace(/^\//, ''), { credentials: 'same-origin', ...opts });
   const ct = res.headers.get('content-type') ?? '';
   const payload = ct.includes('application/json') ? await res.json() : await res.text();
+  if (res.status === 401) {
+    // Session gone or never existed. Don't toast — renderLogin will explain.
+    showLogin('expired');
+    throw new Error('401: auth required');
+  }
   if (!res.ok) {
     const msg = typeof payload === 'object' ? payload.error ?? JSON.stringify(payload) : payload;
     throw new Error(`${res.status}: ${msg}`);
   }
   return payload;
+}
+
+// ---------- auth ----------
+
+async function isAuthed() {
+  try {
+    const res = await fetch('api/auth/whoami', { credentials: 'same-origin' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function showLogin(reason = 'gate') {
+  const root = $('#app');
+  if (!root) return;
+  renderLogin(root, reason);
+  renderNav('login');
+}
+
+function renderLogin(root, reason) {
+  const heading = reason === 'expired' ? 'Session expired' : 'Studio · sign in';
+  const sub = reason === 'expired'
+    ? 'Your session ended. Paste the studio token to continue.'
+    : 'Paste the studio token printed in the server console on startup.';
+
+  const tokenInput = el('input', {
+    type: 'password',
+    id: 'login-token',
+    autocomplete: 'off',
+    spellcheck: 'false',
+    autocapitalize: 'off',
+    placeholder: 'studio token',
+    onkeydown: (e) => { if (e.key === 'Enter') submitLogin(); },
+  });
+  const errorBox = el('p', { class: 'login-error', id: 'login-error', hidden: '' });
+  const submitBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-primary',
+    onclick: submitLogin,
+  }, 'Enter studio →');
+
+  const card = el('div', { class: 'login-card' }, [
+    el('span', { class: 'login-kicker' }, 'Authoring desk'),
+    el('h2', { class: 'login-title' }, heading),
+    el('p', { class: 'login-sub' }, sub),
+    el('div', { class: 'login-field' }, [
+      el('label', { for: 'login-token', class: 'field-label' }, 'Token'),
+      tokenInput,
+    ]),
+    errorBox,
+    el('div', { class: 'login-actions' }, [submitBtn]),
+    el('p', { class: 'login-hint' },
+      'Token is reset every restart unless STUDIO_TOKEN is pinned in env. ' +
+      'Cookie is HttpOnly; session lasts 12 hours.'),
+  ]);
+
+  mount(root, el('div', { class: 'login-shell' }, [card]));
+  setTimeout(() => tokenInput.focus(), 0);
+}
+
+async function submitLogin() {
+  const input = $('#login-token');
+  const errorBox = $('#login-error');
+  const token = (input?.value || '').trim();
+  if (!token) {
+    showLoginError('Paste the token first.');
+    return;
+  }
+  try {
+    const res = await fetch('api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (res.status === 429) {
+      const retry = res.headers.get('retry-after') || '?';
+      showLoginError(`Too many attempts — locked for ${retry}s.`);
+      return;
+    }
+    if (!res.ok) {
+      let payload = {};
+      try { payload = await res.json(); } catch {}
+      showLoginError(payload.error || `Login failed (${res.status}).`);
+      return;
+    }
+    // Success — clear field, hide error, re-route into the SPA.
+    if (input) input.value = '';
+    if (errorBox) errorBox.hidden = true;
+    route();
+  } catch (e) {
+    showLoginError(`Network error: ${e.message}`);
+  }
+}
+
+function showLoginError(msg) {
+  const box = $('#login-error');
+  if (!box) return;
+  box.textContent = msg;
+  box.hidden = false;
+}
+
+async function doLogout() {
+  try {
+    await fetch('api/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'origin': location.origin },
+    });
+  } catch {}
+  showLogin('gate');
 }
 
 // ---------- router ----------
@@ -130,14 +247,23 @@ document.addEventListener('click', (e) => {
 // ---------- views ----------
 
 function renderNav(active) {
+  const isLogin = active === 'login';
   $$('#nav button').forEach((b) => {
-    const isActive = b.dataset.view === active;
+    const view = b.dataset.view;
+    if (view === 'logout') {
+      b.hidden = isLogin;
+      return;
+    }
+    const isActive = view === active;
     b.classList.toggle('active', isActive);
-    if (b.dataset.view === 'editor') b.disabled = active !== 'editor';
+    if (view === 'editor') b.disabled = active !== 'editor';
+    // Hide dashboard/editor tabs on login so they can't taunt the gate.
+    b.hidden = isLogin;
   });
 }
 
 async function route() {
+  if (!(await isAuthed())) { showLogin('gate'); return; }
   const v = currentView();
   renderNav(v.name);
   if (v.name === 'dashboard') await renderDashboard();
@@ -336,20 +462,35 @@ function buildEditorView(review, isNew) {
   ]);
 
   // Chapter II — AI proof review (the only field the human types)
+  const textarea = el('textarea', {
+    id: 'f-ai_proof_review',
+    class: 'tall tall--xl',
+    placeholder: '## Setup\n\nThe paper claims …\n\n## Lemma 2.1\n\nThe argument uses …\n\n## Overall\n\n…',
+  }, review.ai_proof_review || '');
+  const previewPane = el('div', {
+    id: 'f-ai_proof_review-preview',
+    class: 'prose-preview',
+    hidden: '',
+  });
+  const previewBtn = el('button', {
+    type: 'button',
+    class: 'btn-link toggle-preview',
+    title: 'Toggle Markdown + LaTeX preview',
+  }, '👁 Preview');
+  previewBtn.addEventListener('click', () => togglePreview(textarea, previewPane, previewBtn));
+
   const chapterB = el('section', { class: 'chapter chapter--proof' }, [
     el('header', { class: 'chapter-head' }, [
       el('span', { class: 'chapter-num' }, 'II · AI proof review'),
       el('h2', { class: 'chapter-title' }, [el('em', {}, 'one long-form reading')]),
+      el('div', { class: 'chapter-action' }, [previewBtn]),
     ]),
     el('p', { class: 'chapter-lede' },
-      'Paste / write the AI evaluation of the proof. Markdown headings (## Setup / ## Lemma 2.1 / ## Overall) are honoured. LaTeX inline ($...$) and display ($$...$$) are typeset on the public page.'),
+      'Paste / write the AI evaluation of the proof. Markdown headings (## Setup / ## Lemma 2.1 / ## Overall) are honoured. LaTeX inline ($...$) and display ($$...$$) are typeset live in Preview and on the public page.'),
     el('div', { class: 'field' }, [
       el('label', { for: 'f-ai_proof_review', class: 'field-label' }, 'AI proof review (Markdown + LaTeX)'),
-      el('textarea', {
-        id: 'f-ai_proof_review',
-        class: 'tall tall--xl',
-        placeholder: '## Setup\n\nThe paper claims …\n\n## Lemma 2.1\n\nThe argument uses …\n\n## Overall\n\n…',
-      }, review.ai_proof_review || ''),
+      textarea,
+      previewPane,
       el('p', { class: 'field-hint' }, 'Minimum 50 characters.'),
     ]),
   ]);
@@ -361,6 +502,62 @@ function buildEditorView(review, isNew) {
   container.appendChild(chapterB);
   container.appendChild(el('div', { class: 'footer-bar' }, [cancelBtn, saveBtn]));
   return container;
+}
+
+// ---------- Markdown + LaTeX preview ----------
+//
+// Renders the ai_proof_review textarea contents the same way the public site
+// does (see apps/web/src/lib/review-page.ts renderProseBlocks): split on blank
+// lines, treat `## ` / `### ` / `#### ` as h3/h4/h5, leave inline markdown
+// stars alone. LaTeX `$...$` / `$$...$$` is then typeset by KaTeX auto-render.
+
+function renderProsePreview(text, container) {
+  while (container.firstChild) container.removeChild(container.firstChild);
+  const blocks = (text || '').split(/\n\s*\n/);
+  for (const raw of blocks) {
+    const block = raw.trim();
+    if (!block) continue;
+    const m = block.match(/^(#{2,4})\s+(.+)$/);
+    if (m) {
+      const tag = m[1].length === 2 ? 'h3' : m[1].length === 3 ? 'h4' : 'h5';
+      container.appendChild(el(tag, { class: 'prose-preview-heading' }, m[2]));
+    } else {
+      container.appendChild(el('p', {}, block));
+    }
+  }
+  // KaTeX auto-render: typeset $...$, $$...$$, \(...\), \[...\] in-place.
+  // Loaded via <script defer> in index.html — may not be ready on a very
+  // early click. Fail open (raw LaTeX stays visible).
+  const render = window.renderMathInElement;
+  if (typeof render === 'function') {
+    try {
+      render(container, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true },
+        ],
+        throwOnError: false,
+        errorColor: '#B91C1C',
+      });
+    } catch {}
+  }
+}
+
+function togglePreview(textarea, previewPane, button) {
+  const showingPreview = !previewPane.hidden;
+  if (showingPreview) {
+    previewPane.hidden = true;
+    textarea.hidden = false;
+    button.textContent = '👁 Preview';
+    textarea.focus();
+  } else {
+    renderProsePreview(textarea.value, previewPane);
+    textarea.hidden = true;
+    previewPane.hidden = false;
+    button.textContent = '✎ Edit';
+  }
 }
 
 function buildField(label, key, value, opts = {}) {
@@ -461,5 +658,19 @@ async function saveEditor(prev) {
 }
 
 // ---------- boot ----------
+
+// Inject a Logout button into the masthead nav (index.html stays static).
+(function injectLogoutButton() {
+  const nav = document.getElementById('nav');
+  if (!nav || nav.querySelector('[data-view="logout"]')) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.dataset.view = 'logout';
+  btn.className = 'masthead-logout';
+  btn.textContent = 'Logout';
+  btn.hidden = true;     // shown only when authed (renderNav flips it)
+  btn.addEventListener('click', doLogout);
+  nav.appendChild(btn);
+})();
 
 route();
