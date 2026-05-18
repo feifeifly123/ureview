@@ -4,7 +4,7 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="About"
-  description="How Ureview picks arxiv math papers and generates a long-form AI reading of each one."
+  description="Ureview ranks arxiv math papers by expected impact = impact-if-true × proof-correctness."
   activeNav="about"
 >
   <div class="container">
@@ -14,12 +14,11 @@ import Layout from '../components/Layout.astro';
         <span class="sep">/</span>
         <span>About</span>
       </nav>
-      <span class="page-intro-eyebrow">Masthead · Colophon</span>
-      <h1 class="page-intro-title">About the gazette.</h1>
+      <span class="page-intro-eyebrow">First principles</span>
+      <h1 class="page-intro-title">Two numbers per paper. Nothing else.</h1>
       <p class="page-intro-lede">
-        A reading surface for trending arxiv math papers. Each paper gets
-        one long-form machine reading of the proof, filed alongside the
-        author's own abstract.
+        A paper triage surface for arxiv math, built from first principles.
+        Every review answers two questions and ranks the feed by their product.
       </p>
     </section>
   </div>
@@ -27,70 +26,94 @@ import Layout from '../components/Layout.astro';
   <div class="essay-shell">
     <article class="essay">
       <section class="essay-disclaimers">
-        <span class="essay-kicker">Key disclaimers</span>
+        <span class="essay-kicker">The two numbers</span>
+        <p>Both axes are 5-tier — <code>max / high / medium / low / minimal</code>.
+        Neither LLMs nor mathematicians calibrate finer, and a unified scale keeps the feed legible.</p>
         <ul>
-          <li>Reviews are single-pass language-model readings, not peer review.</li>
-          <li>The only human-uploaded field is <code>ai_proof_review</code> — the long-form prose itself. Everything else (title, authors, abstract, categories) is straight from arxiv.</li>
-          <li>The abstract is the author's own arxiv abstract, verbatim.</li>
-          <li>The queue is driven by the Hugging Face Daily Papers feed, filtered to <code>math.*</code> categories. No editorial calendar.</li>
+          <li><strong>Impact if true</strong> — if the proof goes through, how much does the result matter? <code>max</code> = field-defining (Perelman entropy formula); <code>minimal</code> = niche micro-step.</li>
+          <li><strong>Proof correctness</strong> — how confident is the AI reader after a single careful pass? <code>max</code> = solid; <code>minimal</code> = almost certainly not.</li>
+          <li><strong>E[impact]</strong> — a numeric proxy for ranking, derived from the two tiers. A Fields-medal paper at <code>minimal</code> correctness and a modest paper at <code>max</code> land on the same scale.</li>
         </ul>
       </section>
 
-      <h2 id="what-this-is">What this is</h2>
+      <h2 id="why">Why these two and nothing else</h2>
       <p>
-        Ureview is an experimental reading surface for trending arxiv math papers.
-        For every paper we surface the arxiv abstract and a long-form AI reading of
-        the proof — what the paper shows, where the argument leans, what a careful
-        reader should watch for.
+        Four-dimension rubrics (soundness / presentation / significance / originality)
+        invite false precision. A 7 in "presentation" is not commensurate with a 3 in
+        "originality" — averaging them launders the trade-off you actually care about.
+      </p>
+      <p>
+        Mathematicians already triage papers along exactly these two axes,
+        informally. A 60-page claim of the abc conjecture and a tidy lemma in
+        functional analysis are not the same kind of object, but they are
+        commensurable: <em>how much should I bet, in attention, on reading
+        this?</em> That is what E[impact] estimates.
       </p>
 
-      <h2 id="how-it-works">How the data flows</h2>
+      <h2 id="how">How a review gets generated</h2>
       <ul>
         <li>Papers are picked from <strong>Hugging Face Daily Papers</strong> as they surface, filtered to <code>math.*</code> arxiv categories.</li>
-        <li>For each paper, the arxiv abstract is stored verbatim alongside the title, authors, and category list.</li>
-        <li>A language model produces one long-form prose reading of the proof. That prose is the only human-uploaded field; nothing is parsed into scores or sub-fields.</li>
-        <li>The pair is published as JSON to Cloudflare R2 and rendered into the review page.</li>
-        <li>One review per paper. If the paper trends again later, we don't re-review it.</li>
+        <li>A language model reads the proof once and produces three things: a long-form prose reading (<code>ai_proof_review</code>), an impact score, and a correctness probability.</li>
+        <li>That triplet plus arxiv metadata (title, authors, abstract verbatim, category) is published as JSON to Cloudflare R2.</li>
+        <li>One review per paper. If it trends again later, we don't re-review.</li>
       </ul>
+
+      <h2 id="quadrants">The four quadrants</h2>
+      <p>
+        The browse page lets you slice the feed by quadrant. They each carry
+        very different reading instructions:
+      </p>
+      <dl>
+        <dt>Top (impact ∈ &#123;max, high&#125; × correctness ∈ &#123;max, high&#125;)</dt>
+        <dd>Read carefully. Real progress on a real problem. Rare.</dd>
+        <dt>Dragons (impact ∈ &#123;max, high&#125; × correctness ∈ &#123;low, minimal&#125;)</dt>
+        <dd>Bold claims with shaky proofs — alleged RH proofs, Navier–Stokes regularity announcements, ABC corollaries. Read only if you enjoy hunting for the specific lemma where it breaks.</dd>
+        <dt>Solid (impact ∈ &#123;medium, low, minimal&#125; × correctness ∈ &#123;max, high&#125;)</dt>
+        <dd>The incremental backbone of the field. Read if you work in the area.</dd>
+        <dt>The rest</dt>
+        <dd>Low E[impact]. Probably skip.</dd>
+      </dl>
 
       <h2 id="limits">What this isn't</h2>
       <ul>
         <li>Not peer review, not an editorial endorsement, not a publication decision.</li>
-        <li>Single-pass model output with no human verification.</li>
+        <li>Single-pass model output. The correctness number is an AI reader's confidence, not a community consensus.</li>
         <li>No author rebuttal flow — the arxiv link is one click away.</li>
-        <li>Not a rating system. There are no scores, dimensions, or verdicts to compare across papers — only prose.</li>
+        <li>Not a leaderboard between authors. E[impact] is a triage tool, not a metric to optimise.</li>
       </ul>
 
       <h2 id="faq">Frequently asked</h2>
 
-      <h3>Why no scores or ratings?</h3>
+      <h3>How can a machine estimate "correctness"?</h3>
       <p>
-        An earlier version of the site had a four-dimension rubric and a verdict leaning.
-        Both were collapsed back into prose: scoring a proof on a 1–4 scale invited
-        false precision, and the verdict label hid the reasoning that produced it.
-        The long-form reading carries the same judgement, but the reader has to read it.
+        Imperfectly. The tier reflects whether the proof, as written, holds
+        up under a careful single read by a language model — gaps, hand-waves,
+        missing absolute-convergence checks, broken induction steps. It is not
+        a guarantee. <code>high</code> means the AI didn't spot a fatal gap on
+        one pass; <code>minimal</code> means it spotted one and judged it
+        load-bearing. Treat the tier as a prior, not a verdict.
       </p>
 
-      <h3>Is this peer review?</h3>
-      <p>No. It is a lightweight AI reading aid. Use the source link to check the paper yourself.</p>
-
-      <h3>How are papers picked?</h3>
+      <h3>Why is the Riemann hypothesis paper ranked so low?</h3>
       <p>
-        We watch the Hugging Face Daily Papers feed and keep only the <code>math.*</code>
-        entries we haven't read yet. No fixed daily quota, no editorial calendar — the
-        feed ebbs and flows with what HF curates.
+        Because almost-certainly-wrong × field-defining is still a tiny
+        expected value. Strong claims need strong evidence; the prior on a
+        one-page proof of RH is brutal. If a future RH proof actually convinces
+        the AI reader, it will rocket to the top automatically.
       </p>
 
-      <h3>Why was this paper selected?</h3>
+      <h3>How are papers picked into the queue?</h3>
       <p>
-        Because it surfaced on Hugging Face Daily Papers, has an arxiv math category,
-        and we hadn't read it yet. There is no venue-specific editorial selection.
+        We watch the Hugging Face Daily Papers feed and keep only the
+        <code>math.*</code> entries we haven't read yet. No fixed daily quota,
+        no editorial calendar.
       </p>
 
-      <h3>Can the review be wrong?</h3>
+      <h3>Can the AI be wrong about the scores?</h3>
       <p>
-        Yes. Treat the reading as a first-pass impression. The abstract and the arxiv
-        link are always one click away — read the paper yourself if it matters.
+        Yes. Calibration on impact is loose; calibration on correctness is
+        looser. The scores are sharper than free-form prose but still
+        compressed lossy versions of a real judgement. Open the paper.
       </p>
 
       <h2 id="colophon">Colophon</h2>
@@ -107,8 +130,9 @@ import Layout from '../components/Layout.astro';
     <aside class="essay-toc" aria-label="On this page">
       <span class="essay-toc-label">On this page</span>
       <ol>
-        <li><a href="#what-this-is">What this is</a></li>
-        <li><a href="#how-it-works">How the data flows</a></li>
+        <li><a href="#why">Why these two</a></li>
+        <li><a href="#how">How a review is made</a></li>
+        <li><a href="#quadrants">The four quadrants</a></li>
         <li><a href="#limits">What this isn't</a></li>
         <li><a href="#faq">Frequently asked</a></li>
         <li><a href="#colophon">Colophon</a></li>

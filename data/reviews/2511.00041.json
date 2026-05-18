@@ -1,0 +1,18 @@
+{
+  "id": "2511.00041",
+  "date": "2026-05-16",
+  "title": "On the Riemann hypothesis: a proof via fine structure of the explicit formula",
+  "paper_url": "https://arxiv.org/abs/2511.00041",
+  "abstract": "We prove the Riemann hypothesis by extracting an unconditional positivity bound from a refined version of Weil's explicit formula.",
+  "arxiv_categories": [
+    "math.NT"
+  ],
+  "authors": [
+    "A. Petrov"
+  ],
+  "published": "2026-05-14T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe argument tries to upgrade the well-known positivity criterion (RH is equivalent to non-negativity of a particular quadratic form on test functions) by inserting a new family of test functions said to make the criterion verifiable.\n\n## Section 3 (the new test functions)\n\nThe construction is concrete and the formulae are correct as stated. So far so good.\n\n## Lemma 5.1 — the critical step\n\nThe lemma claims that a certain double sum is bounded by a single sum of the same shape. The proof invokes a 'standard rearrangement' but the rearrangement implicitly assumes the absolute convergence of an intermediate series that, as far as I can tell, is **conditionally** convergent at best. Without uniform absolute control, the swap of summation order is unjustified. The entire positivity bound rests on this lemma.\n\n## Overall\n\nThe surrounding framework is competent and the test-function construction is genuinely interesting. But Lemma 5.1 is the load-bearing step and the proof, as written, does not close it. If the gap can be patched by a more careful absolute-convergence argument, the paper is plausible; if not, the whole structure collapses. Strong prior says such a one-page proof of RH would have been spotted earlier — the burden of proof is heavy and unmet.",
+  "impact_if_true": "max",
+  "proof_correctness": "minimal",
+  "updated_at": "2026-05-16T12:00:00+00:00"
+}

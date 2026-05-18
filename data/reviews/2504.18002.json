@@ -1,0 +1,20 @@
+{
+  "id": "2504.18002",
+  "date": "2026-05-08",
+  "title": "Algebraic K-theory of stable infinity-categories satisfies excision",
+  "paper_url": "https://arxiv.org/abs/2504.18002",
+  "abstract": "We prove that algebraic K-theory, viewed as a functor on stable ∞-categories, satisfies a strong excision property along arbitrary localising sequences.",
+  "arxiv_categories": [
+    "math.KT",
+    "math.AT"
+  ],
+  "authors": [
+    "L. Hesselholt",
+    "T. Nikolaus"
+  ],
+  "published": "2026-05-02T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe claim sharpens the additivity theorem of Waldhausen and the localisation theorem of Thomason–Trobaugh, extending excision to a much broader setting.\n\n## Lemma 3.7 (filtered colimit lemma)\n\nThe proof uses a clever fibre-sequence comparison. The construction is intricate but each diagram I checked commutes. I am, however, not fully convinced of the coherence data in the cube of $\\infty$-categories on p. 17 — it is stated as 'evident' but the higher coherences are non-trivial.\n\n## Theorem A\n\nFollows from Lemma 3.7 and the standard machinery. The gap, if there is one, is in 3.7's coherence data.\n\n## Overall\n\nThe result, if correct, is a major structural theorem people have wanted. The proof is plausible but the coherence handwave on p. 17 is the kind of place where errors hide in higher-categorical work. Verifying that step requires a careful $(\\infty, 2)$-categorical bookkeeping that the paper does not do explicitly.",
+  "impact_if_true": "high",
+  "proof_correctness": "medium",
+  "updated_at": "2026-05-08T12:00:00+00:00"
+}

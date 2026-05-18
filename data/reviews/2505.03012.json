@@ -1,0 +1,18 @@
+{
+  "id": "2505.03012",
+  "date": "2026-05-14",
+  "title": "A short proof of the cap-set lower bound via polynomial multiplicities",
+  "paper_url": "https://arxiv.org/abs/2505.03012",
+  "abstract": "We give a one-page proof of Edel's lower bound for cap sets in $\\mathbb{F}_3^n$ using a multiplicity argument adapted from the Croot–Lev–Pach method.",
+  "arxiv_categories": [
+    "math.CO"
+  ],
+  "authors": [
+    "Sophie Huczynska"
+  ],
+  "published": "2026-05-11T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nA self-contained note giving a streamlined proof of a known lower bound. The novelty is presentational.\n\n## Main argument\n\nThe multiplicity bookkeeping is elementary and explicit. I worked through it and recovered the same constant. No subtleties.\n\n## Overall\n\nNice exposition; nothing more, nothing less. A clean teaching note that may be cited by the additive combinatorics community.",
+  "impact_if_true": "low",
+  "proof_correctness": "max",
+  "updated_at": "2026-05-14T12:00:00+00:00"
+}

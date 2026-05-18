@@ -1,0 +1,19 @@
+{
+  "id": "2510.21194",
+  "date": "2026-05-10",
+  "title": "Global regularity for the 3D Navier–Stokes equations via a conditional energy cascade",
+  "paper_url": "https://arxiv.org/abs/2510.21194",
+  "abstract": "We establish global-in-time smoothness for arbitrary smooth initial data in 3D incompressible Navier–Stokes by ruling out finite-time blowup through a new energy-cascade obstruction.",
+  "arxiv_categories": [
+    "math.AP"
+  ],
+  "authors": [
+    "I. Mikhailov",
+    "T. Vorobev"
+  ],
+  "published": "2026-05-03T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe paper builds on Tao's averaged-Navier-Stokes program and claims that the obstruction Tao constructed actually cannot be embedded in the genuine equation. The argument introduces a 'cascade compatibility' invariant.\n\n## Theorem 2.1\n\nReformulates the regularity question as a vanishing statement for the new invariant. The reformulation is technically correct.\n\n## Lemma 4.3 — the heart of the matter\n\nThe lemma claims an a priori $H^1$ bound depending only on initial data, essentially by an integration-by-parts identity. The identity, as written, drops a boundary term at $t = 0$ that is not obviously controlled by the initial $H^1$ norm; the next line tacitly absorbs it into the LHS, which is the move that would close the whole proof. This is precisely the type of gap that has sunk previous announcements.\n\n## Overall\n\nThe framing is creative but the central a priori bound is asserted, not proven. Given the long history of Navier–Stokes announcements that died at exactly this kind of step, treat the result as not yet established.",
+  "impact_if_true": "max",
+  "proof_correctness": "minimal",
+  "updated_at": "2026-05-10T12:00:00+00:00"
+}

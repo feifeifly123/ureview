@@ -13,6 +13,8 @@
     "arxiv_categories",
     "authors",
     "ai_proof_review",
+    "impact_if_true",
+    "proof_correctness",
     "updated_at"
   ],
   "properties": {
@@ -37,6 +39,16 @@
       "type": "string",
       "minLength": 50,
       "description": "Long-form AI evaluation of the paper's proof. Markdown + LaTeX (KaTeX delimiters) supported."
+    },
+    "impact_if_true": {
+      "type": "string",
+      "enum": ["max", "high", "medium", "low", "minimal"],
+      "description": "Discrete tier. max = Field-defining (Perelman / Wiles class); high = changes the field; medium = substantial; low = incremental; minimal = niche micro-step."
+    },
+    "proof_correctness": {
+      "type": "string",
+      "enum": ["max", "high", "medium", "low", "minimal"],
+      "description": "Discrete tier from max → minimal. Five buckets only: LLMs cannot calibrate finer than this. max = solid as a one-pass read; minimal = almost certainly not."
     },
     "updated_at": { "type": "string", "format": "date-time" }
   },

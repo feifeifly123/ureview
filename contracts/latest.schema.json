@@ -10,7 +10,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "date", "title", "authors", "arxiv_categories", "review_lede"],
+        "required": ["id", "date", "title", "authors", "arxiv_categories", "review_lede", "impact_if_true", "proof_correctness"],
         "properties": {
           "id": { "type": "string" },
           "date": { "type": "string", "format": "date" },
@@ -22,7 +22,9 @@
           "review_lede": {
             "type": "string",
             "description": "First sentence(s) of ai_proof_review, truncated for listings."
-          }
+          },
+          "impact_if_true": { "type": "string", "enum": ["max", "high", "medium", "low", "minimal"] },
+          "proof_correctness": { "type": "string", "enum": ["max", "high", "medium", "low", "minimal"] }
         },
         "additionalProperties": false
       }

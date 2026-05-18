@@ -1,0 +1,20 @@
+{
+  "id": "2503.11201",
+  "date": "2026-05-15",
+  "title": "Resolution of singularities for foliated threefolds in characteristic zero",
+  "paper_url": "https://arxiv.org/abs/2503.11201",
+  "abstract": "We extend Hironaka-style resolution of singularities to algebraically integrable foliations on threefolds over fields of characteristic zero, settling a question raised by McQuillan.",
+  "arxiv_categories": [
+    "math.AG"
+  ],
+  "authors": [
+    "Mihnea Popa",
+    "Stefan Kebekus",
+    "Karl Schwede"
+  ],
+  "published": "2026-05-09T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe paper builds on the foliated MMP framework, lifting the threefold resolution proof to the foliated category. The technical heart is a foliated analogue of the maximal contact lemma.\n\n## Lemma 4.2 (maximal contact)\n\nThe construction is direct: choose a hypersurface tangent to the foliation along the singular locus, then track the multiplicity drop under blowups. The induction on dimension is standard once the lemma is in hand. No gaps.\n\n## Section 7 (termination)\n\nThe termination argument uses a foliated multiplicity invariant similar to Włodarczyk's. The decreasing chain condition is verified in detail; the only place that gave me pause was the handling of mixed singularities at flip loci, which the authors resolve with an explicit case split.\n\n## Overall\n\nA careful, complete proof. The result is what people in foliated birational geometry have been working toward for a decade; it unlocks several conditional papers.",
+  "impact_if_true": "high",
+  "proof_correctness": "max",
+  "updated_at": "2026-05-15T12:00:00+00:00"
+}

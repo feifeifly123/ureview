@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-16T13:32:29.525447+00:00",
+  "generated_at": "2026-05-18T13:33:25.231755+00:00",
   "reviews": [
     {
       "id": "math/0211159",
-      "date": "2026-04-22",
+      "date": "2026-05-17",
       "title": "The entropy formula for the Ricci flow and its geometric applications",
       "authors": [
         "Grisha Perelman"
@@ -12,8 +12,168 @@
         "math.DG"
       ],
       "review_lede": "The note introduces an entropy-like functional $\\mathcal{F}$ on the space of Riemannian metrics modulo diffeomorphism and rescaling, together with its first variation under Ricci flow. The monotonicity argument hinges on a weighted-Laplaci…",
+      "impact_if_true": "max",
+      "proof_correctness": "max",
       "published": "2002-11-11T16:11:49Z",
-      "updated_at": "2026-04-22T13:30:00Z"
+      "updated_at": "2026-05-17T12:00:00+00:00"
+    },
+    {
+      "id": "2503.11201",
+      "date": "2026-05-15",
+      "title": "Resolution of singularities for foliated threefolds in characteristic zero",
+      "authors": [
+        "Mihnea Popa",
+        "Stefan Kebekus",
+        "Karl Schwede"
+      ],
+      "arxiv_categories": [
+        "math.AG"
+      ],
+      "review_lede": "The paper builds on the foliated MMP framework, lifting the threefold resolution proof to the foliated category. The technical heart is a foliated analogue of the maximal contact lemma.",
+      "impact_if_true": "high",
+      "proof_correctness": "max",
+      "published": "2026-05-09T12:00:00+00:00",
+      "updated_at": "2026-05-15T12:00:00+00:00"
+    },
+    {
+      "id": "2504.08823",
+      "date": "2026-05-12",
+      "title": "Effective bounds for the Manin–Mumford conjecture over function fields",
+      "authors": [
+        "Vesselin Dimitrov",
+        "Ziyang Gao"
+      ],
+      "arxiv_categories": [
+        "math.NT",
+        "math.AG"
+      ],
+      "review_lede": "The paper combines o-minimal counting with a refined Pila–Wilkie argument, but does so over function fields where the model-theoretic input has to be reworked.",
+      "impact_if_true": "high",
+      "proof_correctness": "max",
+      "published": "2026-05-06T12:00:00+00:00",
+      "updated_at": "2026-05-12T12:00:00+00:00"
+    },
+    {
+      "id": "2501.09887",
+      "date": "2026-05-02",
+      "title": "Heegaard Floer homology and the L-space conjecture for graph manifolds",
+      "authors": [
+        "Liam Watson",
+        "Jonathan Hanselman",
+        "Jacob Rasmussen"
+      ],
+      "arxiv_categories": [
+        "math.GT",
+        "math.SG"
+      ],
+      "review_lede": "The paper completes a decade-long program by handling the remaining graph-manifold case. The earlier work of Hanselman–Rasmussen–Watson reduces the question to a combinatorial condition on JSJ pieces.",
+      "impact_if_true": "high",
+      "proof_correctness": "high",
+      "published": "2026-04-27T12:00:00+00:00",
+      "updated_at": "2026-05-02T12:00:00+00:00"
+    },
+    {
+      "id": "2503.27411",
+      "date": "2026-05-13",
+      "title": "Sharp mixing-time bounds for random walks on expander Cayley graphs",
+      "authors": [
+        "Yuval Peres",
+        "Allan Sly"
+      ],
+      "arxiv_categories": [
+        "math.PR",
+        "math.CO"
+      ],
+      "review_lede": "Classical mixing-time theory plus a new sharp lower bound based on a return-time argument.",
+      "impact_if_true": "medium",
+      "proof_correctness": "high",
+      "published": "2026-05-07T12:00:00+00:00",
+      "updated_at": "2026-05-13T12:00:00+00:00"
+    },
+    {
+      "id": "2504.18002",
+      "date": "2026-05-08",
+      "title": "Algebraic K-theory of stable infinity-categories satisfies excision",
+      "authors": [
+        "L. Hesselholt",
+        "T. Nikolaus"
+      ],
+      "arxiv_categories": [
+        "math.KT",
+        "math.AT"
+      ],
+      "review_lede": "The claim sharpens the additivity theorem of Waldhausen and the localisation theorem of Thomason–Trobaugh, extending excision to a much broader setting.",
+      "impact_if_true": "high",
+      "proof_correctness": "medium",
+      "published": "2026-05-02T12:00:00+00:00",
+      "updated_at": "2026-05-08T12:00:00+00:00"
+    },
+    {
+      "id": "2505.03012",
+      "date": "2026-05-14",
+      "title": "A short proof of the cap-set lower bound via polynomial multiplicities",
+      "authors": [
+        "Sophie Huczynska"
+      ],
+      "arxiv_categories": [
+        "math.CO"
+      ],
+      "review_lede": "A self-contained note giving a streamlined proof of a known lower bound. The novelty is presentational.",
+      "impact_if_true": "low",
+      "proof_correctness": "max",
+      "published": "2026-05-11T12:00:00+00:00",
+      "updated_at": "2026-05-14T12:00:00+00:00"
+    },
+    {
+      "id": "2502.14771",
+      "date": "2026-05-05",
+      "title": "Weak-type endpoint bounds for a class of bilinear Hilbert-transform operators",
+      "authors": [
+        "Lillian Pierce",
+        "Po-Lam Yung"
+      ],
+      "arxiv_categories": [
+        "math.FA",
+        "math.CA"
+      ],
+      "review_lede": "A tightening of the known $L^p$ theory at the endpoint. Uses time-frequency tile decompositions and a Calderón–Zygmund argument adapted to the bilinear setting.",
+      "impact_if_true": "low",
+      "proof_correctness": "max",
+      "published": "2026-04-29T12:00:00+00:00",
+      "updated_at": "2026-05-05T12:00:00+00:00"
+    },
+    {
+      "id": "2511.00041",
+      "date": "2026-05-16",
+      "title": "On the Riemann hypothesis: a proof via fine structure of the explicit formula",
+      "authors": [
+        "A. Petrov"
+      ],
+      "arxiv_categories": [
+        "math.NT"
+      ],
+      "review_lede": "The argument tries to upgrade the well-known positivity criterion (RH is equivalent to non-negativity of a particular quadratic form on test functions) by inserting a new family of test functions said to make the criterion verifiable.",
+      "impact_if_true": "max",
+      "proof_correctness": "minimal",
+      "published": "2026-05-14T12:00:00+00:00",
+      "updated_at": "2026-05-16T12:00:00+00:00"
+    },
+    {
+      "id": "2510.21194",
+      "date": "2026-05-10",
+      "title": "Global regularity for the 3D Navier–Stokes equations via a conditional energy cascade",
+      "authors": [
+        "I. Mikhailov",
+        "T. Vorobev"
+      ],
+      "arxiv_categories": [
+        "math.AP"
+      ],
+      "review_lede": "The paper builds on Tao's averaged-Navier-Stokes program and claims that the obstruction Tao constructed actually cannot be embedded in the genuine equation. The argument introduces a 'cascade compatibility' invariant.",
+      "impact_if_true": "max",
+      "proof_correctness": "minimal",
+      "published": "2026-05-03T12:00:00+00:00",
+      "updated_at": "2026-05-10T12:00:00+00:00"
     }
   ]
 }

@@ -1924,3 +1924,153 @@ main {
   .hero-featured { padding: 28px 0 22px; }
   .stack-header { padding: 28px 0 10px; margin-top: 20px; }
 }
+
+/* ---------- score badges (feed cards) ---------- */
+/* Three little cells inline: Impact · Correct · E[impact]. */
+.score-badge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 10px 0 14px;
+  padding: 8px 14px;
+  border-left: 2px solid var(--ochre);
+  background: var(--ochre-dim);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+.score-cell { display: inline-flex; align-items: baseline; gap: 6px; }
+.score-label {
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+}
+.score-value {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.score-value--strong {
+  color: var(--ochre);
+  font-size: 1rem;
+}
+
+/* Tier color hierarchy — green→amber→red signals epistemic temperature.
+   Same palette for feed-card badges, hero scores, and detail scorecards. */
+.score-cell--tier-max     .score-value,
+.hero-score--tier-max     strong,
+.scorecard-cell--tier-max .scorecard-value strong { color: #2F6F4A; }
+.score-cell--tier-high     .score-value,
+.hero-score--tier-high     strong,
+.scorecard-cell--tier-high .scorecard-value strong { color: #4F7B4F; }
+.score-cell--tier-medium     .score-value,
+.hero-score--tier-medium     strong,
+.scorecard-cell--tier-medium .scorecard-value strong { color: #8A6A1F; }
+.score-cell--tier-low     .score-value,
+.hero-score--tier-low     strong,
+.scorecard-cell--tier-low .scorecard-value strong { color: #B45309; }
+.score-cell--tier-minimal     .score-value,
+.hero-score--tier-minimal     strong,
+.scorecard-cell--tier-minimal .scorecard-value strong { color: #B91C1C; }
+
+/* Night mode: brighten the same hues so they read on dark paper. */
+:root[data-theme="night"] .score-cell--tier-max     .score-value,
+:root[data-theme="night"] .hero-score--tier-max     strong,
+:root[data-theme="night"] .scorecard-cell--tier-max .scorecard-value strong { color: #6FB58A; }
+:root[data-theme="night"] .score-cell--tier-high     .score-value,
+:root[data-theme="night"] .hero-score--tier-high     strong,
+:root[data-theme="night"] .scorecard-cell--tier-high .scorecard-value strong { color: #97C58A; }
+:root[data-theme="night"] .score-cell--tier-medium     .score-value,
+:root[data-theme="night"] .hero-score--tier-medium     strong,
+:root[data-theme="night"] .scorecard-cell--tier-medium .scorecard-value strong { color: #D4A14F; }
+:root[data-theme="night"] .score-cell--tier-low     .score-value,
+:root[data-theme="night"] .hero-score--tier-low     strong,
+:root[data-theme="night"] .scorecard-cell--tier-low .scorecard-value strong { color: #E59B5A; }
+:root[data-theme="night"] .score-cell--tier-minimal     .score-value,
+:root[data-theme="night"] .hero-score--tier-minimal     strong,
+:root[data-theme="night"] .scorecard-cell--tier-minimal .scorecard-value strong { color: #E76E6E; }
+
+/* ---------- hero score row ---------- */
+/* "8/10 × 95% = 7.6" reads as one mathematical sentence. */
+.hero-scores {
+  margin: 8px 0 14px;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+.hero-score em {
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+.hero-score strong { color: var(--ink); }
+.hero-score-sep {
+  margin: 0 8px;
+  opacity: 0.5;
+}
+.hero-score--strong strong {
+  color: var(--ochre);
+  font-size: 1.2em;
+}
+
+/* ---------- review-page scorecard (3 big cells) ---------- */
+.review-scorecard {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  margin: 18px 0 28px;
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--ochre);
+  background: var(--paper);
+}
+.scorecard-cell {
+  padding: 18px 20px 20px;
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.scorecard-cell:last-child { border-right: none; }
+.scorecard-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.scorecard-value {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.scorecard-value strong { font-weight: 600; }
+.scorecard-unit {
+  font-size: 1rem;
+  opacity: 0.6;
+}
+.scorecard-value--strong strong {
+  color: var(--ochre);
+  font-size: 2.4rem;
+}
+.scorecard-note {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+@media (max-width: 720px) {
+  .review-scorecard { grid-template-columns: 1fr; }
+  .scorecard-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  .scorecard-cell:last-child { border-bottom: none; }
+  .hero-scores { font-size: 0.84rem; }
+  .hero-score-sep { margin: 0 4px; }
+}

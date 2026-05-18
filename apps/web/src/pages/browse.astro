@@ -15,19 +15,20 @@ import Layout from '../components/Layout.astro';
         <span>Browse</span>
       </nav>
       <span class="page-intro-eyebrow">Index · Filterable</span>
-      <h1 class="page-intro-title">Browse recent reviews.</h1>
+      <h1 class="page-intro-title">Browse the feed.</h1>
       <p class="page-intro-lede">
-        Filter by arxiv math sub-category. Sort by date.
+        Always ranked by E[impact] = impact × correctness. Filter by quadrant
+        (where the trade-off lives) or by math sub-category.
       </p>
     </section>
 
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
-      <div class="filter-row" data-filter="categories">
-        <span class="filter-label">Category</span>
+      <div class="filter-row" data-filter="quadrant">
+        <span class="filter-label">Quadrant</span>
         <div class="filter-chips-wrap"></div>
       </div>
-      <div class="filter-row" data-filter="sort">
-        <span class="filter-label">Order</span>
+      <div class="filter-row" data-filter="categories">
+        <span class="filter-label">Category</span>
         <div class="filter-chips-wrap"></div>
       </div>
     </section>
@@ -55,6 +56,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { buildFeedCard } from '../lib/feed-card';
+  import { expectedImpact } from '../lib/types';
   import type { LatestReviewEntry } from '../lib/types';
 
   function timeAgo(iso: string): string {
@@ -71,25 +73,34 @@ import Layout from '../components/Layout.astro';
     return new Date(ts).toLocaleDateString();
   }
 
-  type SortKey = 'newest' | 'oldest';
+  // Quadrants of (impact × correctness). Mathematicians read these very
+  // differently: "high-impact / shaky proof" is the dragon-hunting feed,
+  // "low-impact / solid" is the increment crowd.
+  type Quadrant = 'all' | 'top' | 'dragons' | 'solid';
 
-  const DEFAULT_SORT: SortKey = 'newest';
+  const HIGH_IMPACT = new Set(['max', 'high']);
+  const HIGH_CORRECT = new Set(['max', 'high']);
+  const LOW_CORRECT = new Set(['low', 'minimal']);
 
-  const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
-    { key: 'newest', label: 'Newest first' },
-    { key: 'oldest', label: 'Oldest first' },
+  const QUADRANTS: Array<{ key: Quadrant; label: string; match: (e: LatestReviewEntry) => boolean }> = [
+    { key: 'all',     label: 'All',                  match: () => true },
+    { key: 'top',     label: 'Top: high × high',     match: (e) => HIGH_IMPACT.has(e.impact_if_true) && HIGH_CORRECT.has(e.proof_correctness) },
+    { key: 'dragons', label: 'Dragons: high × low',  match: (e) => HIGH_IMPACT.has(e.impact_if_true) && LOW_CORRECT.has(e.proof_correctness) },
+    { key: 'solid',   label: 'Solid: low × high',    match: (e) => !HIGH_IMPACT.has(e.impact_if_true) && HIGH_CORRECT.has(e.proof_correctness) },
   ];
+
+  const DEFAULT_QUADRANT: Quadrant = 'all';
 
   const state = {
     categories: new Set<string>(),
-    sort: DEFAULT_SORT,
+    quadrant: DEFAULT_QUADRANT,
   };
 
   function readStateFromUrl() {
     const params = new URLSearchParams(window.location.search);
     state.categories = new Set((params.get('cat') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-    const sortParam = params.get('sort');
-    state.sort = SORT_OPTIONS.find((o) => o.key === sortParam)?.key ?? DEFAULT_SORT;
+    const q = params.get('q') as Quadrant | null;
+    state.quadrant = QUADRANTS.find((o) => o.key === q)?.key ?? DEFAULT_QUADRANT;
   }
 
   function writeStateToUrl() {
@@ -99,13 +110,13 @@ import Layout from '../components/Layout.astro';
       else url.searchParams.delete(name);
     };
     setOrDelete('cat', [...state.categories].join(','));
-    setOrDelete('sort', state.sort === DEFAULT_SORT ? '' : state.sort);
+    setOrDelete('q', state.quadrant === DEFAULT_QUADRANT ? '' : state.quadrant);
     history.replaceState({}, '', url);
   }
 
   function resetState() {
     state.categories.clear();
-    state.sort = DEFAULT_SORT;
+    state.quadrant = DEFAULT_QUADRANT;
   }
 
   function chip(opts: {
@@ -143,7 +154,9 @@ import Layout from '../components/Layout.astro';
   }
 
   function applyFilter(reviews: LatestReviewEntry[]): LatestReviewEntry[] {
+    const quadrant = QUADRANTS.find((q) => q.key === state.quadrant) ?? QUADRANTS[0];
     return reviews.filter((r) => {
+      if (!quadrant.match(r)) return false;
       if (state.categories.size > 0) {
         const cats = r.arxiv_categories ?? [];
         if (!cats.some((c) => state.categories.has(c))) return false;
@@ -152,20 +165,16 @@ import Layout from '../components/Layout.astro';
     });
   }
 
-  function parseTs(v: string | undefined, fallbackDate: string | undefined): number {
-    if (v) return Date.parse(v);
-    if (fallbackDate) return Date.parse(`${fallbackDate}T00:00:00Z`);
-    return 0;
-  }
-
   function applySort(arr: LatestReviewEntry[]): LatestReviewEntry[] {
-    const sorted = arr.slice();
-    if (state.sort === 'oldest') {
-      sorted.sort((a, b) => parseTs(a.updated_at, a.date) - parseTs(b.updated_at, b.date));
-    } else {
-      sorted.sort((a, b) => parseTs(b.updated_at, b.date) - parseTs(a.updated_at, a.date));
-    }
-    return sorted;
+    // Always rank by expected impact desc; tie-break by recency.
+    return arr.slice().sort((a, b) => {
+      const ea = expectedImpact(a);
+      const eb = expectedImpact(b);
+      if (ea !== eb) return eb - ea;
+      const ta = Date.parse(a.updated_at || `${a.date}T00:00:00Z`);
+      const tb = Date.parse(b.updated_at || `${b.date}T00:00:00Z`);
+      return tb - ta;
+    });
   }
 
   function rowChipsWrap(rowSelector: string): HTMLElement | null {
@@ -178,12 +187,26 @@ import Layout from '../components/Layout.astro';
   }
 
   function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
+    const quadWrap = rowChipsWrap('[data-filter="quadrant"]');
     const catsWrap = rowChipsWrap('[data-filter="categories"]');
-    const sortWrap = rowChipsWrap('[data-filter="sort"]');
-    if (!catsWrap || !sortWrap) return;
+    if (!quadWrap || !catsWrap) return;
+
+    clearChildren(quadWrap);
+    for (const q of QUADRANTS) {
+      const count = reviews.filter(q.match).length;
+      quadWrap.appendChild(chip({
+        label: q.label,
+        count,
+        active: state.quadrant === q.key,
+        onClick: () => {
+          if (state.quadrant === q.key) return;
+          state.quadrant = q.key;
+          onChange();
+        },
+      }));
+    }
 
     const cats = topCategories(reviews);
-
     clearChildren(catsWrap);
     if (cats.length === 0) {
       catsWrap.appendChild(el('span', { class: 'filter-hint' }, 'none yet'));
@@ -200,19 +223,6 @@ import Layout from '../components/Layout.astro';
           },
         }));
       }
-    }
-
-    clearChildren(sortWrap);
-    for (const opt of SORT_OPTIONS) {
-      sortWrap.appendChild(chip({
-        label: opt.label,
-        active: state.sort === opt.key,
-        onClick: () => {
-          if (state.sort === opt.key) return;
-          state.sort = opt.key;
-          onChange();
-        },
-      }));
     }
   }
 

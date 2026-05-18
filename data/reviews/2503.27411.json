@@ -1,0 +1,20 @@
+{
+  "id": "2503.27411",
+  "date": "2026-05-13",
+  "title": "Sharp mixing-time bounds for random walks on expander Cayley graphs",
+  "paper_url": "https://arxiv.org/abs/2503.27411",
+  "abstract": "We obtain sharp upper and lower bounds on the total-variation mixing time of simple random walks on Cayley graphs of expander families.",
+  "arxiv_categories": [
+    "math.PR",
+    "math.CO"
+  ],
+  "authors": [
+    "Yuval Peres",
+    "Allan Sly"
+  ],
+  "published": "2026-05-07T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nClassical mixing-time theory plus a new sharp lower bound based on a return-time argument.\n\n## Upper bound (Section 3)\n\nStandard spectral argument. Clean.\n\n## Lower bound (Section 4)\n\nMore delicate. Uses a coupling that holds with high probability, with the failure mode controlled by a hitting-time tail estimate (Lemma 4.5). The tail estimate cites a long preprint of one of the authors; I could not independently verify the cited bound but the citation appears legitimate and the application is standard.\n\n## Overall\n\nThe result is plausible and the methods are mainstream. Mild conditional confidence due to the external lemma; if that lemma holds (very likely), the paper is fine.",
+  "impact_if_true": "medium",
+  "proof_correctness": "high",
+  "updated_at": "2026-05-13T12:00:00+00:00"
+}

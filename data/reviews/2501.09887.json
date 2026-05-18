@@ -1,0 +1,21 @@
+{
+  "id": "2501.09887",
+  "date": "2026-05-02",
+  "title": "Heegaard Floer homology and the L-space conjecture for graph manifolds",
+  "paper_url": "https://arxiv.org/abs/2501.09887",
+  "abstract": "We verify the L-space conjecture for all graph manifolds, showing that the three equivalent characterisations (Heegaard Floer, taut foliations, left-orderable $\\pi_1$) coincide in this class.",
+  "arxiv_categories": [
+    "math.GT",
+    "math.SG"
+  ],
+  "authors": [
+    "Liam Watson",
+    "Jonathan Hanselman",
+    "Jacob Rasmussen"
+  ],
+  "published": "2026-04-27T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe paper completes a decade-long program by handling the remaining graph-manifold case. The earlier work of Hanselman–Rasmussen–Watson reduces the question to a combinatorial condition on JSJ pieces.\n\n## Theorem 1.1\n\nThe combinatorial condition is verified by a case analysis over Seifert-fibre structures. The case analysis is long (40+ pages) but each case is mechanically checked.\n\n## Section 6 (foliation correspondence)\n\nThe taut-foliation side uses a gluing construction. Construction is standard but the verification that the glued foliation is taut on the boundary uses an inequality (Lemma 6.4) whose proof I would want to double-check; the paper proof relies on a numerical condition that I had to recompute.\n\n## Overall\n\nA major result in 3-manifold topology that completes a famous open problem in its named class. The proof is mostly bookkeeping plus one sharp lemma. Confidence is high but not certainty; one technical lemma deserves expert refereeing.",
+  "impact_if_true": "high",
+  "proof_correctness": "high",
+  "updated_at": "2026-05-02T12:00:00+00:00"
+}

@@ -2,7 +2,33 @@ import { el, mount } from './dom';
 import { authorsDetailed } from './format';
 import { scheduleTypeset } from './latex';
 import { formatDate, safeHref } from './utils';
+import { expectedImpact, impactMeta, correctnessMeta } from './types';
 import type { Review } from './types';
+
+function buildScoreCard(review: Review): HTMLElement {
+  const imp = impactMeta(review.impact_if_true);
+  const corr = correctnessMeta(review.proof_correctness);
+  const e = expectedImpact(review);
+  return el('section', { class: 'review-scorecard', 'aria-label': 'Expected-impact scorecard' }, [
+    el('div', { class: `scorecard-cell scorecard-cell--impact scorecard-cell--tier-${review.impact_if_true}` }, [
+      el('span', { class: 'scorecard-label' }, 'Impact if true'),
+      el('span', { class: 'scorecard-value' }, [el('strong', {}, imp.short)]),
+      el('span', { class: 'scorecard-note' }, imp.long),
+    ]),
+    el('div', { class: `scorecard-cell scorecard-cell--correct scorecard-cell--tier-${review.proof_correctness}` }, [
+      el('span', { class: 'scorecard-label' }, 'Proof correctness'),
+      el('span', { class: 'scorecard-value' }, [el('strong', {}, corr.short)]),
+      el('span', { class: 'scorecard-note' }, corr.long),
+    ]),
+    el('div', { class: 'scorecard-cell scorecard-cell--expected' }, [
+      el('span', { class: 'scorecard-label' }, 'E[impact] = product'),
+      el('span', { class: 'scorecard-value scorecard-value--strong' }, [
+        el('strong', {}, e.toFixed(1)),
+      ]),
+      el('span', { class: 'scorecard-note' }, 'Used for ranking the feed'),
+    ]),
+  ]);
+}
 
 // ---------- markdown-ish rendering ----------
 
@@ -98,22 +124,16 @@ function buildProofReview(review: Review): HTMLElement {
 // ---------- post-read nav ----------
 
 function buildPostReadNav(review: Review): HTMLElement {
+  // Two CTAs only: deep-dive on arxiv, or back to feed to triage the next paper.
+  // Copy-link is already in the header; back vs browse-all collapse into one.
   return el('nav', { class: 'post-read-nav', 'aria-label': 'Continue reading' }, [
-    el('a', { class: 'post-read-link post-read-back', href: '/' }, '← Back to feed'),
-    el('div', { class: 'post-read-center' }, [
-      el('a', {
-        class: 'post-read-link post-read-arxiv',
-        href: safeHref(review.paper_url),
-        target: '_blank',
-        rel: 'noopener',
-      }, 'Open on arXiv →'),
-      el('button', {
-        class: 'post-read-link post-read-copy',
-        type: 'button',
-        'data-copy-link': 'true',
-      }, 'Copy link'),
-    ]),
-    el('a', { class: 'post-read-link post-read-browse', href: '/browse/' }, 'Browse all reviews →'),
+    el('a', {
+      class: 'post-read-link post-read-arxiv',
+      href: safeHref(review.paper_url),
+      target: '_blank',
+      rel: 'noopener',
+    }, 'Open on arXiv →'),
+    el('a', { class: 'post-read-link post-read-back', href: '/' }, 'Back to the feed →'),
   ]);
 }
 
@@ -140,11 +160,12 @@ function attachCopyLink(container: HTMLElement) {
 
 function renderPage(container: HTMLElement, review: Review) {
   const header = buildHeader(review);
+  const scorecard = buildScoreCard(review);
   const abstract = buildAbstract(review);
   const proof = buildProofReview(review);
   const postNav = buildPostReadNav(review);
 
-  const stack = el('div', { class: 'review-content-stack' }, [abstract, proof, postNav]);
+  const stack = el('div', { class: 'review-content-stack' }, [scorecard, abstract, proof, postNav]);
 
   mount(container, header, stack);
   attachCopyLink(container);

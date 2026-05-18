@@ -36,9 +36,21 @@ def parse_iso(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def sort_key(review: dict[str, Any]) -> datetime:
+IMPACT_NUMERIC = {"max": 9, "high": 7, "medium": 5, "low": 3, "minimal": 1}
+CORRECT_NUMERIC = {"max": 0.95, "high": 0.80, "medium": 0.55, "low": 0.25, "minimal": 0.05}
+
+
+def expected_impact(review: dict[str, Any]) -> float:
+    """impact-numeric × correctness-numeric — headline ranking score."""
+    imp = review.get("impact_if_true", "minimal")
+    corr = review.get("proof_correctness", "minimal")
+    return IMPACT_NUMERIC.get(imp, 1) * CORRECT_NUMERIC.get(corr, 0.05)
+
+
+def sort_key(review: dict[str, Any]) -> tuple[float, datetime]:
+    """Primary: expected impact desc. Secondary: most recently updated."""
     updated = review.get("updated_at") or f"{review['date']}T00:00:00Z"
-    return parse_iso(updated)
+    return (expected_impact(review), parse_iso(updated))
 
 
 def extract_lede(text: str) -> str:
@@ -68,6 +80,8 @@ def build_feed_entry(review: dict[str, Any]) -> dict[str, Any]:
         "authors": review.get("authors") or [],
         "arxiv_categories": review.get("arxiv_categories") or [],
         "review_lede": extract_lede(review.get("ai_proof_review", "")),
+        "impact_if_true": review["impact_if_true"],
+        "proof_correctness": review["proof_correctness"],
     }
     if review.get("published"):
         entry["published"] = review["published"]

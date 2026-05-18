@@ -1,0 +1,20 @@
+{
+  "id": "2504.08823",
+  "date": "2026-05-12",
+  "title": "Effective bounds for the Manin–Mumford conjecture over function fields",
+  "paper_url": "https://arxiv.org/abs/2504.08823",
+  "abstract": "We give explicit, polynomial-in-the-degree bounds on the number of torsion points on a curve of higher genus over a function field, sharpening Hrushovski's existence result.",
+  "arxiv_categories": [
+    "math.NT",
+    "math.AG"
+  ],
+  "authors": [
+    "Vesselin Dimitrov",
+    "Ziyang Gao"
+  ],
+  "published": "2026-05-06T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nThe paper combines o-minimal counting with a refined Pila–Wilkie argument, but does so over function fields where the model-theoretic input has to be reworked.\n\n## Lemma 3.4 (counting in definable families)\n\nThe Pila–Wilkie-type bound is established uniformly across the family; the uniformity in parameters is the main novelty. The proof is technical but each step checks out.\n\n## Theorem 1.1\n\nGoes through given Lemma 3.4 and the height pairing of §5. The constants are explicit and traceable.\n\n## Overall\n\nSolid effective improvement to a known existence result. Impact is real but narrower than the characteristic-zero original — useful for the Diophantine crowd, not field-shaking.",
+  "impact_if_true": "high",
+  "proof_correctness": "max",
+  "updated_at": "2026-05-12T12:00:00+00:00"
+}

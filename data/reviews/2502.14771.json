@@ -1,0 +1,20 @@
+{
+  "id": "2502.14771",
+  "date": "2026-05-05",
+  "title": "Weak-type endpoint bounds for a class of bilinear Hilbert-transform operators",
+  "paper_url": "https://arxiv.org/abs/2502.14771",
+  "abstract": "We establish weak-type $(1,1)$ endpoint estimates for a class of bilinear Hilbert-transform operators arising in time-frequency analysis, extending the strong-type results of Lacey–Thiele.",
+  "arxiv_categories": [
+    "math.FA",
+    "math.CA"
+  ],
+  "authors": [
+    "Lillian Pierce",
+    "Po-Lam Yung"
+  ],
+  "published": "2026-04-29T12:00:00+00:00",
+  "ai_proof_review": "## Setup\n\nA tightening of the known $L^p$ theory at the endpoint. Uses time-frequency tile decompositions and a Calderón–Zygmund argument adapted to the bilinear setting.\n\n## Section 5 (weak-type estimate)\n\nThe weak-$(1,1)$ estimate is established via a careful selection of bad tiles and their geometric arrangement. The constants are explicit and the argument is essentially mechanical given Lacey–Thiele's framework. I checked the key inequality on p. 23; it goes through.\n\n## Overall\n\nA solid extension. Will be useful for the harmonic-analysis crowd working on multilinear operators.",
+  "impact_if_true": "low",
+  "proof_correctness": "max",
+  "updated_at": "2026-05-05T12:00:00+00:00"
+}

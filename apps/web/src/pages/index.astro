@@ -9,13 +9,14 @@ import Layout from '../components/Layout.astro';
 >
   <div class="container">
     <section class="page-intro">
-      <span class="page-intro-eyebrow">The Gazette · Machine Reading Desk · BETA</span>
-      <h1 class="page-intro-title">AI proof reviews of arxiv math papers.</h1>
+      <span class="page-intro-eyebrow">The Triage Desk · BETA</span>
+      <h1 class="page-intro-title">Arxiv math, ranked by expected impact.</h1>
       <p class="page-intro-lede">
-        For every paper, one long-form machine reading of the proof —
-        what it shows, where the argument leans, what to watch for.
-        The metadata is straight from <a href="https://arxiv.org/archive/math" target="_blank" rel="noopener">arxiv math</a>;
-        the review is the only thing we file. Not peer review.
+        Every paper gets two numbers: <strong>impact if the proof is correct</strong>
+        and <strong>probability the proof is correct</strong>. The feed is ordered
+        by their product — a high-impact paper with a shaky proof and a modest
+        paper with an airtight one can meet on the same scale. Single-pass
+        machine reading. Not peer review.
       </p>
     </section>
 
@@ -72,13 +73,13 @@ import Layout from '../components/Layout.astro';
   import { scheduleTypeset } from '../lib/latex';
   import { formatDate } from '../lib/utils';
   import { buildFeedCard } from '../lib/feed-card';
+  import { expectedImpact } from '../lib/types';
   import type { LatestReviewEntry } from '../lib/types';
 
-  function buildFeaturedEntry(entry: LatestReviewEntry, total: number): HTMLElement {
+  function buildFeaturedEntry(entry: LatestReviewEntry): HTMLElement {
+    const e = expectedImpact(entry);
     const kickerBits: HTMLElement[] = [];
-    kickerBits.push(el('span', { class: 'issue-no' }, `№ ${String(total).padStart(3, '0')}`));
-    kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
-    kickerBits.push(el('span', {}, formatDate(entry.date)));
+    kickerBits.push(el('span', { class: 'issue-no' }, `TOP OF FEED · E[impact] ${e.toFixed(1)}`));
     kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
     kickerBits.push(el('span', {}, entry.id));
     const cats = entry.arxiv_categories ?? [];
@@ -86,6 +87,8 @@ import Layout from '../components/Layout.astro';
       kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
       kickerBits.push(el('span', {}, cats[0]));
     }
+    kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
+    kickerBits.push(el('span', {}, formatDate(entry.date)));
     const kicker = el('div', { class: 'hero-kicker' }, kickerBits);
 
     const title = el('h2', { class: 'hero-title' }, [
@@ -95,12 +98,20 @@ import Layout from '../components/Layout.astro';
     const authors = authorsDetailed(entry.authors);
     const authorsEl = authors ? el('p', { class: 'hero-authors' }, authors) : null;
 
+    const scoreRow = el('p', { class: 'hero-scores' }, [
+      el('span', { class: `hero-score hero-score--tier-${entry.impact_if_true}` }, [el('em', {}, 'Impact '), el('strong', {}, entry.impact_if_true)]),
+      el('span', { class: 'hero-score-sep' }, ' × '),
+      el('span', { class: `hero-score hero-score--tier-${entry.proof_correctness}` }, [el('em', {}, 'Correctness '), el('strong', {}, entry.proof_correctness)]),
+      el('span', { class: 'hero-score-sep' }, ' = '),
+      el('span', { class: 'hero-score hero-score--strong' }, [el('strong', {}, e.toFixed(1))]),
+    ]);
+
     const lede = entry.review_lede
       ? el('p', { class: 'hero-lede', 'data-typeset': 'true' }, entry.review_lede)
       : null;
 
     const foot = el('div', { class: 'hero-foot' }, [
-      el('span', {}, 'Machine-generated proof reading · Not peer review'),
+      el('span', {}, 'Ranked by E[impact]. Single-pass machine reading.'),
       el('a', { href: `/review/${entry.id}/` }, 'Open the full review →'),
     ]);
 
@@ -108,7 +119,7 @@ import Layout from '../components/Layout.astro';
       el(
         'div',
         { class: 'hero-featured-inner' },
-        [kicker, el('div', {}, [title, authorsEl, lede].filter((n): n is HTMLElement => n != null)), foot],
+        [kicker, el('div', {}, [title, authorsEl, scoreRow, lede].filter((n): n is HTMLElement => n != null)), foot],
       ),
     ]);
   }
@@ -135,7 +146,7 @@ import Layout from '../components/Layout.astro';
     const featured = reviews[0];
 
     if (featured) {
-      mount(heroSlot, buildFeaturedEntry(featured, reviews.length));
+      mount(heroSlot, buildFeaturedEntry(featured));
     } else {
       mount(heroSlot);
     }
