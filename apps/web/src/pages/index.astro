@@ -71,24 +71,21 @@ import Layout from '../components/Layout.astro';
   import { el, mount } from '../lib/dom';
   import { authorsDetailed } from '../lib/format';
   import { scheduleTypeset } from '../lib/latex';
-  import { formatDate } from '../lib/utils';
   import { buildFeedCard } from '../lib/feed-card';
-  import { expectedImpact } from '../lib/types';
+  import { expectedImpact, categoryName } from '../lib/types';
   import type { LatestReviewEntry } from '../lib/types';
 
   function buildFeaturedEntry(entry: LatestReviewEntry): HTMLElement {
     const e = expectedImpact(entry);
     const kickerBits: HTMLElement[] = [];
-    kickerBits.push(el('span', { class: 'issue-no' }, `TOP OF FEED · E[impact] ${e.toFixed(1)}`));
+    kickerBits.push(el('span', { class: 'issue-no' }, `TOP OF FEED · E ${e.toFixed(1)}`));
     kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
     kickerBits.push(el('span', {}, entry.id));
     const cats = entry.arxiv_categories ?? [];
     if (cats.length > 0) {
       kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
-      kickerBits.push(el('span', {}, cats[0]));
+      kickerBits.push(el('span', { title: categoryName(cats[0]) }, cats[0]));
     }
-    kickerBits.push(el('span', { class: 'kicker-sep' }, '·'));
-    kickerBits.push(el('span', {}, formatDate(entry.date)));
     const kicker = el('div', { class: 'hero-kicker' }, kickerBits);
 
     const title = el('h2', { class: 'hero-title' }, [

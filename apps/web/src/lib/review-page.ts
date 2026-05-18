@@ -2,7 +2,7 @@ import { el, mount } from './dom';
 import { authorsDetailed } from './format';
 import { scheduleTypeset } from './latex';
 import { formatDate, safeHref } from './utils';
-import { expectedImpact, impactMeta, correctnessMeta } from './types';
+import { expectedImpact, impactMeta, correctnessMeta, categoryName } from './types';
 import type { Review } from './types';
 
 function buildScoreCard(review: Review): HTMLElement {
@@ -62,7 +62,7 @@ function buildHeader(review: Review): HTMLElement {
   kickerBits.push(el('span', { class: 'id' }, review.id));
   (review.arxiv_categories ?? []).forEach((cat) => {
     kickerBits.push(el('span', { class: 'sep' }, '·'));
-    kickerBits.push(el('span', {}, cat));
+    kickerBits.push(el('span', { title: cat }, categoryName(cat)));
   });
 
   const kicker = el('div', { class: 'review-kicker' }, kickerBits);

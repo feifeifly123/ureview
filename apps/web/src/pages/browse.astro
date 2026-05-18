@@ -23,8 +23,12 @@ import Layout from '../components/Layout.astro';
     </section>
 
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
-      <div class="filter-row" data-filter="quadrant">
-        <span class="filter-label">Quadrant</span>
+      <div class="filter-row" data-filter="time">
+        <span class="filter-label">Time</span>
+        <div class="filter-chips-wrap"></div>
+      </div>
+      <div class="filter-row" data-filter="quality">
+        <span class="filter-label">Quality</span>
         <div class="filter-chips-wrap"></div>
       </div>
       <div class="filter-row" data-filter="categories">
@@ -56,7 +60,7 @@ import Layout from '../components/Layout.astro';
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
   import { buildFeedCard } from '../lib/feed-card';
-  import { expectedImpact } from '../lib/types';
+  import { expectedImpact, categoryName } from '../lib/types';
   import type { LatestReviewEntry } from '../lib/types';
 
   function timeAgo(iso: string): string {
@@ -73,34 +77,50 @@ import Layout from '../components/Layout.astro';
     return new Date(ts).toLocaleDateString();
   }
 
-  // Quadrants of (impact × correctness). Mathematicians read these very
-  // differently: "high-impact / shaky proof" is the dragon-hunting feed,
-  // "low-impact / solid" is the increment crowd.
-  type Quadrant = 'all' | 'top' | 'dragons' | 'solid';
+  function entryTs(e: LatestReviewEntry): number {
+    return Date.parse(e.updated_at || `${e.date}T00:00:00Z`);
+  }
 
+  // ---- Time windows: filter by recency ----
+  type TimeKey = 'all' | 'week' | 'month' | 'quarter';
+  const DAY = 86_400_000;
+  const TIME_WINDOWS: Array<{ key: TimeKey; label: string; sinceDays: number | null }> = [
+    { key: 'all',     label: 'All time',     sinceDays: null },
+    { key: 'week',    label: 'Last week',    sinceDays: 7 },
+    { key: 'month',   label: 'Last month',   sinceDays: 30 },
+    { key: 'quarter', label: 'Last 3 months', sinceDays: 90 },
+  ];
+  const DEFAULT_TIME: TimeKey = 'all';
+
+  // ---- Quality quadrants: filter by (impact, correctness) regions ----
+  // Mathematicians read these very differently — top vs dragon vs solid
+  // each carry distinct reading instructions, not a single ordinal scale.
+  type Quality = 'all' | 'top' | 'dragons' | 'solid';
   const HIGH_IMPACT = new Set(['max', 'high']);
   const HIGH_CORRECT = new Set(['max', 'high']);
   const LOW_CORRECT = new Set(['low', 'minimal']);
 
-  const QUADRANTS: Array<{ key: Quadrant; label: string; match: (e: LatestReviewEntry) => boolean }> = [
+  const QUALITIES: Array<{ key: Quality; label: string; match: (e: LatestReviewEntry) => boolean }> = [
     { key: 'all',     label: 'All',                  match: () => true },
     { key: 'top',     label: 'Top: high × high',     match: (e) => HIGH_IMPACT.has(e.impact_if_true) && HIGH_CORRECT.has(e.proof_correctness) },
     { key: 'dragons', label: 'Dragons: high × low',  match: (e) => HIGH_IMPACT.has(e.impact_if_true) && LOW_CORRECT.has(e.proof_correctness) },
     { key: 'solid',   label: 'Solid: low × high',    match: (e) => !HIGH_IMPACT.has(e.impact_if_true) && HIGH_CORRECT.has(e.proof_correctness) },
   ];
-
-  const DEFAULT_QUADRANT: Quadrant = 'all';
+  const DEFAULT_QUALITY: Quality = 'all';
 
   const state = {
     categories: new Set<string>(),
-    quadrant: DEFAULT_QUADRANT,
+    quality: DEFAULT_QUALITY,
+    time: DEFAULT_TIME,
   };
 
   function readStateFromUrl() {
     const params = new URLSearchParams(window.location.search);
     state.categories = new Set((params.get('cat') ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-    const q = params.get('q') as Quadrant | null;
-    state.quadrant = QUADRANTS.find((o) => o.key === q)?.key ?? DEFAULT_QUADRANT;
+    const q = params.get('q') as Quality | null;
+    state.quality = QUALITIES.find((o) => o.key === q)?.key ?? DEFAULT_QUALITY;
+    const t = params.get('t') as TimeKey | null;
+    state.time = TIME_WINDOWS.find((o) => o.key === t)?.key ?? DEFAULT_TIME;
   }
 
   function writeStateToUrl() {
@@ -110,13 +130,15 @@ import Layout from '../components/Layout.astro';
       else url.searchParams.delete(name);
     };
     setOrDelete('cat', [...state.categories].join(','));
-    setOrDelete('q', state.quadrant === DEFAULT_QUADRANT ? '' : state.quadrant);
+    setOrDelete('q', state.quality === DEFAULT_QUALITY ? '' : state.quality);
+    setOrDelete('t', state.time === DEFAULT_TIME ? '' : state.time);
     history.replaceState({}, '', url);
   }
 
   function resetState() {
     state.categories.clear();
-    state.quadrant = DEFAULT_QUADRANT;
+    state.quality = DEFAULT_QUALITY;
+    state.time = DEFAULT_TIME;
   }
 
   function chip(opts: {
@@ -142,7 +164,7 @@ import Layout from '../components/Layout.astro';
     return btn;
   }
 
-  function topCategories(reviews: LatestReviewEntry[], n = 8): Array<{ cat: string; count: number }> {
+  function topCategories(reviews: LatestReviewEntry[], n = 5): Array<{ cat: string; count: number }> {
     const counts = new Map<string, number>();
     for (const r of reviews) {
       for (const c of r.arxiv_categories ?? []) counts.set(c, (counts.get(c) ?? 0) + 1);
@@ -154,9 +176,12 @@ import Layout from '../components/Layout.astro';
   }
 
   function applyFilter(reviews: LatestReviewEntry[]): LatestReviewEntry[] {
-    const quadrant = QUADRANTS.find((q) => q.key === state.quadrant) ?? QUADRANTS[0];
+    const quality = QUALITIES.find((q) => q.key === state.quality) ?? QUALITIES[0];
+    const window = TIME_WINDOWS.find((w) => w.key === state.time) ?? TIME_WINDOWS[0];
+    const cutoff = window.sinceDays == null ? null : Date.now() - window.sinceDays * DAY;
     return reviews.filter((r) => {
-      if (!quadrant.match(r)) return false;
+      if (!quality.match(r)) return false;
+      if (cutoff != null && entryTs(r) < cutoff) return false;
       if (state.categories.size > 0) {
         const cats = r.arxiv_categories ?? [];
         if (!cats.some((c) => state.categories.has(c))) return false;
@@ -187,20 +212,38 @@ import Layout from '../components/Layout.astro';
   }
 
   function renderChips(reviews: LatestReviewEntry[], onChange: () => void) {
-    const quadWrap = rowChipsWrap('[data-filter="quadrant"]');
+    const timeWrap = rowChipsWrap('[data-filter="time"]');
+    const qualWrap = rowChipsWrap('[data-filter="quality"]');
     const catsWrap = rowChipsWrap('[data-filter="categories"]');
-    if (!quadWrap || !catsWrap) return;
+    if (!timeWrap || !qualWrap || !catsWrap) return;
 
-    clearChildren(quadWrap);
-    for (const q of QUADRANTS) {
+    clearChildren(timeWrap);
+    for (const w of TIME_WINDOWS) {
+      const count = w.sinceDays == null
+        ? reviews.length
+        : reviews.filter((r) => entryTs(r) >= Date.now() - w.sinceDays! * DAY).length;
+      timeWrap.appendChild(chip({
+        label: w.label,
+        count,
+        active: state.time === w.key,
+        onClick: () => {
+          if (state.time === w.key) return;
+          state.time = w.key;
+          onChange();
+        },
+      }));
+    }
+
+    clearChildren(qualWrap);
+    for (const q of QUALITIES) {
       const count = reviews.filter(q.match).length;
-      quadWrap.appendChild(chip({
+      qualWrap.appendChild(chip({
         label: q.label,
         count,
-        active: state.quadrant === q.key,
+        active: state.quality === q.key,
         onClick: () => {
-          if (state.quadrant === q.key) return;
-          state.quadrant = q.key;
+          if (state.quality === q.key) return;
+          state.quality = q.key;
           onChange();
         },
       }));
@@ -213,7 +256,8 @@ import Layout from '../components/Layout.astro';
     } else {
       for (const { cat, count } of cats) {
         catsWrap.appendChild(chip({
-          label: cat,
+          // Show friendly name; fall back to raw code if unknown.
+          label: categoryName(cat),
           count,
           active: state.categories.has(cat),
           onClick: () => {
@@ -269,12 +313,20 @@ import Layout from '../components/Layout.astro';
       writeStateToUrl();
     }
 
-    renderChips(reviews, () => { sync(); renderChips(reviews, () => sync()); });
+    // Named recursive refresher: chip clicks must always re-render the chip
+    // row (to flip the active highlight) AND re-run sync (to update the
+    // list + URL). Previous version's closure dropped the re-render after
+    // the first click, so subsequent clicks updated state silently with no
+    // visible feedback.
+    function refresh() {
+      sync();
+      renderChips(reviews, refresh);
+    }
+    renderChips(reviews, refresh);
 
     resetBtn?.addEventListener('click', () => {
       resetState();
-      renderChips(reviews, () => { sync(); renderChips(reviews, () => sync()); });
-      sync();
+      refresh();
     });
 
     sync();
