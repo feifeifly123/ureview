@@ -1,14 +1,7 @@
 import { el } from './dom';
+import { authorsCompact } from './format';
 import { formatDate } from './utils';
 import type { LatestReviewEntry } from './types';
-
-function authorsLine(authors: string[]): string {
-  if (!authors || authors.length === 0) return '';
-  if (authors.length === 1) return authors[0];
-  if (authors.length === 2) return `${authors[0]} & ${authors[1]}`;
-  if (authors.length === 3) return authors.join(', ');
-  return `${authors[0]}, ${authors[1]}, ${authors[2]} et al.`;
-}
 
 function kickerLine(entry: LatestReviewEntry): HTMLElement {
   const parts: HTMLElement[] = [];
@@ -32,7 +25,7 @@ export function buildFeedCard(entry: LatestReviewEntry): HTMLElement {
     el('span', { class: 'entry-title' }, entry.title),
   ];
 
-  const authors = authorsLine(entry.authors ?? []);
+  const authors = authorsCompact(entry.authors);
   if (authors) {
     kids.push(el('span', { class: 'entry-authors' }, authors));
   }
@@ -47,7 +40,7 @@ export function buildFeedCard(entry: LatestReviewEntry): HTMLElement {
     'a',
     {
       class: 'entry',
-      href: `/review/?id=${encodeURIComponent(entry.id)}`,
+      href: `/review/${entry.id}/`,
       'data-review-id': entry.id,
     },
     kids,

@@ -1,5 +1,6 @@
-import { dataClient } from './data-client';
 import { el, mount } from './dom';
+import { authorsDetailed } from './format';
+import { scheduleTypeset } from './latex';
 import { formatDate, safeHref } from './utils';
 import type { Review } from './types';
 
@@ -30,12 +31,6 @@ function renderProseBlocks(text: string): HTMLElement[] {
 
 // ---------- header ----------
 
-function authorsLine(authors: string[]): string {
-  if (!authors || authors.length === 0) return '';
-  if (authors.length <= 3) return authors.join(', ');
-  return `${authors.slice(0, 3).join(', ')}, et al. (${authors.length - 3} more)`;
-}
-
 function buildHeader(review: Review): HTMLElement {
   const kickerBits: HTMLElement[] = [];
   kickerBits.push(el('span', { class: 'id' }, review.id));
@@ -47,7 +42,7 @@ function buildHeader(review: Review): HTMLElement {
   const kicker = el('div', { class: 'review-kicker' }, kickerBits);
   const title = el('h1', { class: 'review-title' }, review.title);
 
-  const authors = authorsLine(review.authors ?? []);
+  const authors = authorsDetailed(review.authors);
   const authorsEl = authors ? el('p', { class: 'review-authors' }, authors) : null;
 
   const datelineBits: (HTMLElement | string)[] = [];
@@ -122,7 +117,7 @@ function buildPostReadNav(review: Review): HTMLElement {
   ]);
 }
 
-// ---------- copy link + KaTeX scheduling ----------
+// ---------- copy link ----------
 
 function attachCopyLink(container: HTMLElement) {
   container.querySelectorAll<HTMLButtonElement>('[data-copy-link]').forEach((btn) => {
@@ -141,31 +136,6 @@ function attachCopyLink(container: HTMLElement) {
   });
 }
 
-/**
- * KaTeX is ~78 KB gzip + ~23 KB CSS and blocks the main thread while typesetting.
- * Lazy-load it after first paint so the reader can scan the prose immediately;
- * formulas "bloom" in once idle.
- */
-function scheduleTypeset(container: HTMLElement): void {
-  const run = async () => {
-    try {
-      const { typeset } = await import('./latex');
-      container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
-    } catch {
-      // Fail-open: leaving raw LaTeX visible beats blocking the page on a
-      // missing chunk (e.g. offline after first paint).
-    }
-  };
-  const ric = (window as Window & {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-  }).requestIdleCallback;
-  if (typeof ric === 'function') {
-    ric(() => { void run(); }, { timeout: 1500 });
-  } else {
-    setTimeout(() => { void run(); }, 50);
-  }
-}
-
 // ---------- orchestration ----------
 
 function renderPage(container: HTMLElement, review: Review) {
@@ -181,41 +151,15 @@ function renderPage(container: HTMLElement, review: Review) {
   scheduleTypeset(container);
 }
 
-function errorState(title: string, detail: string): HTMLElement {
-  return el('div', { class: 'state error' }, [
-    el('strong', {}, title),
-    el('span', {}, detail),
-  ]);
-}
-
-export async function mainReviewPage() {
+export function mainReviewPage() {
   const container = document.getElementById('review-detail');
   if (!container) return;
 
-  // Prefer pre-baked data (SSG path via /review/{id}/)
+  // Detail pages are SSG (/review/{id}/) — review JSON is pre-baked inline by
+  // [...id].astro into window.__OAR_REVIEW. Legacy /review/?id= URLs redirect
+  // to the SSG path client-side in review.astro, so we never have to fetch
+  // here.
   const prebaked = (window as unknown as { __OAR_REVIEW?: Review }).__OAR_REVIEW;
-  if (prebaked) {
-    renderPage(container, prebaked);
-    return;
-  }
-
-  // Legacy path: /review/?id=xxx fetches client-side
-  const id = new URLSearchParams(window.location.search).get('id');
-  if (!id) {
-    // /review/ with no ?id= is a dead-end. Send the user to the home feed.
-    // replace() avoids a Back-button loop.
-    window.location.replace('/');
-    return;
-  }
-
-  let review: Review;
-  try {
-    review = await dataClient.getReview(id);
-  } catch (e) {
-    mount(container, errorState('Failed to load review', e instanceof Error ? e.message : String(e)));
-    return;
-  }
-
-  document.title = `${review.title} \u2014 Ureview`;
-  renderPage(container, review);
+  if (!prebaked) return;
+  renderPage(container, prebaked);
 }

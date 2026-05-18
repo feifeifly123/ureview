@@ -40,7 +40,15 @@ const fullTitle = title === 'Ureview' ? title : `${title} — Ureview`;
       // Pre-paint theme — read localStorage or prefers-color-scheme before CSS is applied.
       (function () {
         try {
-          var t = localStorage.getItem('oar-theme');
+          var t = localStorage.getItem('ureview-theme');
+          if (!t) {
+            var legacy = localStorage.getItem('oar-theme');
+            if (legacy) {
+              t = legacy;
+              localStorage.setItem('ureview-theme', legacy);
+              localStorage.removeItem('oar-theme');
+            }
+          }
           if (!t) {
             t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
           }
@@ -132,7 +140,7 @@ const fullTitle = title === 'Ureview' ? title : `${title} — Ureview`;
 
     <script is:inline>
       (function () {
-        var KEY = 'oar-theme';
+        var KEY = 'ureview-theme';
         var btn = document.getElementById('theme-toggle');
         var dateEl = document.getElementById('masthead-date');
 

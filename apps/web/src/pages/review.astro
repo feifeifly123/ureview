@@ -4,16 +4,25 @@ import Layout from '../components/Layout.astro';
 
 <Layout
   title="Review"
-  description="Structured AI review note for a research paper."
+  description="Redirecting to the canonical review page."
 >
   <div class="review-shell">
     <article class="review-page-root" id="review-detail">
-      <div class="state loading"><strong>Loading review</strong></div>
+      <div class="state loading"><strong>Redirecting…</strong></div>
     </article>
   </div>
 </Layout>
 
-<script>
-  import { mainReviewPage } from '../lib/review-page';
-  mainReviewPage();
+<script is:inline>
+  // /review/?id=<id> is the legacy share URL. Canonical is /review/<id>/.
+  // Server-side redirect would be cleaner, but this site is a pure static
+  // deploy (see PHILOSOPHY / iron rule #2), so we redirect client-side.
+  (function () {
+    var id = new URLSearchParams(window.location.search).get('id');
+    if (!id) { window.location.replace('/'); return; }
+    // Path-prefix proxies (e.g. JupyterHub) — preserve prefix if present.
+    var m = location.pathname.match(/^(.*\/proxy\/\d+)\//);
+    var prefix = m ? m[1] : '';
+    window.location.replace(prefix + '/review/' + id + '/');
+  })();
 </script>

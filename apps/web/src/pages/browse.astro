@@ -14,16 +14,11 @@ import Layout from '../components/Layout.astro';
         <span class="sep">/</span>
         <span>Browse</span>
       </nav>
-      <div style="display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end;">
-        <div>
-          <span class="page-intro-eyebrow">Index · Filterable</span>
-          <h1 class="page-intro-title">Browse recent reviews.</h1>
-          <p class="page-intro-lede">
-            Filter by arxiv math sub-category. Sort by date.
-          </p>
-        </div>
-        <div class="browse-header-aside" id="browse-header-aside" aria-live="polite"></div>
-      </div>
+      <span class="page-intro-eyebrow">Index · Filterable</span>
+      <h1 class="page-intro-title">Browse recent reviews.</h1>
+      <p class="page-intro-lede">
+        Filter by arxiv math sub-category. Sort by date.
+      </p>
     </section>
 
     <section class="filter-bar" id="filter-bar" aria-label="Filter reviews">
@@ -59,9 +54,22 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
-  import { formatDateTime } from '../lib/utils';
   import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
+
+  function timeAgo(iso: string): string {
+    const ts = Date.parse(iso);
+    if (Number.isNaN(ts)) return iso;
+    const diff = Date.now() - ts;
+    const min = Math.round(diff / 60_000);
+    if (min < 1) return 'just now';
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.round(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const day = Math.round(hr / 24);
+    if (day < 30) return `${day}d ago`;
+    return new Date(ts).toLocaleDateString();
+  }
 
   type SortKey = 'newest' | 'oldest';
 
@@ -160,16 +168,6 @@ import Layout from '../components/Layout.astro';
     return sorted;
   }
 
-  function buildHeaderAside(count: number, generatedAt: string): HTMLElement[] {
-    return [
-      el('div', { class: 'count-chip' }, [
-        el('strong', {}, String(count)),
-        ` review${count === 1 ? '' : 's'} in snapshot`,
-      ]),
-      el('div', { class: 'page-header-meta' }, `Generated ${formatDateTime(generatedAt)}`),
-    ];
-  }
-
   function rowChipsWrap(rowSelector: string): HTMLElement | null {
     const row = document.querySelector<HTMLElement>(rowSelector);
     return row?.querySelector<HTMLElement>('.filter-chips-wrap') ?? null;
@@ -219,12 +217,11 @@ import Layout from '../components/Layout.astro';
   }
 
   (async () => {
-    const asideEl = document.getElementById('browse-header-aside');
     const listEl = document.getElementById('browse-list');
     const emptyEl = document.getElementById('browse-empty-state');
     const countEl = document.getElementById('browse-count');
     const resetBtn = document.getElementById('browse-reset');
-    if (!asideEl || !listEl || !countEl) return;
+    if (!listEl || !countEl) return;
 
     let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
@@ -241,7 +238,7 @@ import Layout from '../components/Layout.astro';
     const cards = new Map<string, HTMLElement>();
     reviews.forEach((review) => cards.set(review.id, buildFeedCard(review)));
 
-    mount(asideEl, ...buildHeaderAside(reviews.length, data.generated_at));
+    const snapshotLabel = `snapshot ${timeAgo(data.generated_at)}`;
 
     readStateFromUrl();
 
@@ -258,7 +255,7 @@ import Layout from '../components/Layout.astro';
         mount(listEl!, ...nodes);
       }
 
-      countEl!.textContent = `Showing ${nodes.length} of ${reviews.length} review${reviews.length === 1 ? '' : 's'}`;
+      countEl!.textContent = `Showing ${nodes.length} of ${reviews.length} review${reviews.length === 1 ? '' : 's'} · ${snapshotLabel}`;
       writeStateToUrl();
     }
 

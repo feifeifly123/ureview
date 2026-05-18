@@ -9,22 +9,15 @@ import Layout from '../components/Layout.astro';
 >
   <div class="container">
     <section class="page-intro">
-      <span class="page-intro-eyebrow">The Gazette · Machine Reading Desk</span>
+      <span class="page-intro-eyebrow">The Gazette · Machine Reading Desk · BETA</span>
       <h1 class="page-intro-title">AI proof reviews of arxiv math papers.</h1>
       <p class="page-intro-lede">
         For every paper, one long-form machine reading of the proof —
         what it shows, where the argument leans, what to watch for.
-        The metadata is straight from arxiv; the review is the only
-        thing we file.
+        The metadata is straight from <a href="https://arxiv.org/archive/math" target="_blank" rel="noopener">arxiv math</a>;
+        the review is the only thing we file. Not peer review.
       </p>
     </section>
-
-    <aside class="beta-strip" role="note" aria-label="Beta notice">
-      <span class="beta-tag">BETA</span>
-      <span class="beta-text">
-        First-pass machine readings of <a href="https://arxiv.org/archive/math" target="_blank" rel="noopener">arxiv math</a> papers. Not peer review.
-      </span>
-    </aside>
 
     <div id="home-hero-slot" aria-live="polite">
       <section class="hero-featured hero-featured--skel" aria-label="Loading featured filing">
@@ -42,8 +35,6 @@ import Layout from '../components/Layout.astro';
         </div>
       </section>
     </div>
-
-    <div id="home-trust-slot" class="trust-strip" aria-live="polite" hidden></div>
 
     <section class="stack">
       <header class="stack-header">
@@ -77,15 +68,11 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
+  import { authorsDetailed } from '../lib/format';
+  import { scheduleTypeset } from '../lib/latex';
   import { formatDate } from '../lib/utils';
   import { buildFeedCard } from '../lib/feed-card';
   import type { LatestReviewEntry } from '../lib/types';
-
-  function authorsLine(authors: string[]): string {
-    if (!authors || authors.length === 0) return '';
-    if (authors.length <= 3) return authors.join(', ');
-    return `${authors.slice(0, 3).join(', ')}, et al. (${authors.length - 3} more)`;
-  }
 
   function buildFeaturedEntry(entry: LatestReviewEntry, total: number): HTMLElement {
     const kickerBits: HTMLElement[] = [];
@@ -102,10 +89,10 @@ import Layout from '../components/Layout.astro';
     const kicker = el('div', { class: 'hero-kicker' }, kickerBits);
 
     const title = el('h2', { class: 'hero-title' }, [
-      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, entry.title),
+      el('a', { href: `/review/${entry.id}/` }, entry.title),
     ]);
 
-    const authors = authorsLine(entry.authors ?? []);
+    const authors = authorsDetailed(entry.authors);
     const authorsEl = authors ? el('p', { class: 'hero-authors' }, authors) : null;
 
     const lede = entry.review_lede
@@ -114,7 +101,7 @@ import Layout from '../components/Layout.astro';
 
     const foot = el('div', { class: 'hero-foot' }, [
       el('span', {}, 'Machine-generated proof reading · Not peer review'),
-      el('a', { href: `/review/?id=${encodeURIComponent(entry.id)}` }, 'Open the full review →'),
+      el('a', { href: `/review/${entry.id}/` }, 'Open the full review →'),
     ]);
 
     return el('section', { class: 'hero-featured', 'aria-label': 'Featured review' }, [
@@ -126,34 +113,11 @@ import Layout from '../components/Layout.astro';
     ]);
   }
 
-  function buildTrustStrip(total: number): HTMLElement {
-    return el('p', { class: 'trust-strip-text' }, [
-      el('strong', {}, String(total)),
-      ` review${total === 1 ? '' : 's'} · Source arxiv math · Filed one at a time`,
-    ]);
-  }
-
-  async function scheduleTypesetIn(container: HTMLElement) {
-    if (!container.querySelector('[data-typeset]')) return;
-    const run = async () => {
-      try {
-        const { typeset } = await import('../lib/latex');
-        container.querySelectorAll<HTMLElement>('[data-typeset]').forEach((e) => typeset(e));
-      } catch {}
-    };
-    const ric = (window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-    }).requestIdleCallback;
-    if (typeof ric === 'function') ric(() => { void run(); }, { timeout: 1500 });
-    else setTimeout(() => { void run(); }, 50);
-  }
-
   (async () => {
     const heroSlot = document.getElementById('home-hero-slot');
-    const trustSlot = document.getElementById('home-trust-slot');
     const listEl = document.getElementById('home-list');
     const emptyEl = document.getElementById('home-empty');
-    if (!heroSlot || !trustSlot || !listEl) return;
+    if (!heroSlot || !listEl) return;
 
     let data: { generated_at: string; reviews: LatestReviewEntry[] };
     try {
@@ -176,20 +140,17 @@ import Layout from '../components/Layout.astro';
       mount(heroSlot);
     }
 
-    trustSlot.hidden = false;
-    mount(trustSlot, buildTrustStrip(reviews.length));
-
     const rest = reviews.slice(1);
     if (rest.length === 0) {
       mount(listEl);
       if (emptyEl && reviews.length === 0) emptyEl.hidden = false;
       // typeset hero lede if any
-      if (heroSlot) await scheduleTypesetIn(heroSlot);
+      if (heroSlot) await scheduleTypeset(heroSlot);
       return;
     }
     if (emptyEl) emptyEl.hidden = true;
     mount(listEl, ...rest.map((r) => buildFeedCard(r)));
-    await scheduleTypesetIn(heroSlot);
-    await scheduleTypesetIn(listEl);
+    await scheduleTypeset(heroSlot);
+    await scheduleTypeset(listEl);
   })();
 </script>
