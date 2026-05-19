@@ -1969,39 +1969,38 @@ main {
 }
 
 /* Tier color hierarchy — green→amber→red signals epistemic temperature.
-   Shared by feed-card score-tier, hero score row, detail scorecard. */
+   Defined as CSS variables so day/night can override in one place; selectors
+   stay single-class to dodge minifier merge bugs that drop `:root[...]`
+   prefixes when a long list of compound selectors gets compressed. */
+:root {
+  --tier-max:     #2F6F4A;
+  --tier-high:    #4F7B4F;
+  --tier-medium:  #8A6A1F;
+  --tier-low:     #B45309;
+  --tier-minimal: #B91C1C;
+}
+:root[data-theme="night"] {
+  --tier-max:     #6FB58A;
+  --tier-high:    #97C58A;
+  --tier-medium:  #D4A14F;
+  --tier-low:     #E59B5A;
+  --tier-minimal: #E76E6E;
+}
 .score-tier--max,
 .hero-score--tier-max     strong,
-.scorecard-cell--tier-max .scorecard-value strong { color: #2F6F4A; }
+.scorecard-cell--tier-max .scorecard-value strong { color: var(--tier-max); }
 .score-tier--high,
 .hero-score--tier-high     strong,
-.scorecard-cell--tier-high .scorecard-value strong { color: #4F7B4F; }
+.scorecard-cell--tier-high .scorecard-value strong { color: var(--tier-high); }
 .score-tier--medium,
 .hero-score--tier-medium     strong,
-.scorecard-cell--tier-medium .scorecard-value strong { color: #8A6A1F; }
+.scorecard-cell--tier-medium .scorecard-value strong { color: var(--tier-medium); }
 .score-tier--low,
 .hero-score--tier-low     strong,
-.scorecard-cell--tier-low .scorecard-value strong { color: #B45309; }
+.scorecard-cell--tier-low .scorecard-value strong { color: var(--tier-low); }
 .score-tier--minimal,
 .hero-score--tier-minimal     strong,
-.scorecard-cell--tier-minimal .scorecard-value strong { color: #B91C1C; }
-
-/* Night mode: brighten the same hues so they read on dark paper. */
-:root[data-theme="night"] .score-tier--max,
-:root[data-theme="night"] .hero-score--tier-max     strong,
-:root[data-theme="night"] .scorecard-cell--tier-max .scorecard-value strong { color: #6FB58A; }
-:root[data-theme="night"] .score-tier--high,
-:root[data-theme="night"] .hero-score--tier-high     strong,
-:root[data-theme="night"] .scorecard-cell--tier-high .scorecard-value strong { color: #97C58A; }
-:root[data-theme="night"] .score-tier--medium,
-:root[data-theme="night"] .hero-score--tier-medium     strong,
-:root[data-theme="night"] .scorecard-cell--tier-medium .scorecard-value strong { color: #D4A14F; }
-:root[data-theme="night"] .score-tier--low,
-:root[data-theme="night"] .hero-score--tier-low     strong,
-:root[data-theme="night"] .scorecard-cell--tier-low .scorecard-value strong { color: #E59B5A; }
-:root[data-theme="night"] .score-tier--minimal,
-:root[data-theme="night"] .hero-score--tier-minimal     strong,
-:root[data-theme="night"] .scorecard-cell--tier-minimal .scorecard-value strong { color: #E76E6E; }
+.scorecard-cell--tier-minimal .scorecard-value strong { color: var(--tier-minimal); }
 
 /* ---------- hero score row ---------- */
 /* "8/10 × 95% = 7.6" reads as one mathematical sentence. */

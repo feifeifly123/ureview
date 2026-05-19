@@ -59,6 +59,7 @@ import Layout from '../components/Layout.astro';
 <script>
   import { dataClient } from '../lib/data-client';
   import { el, mount } from '../lib/dom';
+  import { scheduleTypeset } from '../lib/latex';
   import { buildFeedCard } from '../lib/feed-card';
   import { expectedImpact, categoryName } from '../lib/types';
   import type { LatestReviewEntry } from '../lib/types';
@@ -311,6 +312,9 @@ import Layout from '../components/Layout.astro';
 
       countEl!.textContent = `Showing ${nodes.length} of ${reviews.length} review${reviews.length === 1 ? '' : 's'} · ${snapshotLabel}`;
       writeStateToUrl();
+      // Typeset LaTeX in any newly-mounted lede paragraphs. KaTeX is
+      // lazy-loaded by scheduleTypeset; safe to call on every sync.
+      scheduleTypeset(listEl!);
     }
 
     // Named recursive refresher: chip clicks must always re-render the chip
